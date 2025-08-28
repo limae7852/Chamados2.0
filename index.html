@@ -126,7 +126,7 @@ function loadDBSettings(){
   document.getElementById("supabaseUrl").value = dbSettings.url||"";
   document.getElementById("supabaseKey").value = dbSettings.key||"";
   if(dbSettings.url && dbSettings.key){
-    supabase = supabaseJs.createClient(dbSettings.url, dbSettings.key);
+    supabase = supabase.createClient(dbSettings.url, dbSettings.key);
   }
 }
 
@@ -271,11 +271,13 @@ document.getElementById("formSettings").addEventListener("submit", async (e)=>{
   const url = document.getElementById("supabaseUrl").value.trim();
   const key = document.getElementById("supabaseKey").value.trim();
   localStorage.setItem("dbSettings", JSON.stringify({url,key}));
+
   if(url && key){
-    supabase = supabaseJs.createClient(url,key);
+    supabase = supabase.createClient(url,key);
     await fetchOperators();
     await fetchTickets();
   }
+
   modalSettings.classList.add("hidden");
   modalSettings.classList.remove("flex");
 });
