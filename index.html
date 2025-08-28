@@ -8,7 +8,8 @@
 <script type="text/javascript" src="https://cdn.emailjs.com/dist/email.min.js"></script>
 <script type="text/javascript">
   (function(){
-      emailjs.init("SUA_PUBLIC_KEY"); // Substitua pela sua chave pública EmailJS
+      // Inicialização padrão, mas vai ser substituída pelas configs do usuário
+      emailjs.init("SUA_PUBLIC_KEY");
   })();
 </script>
 <style>
@@ -27,7 +28,11 @@
 <body class="bg-gray-100 text-gray-900">
 
 <div class="container mx-auto p-6">
-  <h1 class="text-2xl font-bold mb-6">📌 Sistema de Chamados</h1>
+  <!-- Cabeçalho -->
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold">📌 Sistema de Chamados</h1>
+    <button onclick="openSettingsModal()" class="px-4 py-2 bg-gray-700 text-white rounded">⚙️ Configurações</button>
+  </div>
 
   <!-- Formulário -->
   <div class="bg-white p-6 rounded shadow mb-6">
@@ -68,6 +73,23 @@
   </div>
 </div>
 
+<!-- Modal de Configurações -->
+<div id="settingsModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50">
+  <div class="bg-white rounded-lg shadow-lg w-[28rem] p-6">
+    <h3 class="text-lg font-bold text-gray-800 mb-4">⚙️ Configurações do Sistema</h3>
+    <form id="settingsForm" class="space-y-3">
+      <input type="email" id="notifyEmail" placeholder="E-mail para notificações" class="border p-2 w-full rounded" required>
+      <input type="text" id="emailjsKey" placeholder="EmailJS Public Key" class="border p-2 w-full rounded" required>
+      <input type="text" id="emailjsService" placeholder="EmailJS Service ID" class="border p-2 w-full rounded" required>
+      <input type="text" id="emailjsTemplate" placeholder="EmailJS Template ID" class="border p-2 w-full rounded" required>
+      <div class="flex justify-end space-x-2">
+        <button type="button" onclick="closeSettingsModal()" class="px-4 py-2 rounded bg-gray-400 text-white">Cancelar</button>
+        <button type="submit" class="px-4 py-2 rounded bg-blue-600 text-white">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- Modal de Encerramento -->
 <div id="closeModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50">
   <div class="bg-white rounded-lg shadow-lg w-96 p-6">
@@ -97,6 +119,44 @@ let closeTicketId = null;
 const form = document.getElementById("ticketForm");
 const list = document.getElementById("ticketsList");
 
+// Configurações (localStorage)
+let settings = JSON.parse(localStorage.getItem("settings")) || {
+  notifyEmail: "",
+  emailjsKey: "SUA_PUBLIC_KEY",
+  emailjsService: "SEU_SERVICE_ID",
+  emailjsTemplate: "SEU_TEMPLATE_ID"
+};
+
+// Inicializa EmailJS com configs salvas
+emailjs.init(settings.emailjsKey);
+
+// Modal Configurações
+function openSettingsModal(){
+  document.getElementById("notifyEmail").value = settings.notifyEmail;
+  document.getElementById("emailjsKey").value = settings.emailjsKey;
+  document.getElementById("emailjsService").value = settings.emailjsService;
+  document.getElementById("emailjsTemplate").value = settings.emailjsTemplate;
+  document.getElementById("settingsModal").classList.remove("hidden");
+  document.getElementById("settingsModal").classList.add("flex");
+}
+function closeSettingsModal(){
+  document.getElementById("settingsModal").classList.add("hidden");
+  document.getElementById("settingsModal").classList.remove("flex");
+}
+document.getElementById("settingsForm").addEventListener("submit", function(e){
+  e.preventDefault();
+  settings = {
+    notifyEmail: document.getElementById("notifyEmail").value,
+    emailjsKey: document.getElementById("emailjsKey").value,
+    emailjsService: document.getElementById("emailjsService").value,
+    emailjsTemplate: document.getElementById("emailjsTemplate").value
+  };
+  localStorage.setItem("settings", JSON.stringify(settings));
+  emailjs.init(settings.emailjsKey);
+  closeSettingsModal();
+  alert("Configurações salvas com sucesso!");
+});
+
 // Carregar tickets
 async function loadTickets(){
   const res = await fetch('/api/tickets');
@@ -117,24 +177,20 @@ form.addEventListener("submit", async function(e){
     date: new Date().toISOString()
   };
 
-  // Salvar no Supabase via API
   await fetch('/api/tickets', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(ticket)
   });
 
-  // Enviar e-mail via EmailJS
-  emailjs.send("SEU_SERVICE_ID", "SEU_TEMPLATE_ID", {
+  // Enviar e-mail via EmailJS usando configurações salvas
+  emailjs.send(settings.emailjsService, settings.emailjsTemplate, {
     subject: ticket.subject,
     client: ticket.client,
     tech: ticket.tech,
     priority: ticket.priority,
-    description: ticket.description
-  }).then(function(response) {
-      console.log('E-mail enviado com sucesso!', response.status, response.text);
-  }, function(error) {
-      console.log('Erro ao enviar e-mail:', error);
+    description: ticket.description,
+    notify_email: settings.notifyEmail
   });
 
   form.reset();
@@ -178,27 +234,19 @@ function closeCloseModal(){
 async function confirmCloseTicket(){
   if(closeTicketId !== null){
     const t = tickets.find(ticket => ticket.id === closeTicketId);
-
-    // Atualizar status no Supabase
     await fetch('/api/tickets', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: closeTicketId, status: 'resolved' })
     });
-
-    // Enviar e-mail de encerramento
-    emailjs.send("SEU_SERVICE_ID", "SEU_TEMPLATE_ID", {
+    emailjs.send(settings.emailjsService, settings.emailjsTemplate, {
       subject: `Chamado #${t.id} encerrado`,
       client: t.client,
       tech: t.tech,
       priority: t.priority,
-      description: t.description
-    }).then(function(response) {
-        console.log('E-mail de encerramento enviado!', response.status, response.text);
-    }, function(error) {
-        console.log('Erro ao enviar e-mail:', error);
+      description: t.description,
+      notify_email: settings.notifyEmail
     });
-
     closeCloseModal();
     await loadTickets();
     alert(`Chamado #${t.id} encerrado com sucesso!`);
