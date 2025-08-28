@@ -62,7 +62,7 @@
 
   <!-- Modal Configurações -->
   <div id="configModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center">
-    <div class="bg-white p-6 rounded-lg w-96 shadow-xl">
+    <div class="bg-white p-6 rounded-lg w-96 shadow-xl max-h-[90vh] overflow-y-auto">
       <h2 class="text-xl font-bold mb-4">⚙️ Configurações</h2>
 
       <!-- Config Email -->
@@ -71,11 +71,19 @@
       <input id="emailServiceId" type="text" placeholder="Service ID" class="w-full border p-2 mb-2 rounded">
       <input id="emailTemplateId" type="text" placeholder="Template ID" class="w-full border p-2 mb-4 rounded">
 
+      <!-- Config Banco -->
+      <h3 class="text-lg font-semibold">Banco de Dados (Supabase)</h3>
+      <input id="dbUrl" type="text" placeholder="Supabase URL" class="w-full border p-2 mb-2 rounded">
+      <input id="dbKey" type="text" placeholder="Supabase Anon Key" class="w-full border p-2 mb-4 rounded">
+
       <!-- Config Operadores -->
       <h3 class="text-lg font-semibold">Operadores</h3>
       <div id="operatorList" class="mb-2"></div>
       <div class="flex gap-2">
         <input id="newOperator" type="text" placeholder="Nome do operador" class="flex-1 border p-2 rounded">
+      </div>
+      <div class="flex gap-2 mt-2">
+        <input id="newOperatorEmail" type="email" placeholder="Email do operador" class="flex-1 border p-2 rounded">
         <button onclick="addOperator()" class="bg-blue-500 text-white px-3 py-2 rounded">+ Adicionar</button>
       </div>
 
@@ -89,9 +97,12 @@
 
 <script>
 // ==================== Supabase =====================
-const SUPABASE_URL = "https://YOUR_SUPABASE_URL.supabase.co";
-const SUPABASE_KEY = "YOUR_SUPABASE_ANON_KEY";
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let supabaseClient;
+function initSupabase() {
+  const url = localStorage.getItem("dbUrl") || "https://YOUR_SUPABASE_URL.supabase.co";
+  const key = localStorage.getItem("dbKey") || "YOUR_SUPABASE_ANON_KEY";
+  supabaseClient = supabase.createClient(url, key);
+}
 
 // ==================== Configurações =====================
 function openConfig() {
@@ -109,24 +120,32 @@ function saveConfig() {
   localStorage.setItem("emailPublicKey", document.getElementById("emailPublicKey").value);
   localStorage.setItem("emailServiceId", document.getElementById("emailServiceId").value);
   localStorage.setItem("emailTemplateId", document.getElementById("emailTemplateId").value);
+  localStorage.setItem("dbUrl", document.getElementById("dbUrl").value);
+  localStorage.setItem("dbKey", document.getElementById("dbKey").value);
+  initSupabase();
   closeConfig();
+  loadTickets();
 }
 
 function loadConfig() {
   document.getElementById("emailPublicKey").value = localStorage.getItem("emailPublicKey") || "";
   document.getElementById("emailServiceId").value = localStorage.getItem("emailServiceId") || "";
   document.getElementById("emailTemplateId").value = localStorage.getItem("emailTemplateId") || "";
+  document.getElementById("dbUrl").value = localStorage.getItem("dbUrl") || "";
+  document.getElementById("dbKey").value = localStorage.getItem("dbKey") || "";
   renderOperators();
 }
 
 // ==================== Operadores =====================
 function addOperator() {
   const name = document.getElementById("newOperator").value.trim();
-  if (!name) return;
+  const email = document.getElementById("newOperatorEmail").value.trim();
+  if (!name || !email) return;
   let operators = JSON.parse(localStorage.getItem("operators") || "[]");
-  operators.push(name);
+  operators.push({ name, email });
   localStorage.setItem("operators", JSON.stringify(operators));
   document.getElementById("newOperator").value = "";
+  document.getElementById("newOperatorEmail").value = "";
   renderOperators();
   loadOperatorsSelect();
 }
@@ -138,7 +157,7 @@ function renderOperators() {
   operators.forEach((op, i) => {
     list.innerHTML += `
       <div class="flex justify-between items-center bg-gray-100 p-2 rounded mb-1">
-        <span>${op}</span>
+        <span>${op.name} (${op.email})</span>
         <button onclick="removeOperator(${i})" class="text-red-500">✖</button>
       </div>`;
   });
@@ -158,14 +177,15 @@ function loadOperatorsSelect() {
   const operators = JSON.parse(localStorage.getItem("operators") || "[]");
   operators.forEach(op => {
     const option = document.createElement("option");
-    option.value = op;
-    option.textContent = op;
+    option.value = op.name;
+    option.textContent = `${op.name} (${op.email})`;
     select.appendChild(option);
   });
 }
 
 // ==================== Tickets =====================
 async function loadTickets() {
+  if (!supabaseClient) return;
   const { data, error } = await supabaseClient.from("tickets").select("*").order("id", { ascending: false });
   if (error) return console.error(error);
   const table = document.getElementById("ticketsTable");
@@ -181,8 +201,7 @@ async function loadTickets() {
         <td class="p-2 border">
           ${t.status === "Aberto" ? `<button onclick="closeTicket(${t.id})" class="bg-red-600 text-white px-2 py-1 rounded">Encerrar</button>` : ""}
         </td>
-      </tr>
-    `;
+      </tr>`;
   });
 }
 
@@ -219,17 +238,13 @@ function sendEmail(subject, data) {
     return;
   }
   emailjs.init(publicKey);
-  emailjs.send(serviceId, templateId, {
-    subject,
-    ...data
-  }).then(() => {
-    console.log("Email enviado");
-  }).catch(err => {
-    console.error("Erro email:", err);
-  });
+  emailjs.send(serviceId, templateId, { subject, ...data })
+    .then(() => console.log("Email enviado"))
+    .catch(err => console.error("Erro email:", err));
 }
 
 // ==================== Inicialização =====================
+initSupabase();
 loadOperatorsSelect();
 loadTickets();
 </script>
