@@ -6,12 +6,6 @@
 <title>Sistema de Chamados</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script type="text/javascript" src="https://cdn.emailjs.com/dist/email.min.js"></script>
-<script type="text/javascript">
-  (function(){
-      // Inicialização padrão, mas vai ser substituída pelas configs do usuário
-      emailjs.init("SUA_PUBLIC_KEY");
-  })();
-</script>
 <style>
   @keyframes blinkHighlight {
     0% { background-color: #fce7f3; }
@@ -40,7 +34,9 @@
     <form id="ticketForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <input type="text" id="subject" placeholder="Assunto" class="border p-2 rounded" required>
       <input type="text" id="client" placeholder="Cliente" class="border p-2 rounded" required>
-      <input type="text" id="tech" placeholder="Técnico Responsável" class="border p-2 rounded" required>
+      <select id="tech" class="border p-2 rounded" required>
+        <option value="">Selecione o Técnico</option>
+      </select>
       <select id="priority" class="border p-2 rounded" required>
         <option value="">Selecione a Prioridade</option>
         <option value="low">Baixa</option>
@@ -75,14 +71,24 @@
 
 <!-- Modal de Configurações -->
 <div id="settingsModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50">
-  <div class="bg-white rounded-lg shadow-lg w-[28rem] p-6">
+  <div class="bg-white rounded-lg shadow-lg w-[28rem] p-6 max-h-[90vh] overflow-y-auto">
     <h3 class="text-lg font-bold text-gray-800 mb-4">⚙️ Configurações do Sistema</h3>
     <form id="settingsForm" class="space-y-3">
       <input type="email" id="notifyEmail" placeholder="E-mail para notificações" class="border p-2 w-full rounded" required>
       <input type="text" id="emailjsKey" placeholder="EmailJS Public Key" class="border p-2 w-full rounded" required>
       <input type="text" id="emailjsService" placeholder="EmailJS Service ID" class="border p-2 w-full rounded" required>
       <input type="text" id="emailjsTemplate" placeholder="EmailJS Template ID" class="border p-2 w-full rounded" required>
-      <div class="flex justify-end space-x-2">
+
+      <hr class="my-3">
+
+      <h4 class="font-semibold mb-2">👷 Operadores/Técnicos</h4>
+      <div class="flex gap-2 mb-2">
+        <input type="text" id="newOperator" placeholder="Nome do operador" class="border p-2 w-full rounded">
+        <button type="button" onclick="addOperator()" class="px-4 py-2 bg-green-600 text-white rounded">Adicionar</button>
+      </div>
+      <ul id="operatorsList" class="list-disc list-inside text-gray-800 space-y-1"></ul>
+
+      <div class="flex justify-end space-x-2 mt-4">
         <button type="button" onclick="closeSettingsModal()" class="px-4 py-2 rounded bg-gray-400 text-white">Cancelar</button>
         <button type="submit" class="px-4 py-2 rounded bg-blue-600 text-white">Salvar</button>
       </div>
@@ -113,21 +119,21 @@
   </div>
 </div>
 
-<script>
+<script type="text/javascript">
 let tickets = [];
 let closeTicketId = null;
 const form = document.getElementById("ticketForm");
 const list = document.getElementById("ticketsList");
+const techSelect = document.getElementById("tech");
 
-// Configurações (localStorage)
+// Configurações e operadores
 let settings = JSON.parse(localStorage.getItem("settings")) || {
   notifyEmail: "",
   emailjsKey: "SUA_PUBLIC_KEY",
   emailjsService: "SEU_SERVICE_ID",
-  emailjsTemplate: "SEU_TEMPLATE_ID"
+  emailjsTemplate: "SEU_TEMPLATE_ID",
+  operators: []
 };
-
-// Inicializa EmailJS com configs salvas
 emailjs.init(settings.emailjsKey);
 
 // Modal Configurações
@@ -136,6 +142,7 @@ function openSettingsModal(){
   document.getElementById("emailjsKey").value = settings.emailjsKey;
   document.getElementById("emailjsService").value = settings.emailjsService;
   document.getElementById("emailjsTemplate").value = settings.emailjsTemplate;
+  renderOperators();
   document.getElementById("settingsModal").classList.remove("hidden");
   document.getElementById("settingsModal").classList.add("flex");
 }
@@ -145,23 +152,58 @@ function closeSettingsModal(){
 }
 document.getElementById("settingsForm").addEventListener("submit", function(e){
   e.preventDefault();
-  settings = {
-    notifyEmail: document.getElementById("notifyEmail").value,
-    emailjsKey: document.getElementById("emailjsKey").value,
-    emailjsService: document.getElementById("emailjsService").value,
-    emailjsTemplate: document.getElementById("emailjsTemplate").value
-  };
+  settings.notifyEmail = document.getElementById("notifyEmail").value;
+  settings.emailjsKey = document.getElementById("emailjsKey").value;
+  settings.emailjsService = document.getElementById("emailjsService").value;
+  settings.emailjsTemplate = document.getElementById("emailjsTemplate").value;
   localStorage.setItem("settings", JSON.stringify(settings));
   emailjs.init(settings.emailjsKey);
+  populateTechSelect();
   closeSettingsModal();
   alert("Configurações salvas com sucesso!");
 });
+
+// Operadores
+function renderOperators(){
+  const list = document.getElementById("operatorsList");
+  list.innerHTML = "";
+  settings.operators.forEach((op,index)=>{
+    const li = document.createElement("li");
+    li.classList.add("flex","justify-between","items-center");
+    li.innerHTML = `<span>${op}</span> <button onclick="removeOperator(${index})" class="text-red-600 hover:underline">Remover</button>`;
+    list.appendChild(li);
+  });
+}
+function addOperator(){
+  const name = document.getElementById("newOperator").value.trim();
+  if(name){
+    settings.operators.push(name);
+    document.getElementById("newOperator").value = "";
+    renderOperators();
+    populateTechSelect();
+  }
+}
+function removeOperator(index){
+  settings.operators.splice(index,1);
+  renderOperators();
+  populateTechSelect();
+}
+function populateTechSelect(){
+  techSelect.innerHTML = `<option value="">Selecione o Técnico</option>`;
+  settings.operators.forEach(op=>{
+    const opt = document.createElement("option");
+    opt.value = op;
+    opt.textContent = op;
+    techSelect.appendChild(opt);
+  });
+}
 
 // Carregar tickets
 async function loadTickets(){
   const res = await fetch('/api/tickets');
   tickets = await res.json();
   renderTickets();
+  populateTechSelect();
 }
 
 // Adicionar ticket
@@ -176,14 +218,11 @@ form.addEventListener("submit", async function(e){
     status: "open",
     date: new Date().toISOString()
   };
-
   await fetch('/api/tickets', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
     body: JSON.stringify(ticket)
   });
-
-  // Enviar e-mail via EmailJS usando configurações salvas
   emailjs.send(settings.emailjsService, settings.emailjsTemplate, {
     subject: ticket.subject,
     client: ticket.client,
@@ -192,7 +231,6 @@ form.addEventListener("submit", async function(e){
     description: ticket.description,
     notify_email: settings.notifyEmail
   });
-
   form.reset();
   await loadTickets();
 });
@@ -200,7 +238,7 @@ form.addEventListener("submit", async function(e){
 // Renderizar tabela
 function renderTickets(){
   list.innerHTML = "";
-  tickets.forEach(ticket => {
+  tickets.forEach(ticket=>{
     const tr = document.createElement("tr");
     tr.classList.add(`priority-${ticket.priority}`);
     tr.innerHTML = `
@@ -212,18 +250,18 @@ function renderTickets(){
       <td class="border px-4 py-2 capitalize">${ticket.status}</td>
       <td class="border px-4 py-2 space-x-2">
         <button onclick="viewDetails(${ticket.id})" class="text-blue-600 hover:underline">Detalhes</button>
-        ${ticket.status !== "resolved" ? `<button onclick="openCloseModal(${ticket.id})" class="text-green-600 hover:underline">Encerrar</button>` : "✅ Encerrado"}
+        ${ticket.status!=="resolved"? `<button onclick="openCloseModal(${ticket.id})" class="text-green-600 hover:underline">Encerrar</button>`: "✅ Encerrado"}
       </td>
     `;
     list.appendChild(tr);
-    if(ticket.priority === "critical") tr.classList.add("blink");
+    if(ticket.priority==="critical") tr.classList.add("blink");
   });
 }
 
 // Modal Encerramento
 function openCloseModal(id){
-  closeTicketId = id;
-  document.getElementById("closeMessage").textContent = `Deseja realmente encerrar o chamado #${id}?`;
+  closeTicketId=id;
+  document.getElementById("closeMessage").textContent=`Deseja realmente encerrar o chamado #${id}?`;
   document.getElementById("closeModal").classList.remove("hidden");
   document.getElementById("closeModal").classList.add("flex");
 }
@@ -232,19 +270,19 @@ function closeCloseModal(){
   document.getElementById("closeModal").classList.remove("flex");
 }
 async function confirmCloseTicket(){
-  if(closeTicketId !== null){
-    const t = tickets.find(ticket => ticket.id === closeTicketId);
-    await fetch('/api/tickets', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: closeTicketId, status: 'resolved' })
+  if(closeTicketId!==null){
+    const t=tickets.find(ticket=>ticket.id===closeTicketId);
+    await fetch('/api/tickets',{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({id:closeTicketId,status:'resolved'})
     });
-    emailjs.send(settings.emailjsService, settings.emailjsTemplate, {
-      subject: `Chamado #${t.id} encerrado`,
-      client: t.client,
-      tech: t.tech,
-      priority: t.priority,
-      description: t.description,
+    emailjs.send(settings.emailjsService,settings.emailjsTemplate,{
+      subject:`Chamado #${t.id} encerrado`,
+      client:t.client,
+      tech:t.tech,
+      priority:t.priority,
+      description:t.description,
       notify_email: settings.notifyEmail
     });
     closeCloseModal();
@@ -255,9 +293,9 @@ async function confirmCloseTicket(){
 
 // Modal Detalhes
 function viewDetails(id){
-  const t = tickets.find(ticket => ticket.id === id);
+  const t = tickets.find(ticket => ticket.id===id);
   if(t){
-    document.getElementById("detailsContent").innerHTML = `
+    document.getElementById("detailsContent").innerHTML=`
       <p><strong>ID:</strong> ${t.id}</p>
       <p><strong>Assunto:</strong> ${t.subject}</p>
       <p><strong>Descrição:</strong> ${t.description}</p>
