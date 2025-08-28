@@ -68,24 +68,23 @@
   </div>
 </div>
 
-<!-- Modal Configurações (inicia oculto) -->
+<!-- Modal Configurações -->
 <div id="modalSettings" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-50">
-  <div class="bg-white rounded-lg shadow-lg w-[28rem] p-6" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
-    <h3 id="settingsTitle" class="text-lg font-bold text-gray-800 mb-4">⚙️ Configurações do Sistema</h3>
+  <div class="bg-white rounded-lg shadow-lg w-[32rem] p-6">
+    <h3 class="text-lg font-bold mb-4">⚙️ Configurações do Sistema</h3>
     <form id="formSettings" class="space-y-3">
       <input type="email" id="notifyEmail" placeholder="E-mail para notificações" class="border p-2 w-full rounded" required>
       <input type="text" id="emailjsKey" placeholder="EmailJS Public Key" class="border p-2 w-full rounded" required>
       <input type="text" id="emailjsService" placeholder="EmailJS Service ID" class="border p-2 w-full rounded" required>
       <input type="text" id="emailjsTemplate" placeholder="EmailJS Template ID" class="border p-2 w-full rounded" required>
 
-      <hr class="my-3">
-
-      <h4 class="font-semibold mb-2">👷 Operadores/Técnicos</h4>
-      <div class="flex gap-2 mb-2">
-        <input type="text" id="newOperator" placeholder="Nome do operador" class="border p-2 w-full rounded">
-        <button type="button" id="addOperatorBtn" class="px-4 py-2 bg-green-600 text-white rounded">Adicionar</button>
+      <hr class="my-4">
+      <h4 class="font-semibold">👷 Cadastro de Técnicos</h4>
+      <div class="flex space-x-2">
+        <input type="text" id="newTech" placeholder="Nome do técnico" class="border p-2 rounded flex-1">
+        <button type="button" id="addTechBtn" class="px-4 py-2 rounded bg-green-600 text-white">Adicionar</button>
       </div>
-      <ul id="operatorsList" class="list-disc list-inside text-gray-800 space-y-1 max-h-40 overflow-auto"></ul>
+      <ul id="techList" class="list-disc pl-5 mt-2 text-sm text-gray-700"></ul>
 
       <div class="flex justify-end space-x-2 mt-4">
         <button type="button" id="closeSettingsBtn" class="px-4 py-2 rounded bg-gray-400 text-white">Cancelar</button>
@@ -95,291 +94,77 @@
   </div>
 </div>
 
-<!-- Modais Detalhes e Encerramento -->
-<div id="detailsModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-40">
-  <div class="bg-white rounded-lg shadow-lg w-[28rem] p-6">
-    <h3 class="text-lg font-bold text-blue-600 mb-4">Detalhes do Chamado</h3>
-    <div id="detailsContent" class="space-y-2 text-gray-800"></div>
-    <div class="flex justify-end mt-4">
-      <button onclick="closeDetailsModal()" class="px-4 py-2 rounded bg-blue-600 text-white">Fechar</button>
-    </div>
-  </div>
-</div>
-
-<div id="closeModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-40">
-  <div class="bg-white rounded-lg shadow-lg w-96 p-6">
-    <h3 class="text-lg font-bold text-red-600 mb-4">Encerrar Chamado</h3>
-    <p id="closeMessage" class="mb-4 text-gray-700"></p>
-    <div class="flex justify-end space-x-2">
-      <button onclick="closeCloseModal()" class="px-4 py-2 rounded bg-gray-400 text-white">Cancelar</button>
-      <button onclick="confirmCloseTicket()" class="px-4 py-2 rounded bg-green-600 text-white">Confirmar</button>
-    </div>
-  </div>
-</div>
-
 <script>
 document.addEventListener("DOMContentLoaded", function(){
-  // ===== Fallback/Proteção EmailJS =====
-  const hasEmailJS = typeof window.emailjs !== "undefined";
-  const Email = {
-    init(key){ if(hasEmailJS){ try{ emailjs.init(key||""); }catch(e){ console.warn("Falha ao inicializar EmailJS:", e);} } },
-    send(service, template, params){
-      if(hasEmailJS){
-        return emailjs.send(service, template, params).catch(err=>console.warn("Erro EmailJS:", err));
-      } else {
-        console.warn("EmailJS não carregado — envio simulado:", {service, template, params});
-        return Promise.resolve(); // não bloqueia fluxo
-      }
-    }
-  };
-
-  // ===== Configurações =====
-  let settings = JSON.parse(localStorage.getItem("settings")) || {
-    notifyEmail:"",
-    emailjsKey:"SUA_PUBLIC_KEY",
-    emailjsService:"SEU_SERVICE_ID",
-    emailjsTemplate:"SEU_TEMPLATE_ID",
-    operators:[]
-  };
-  Email.init(settings.emailjsKey);
-
-  // ===== Elementos principais =====
   const btnSettings = document.getElementById("btnSettings");
   const modalSettings = document.getElementById("modalSettings");
   const closeSettingsBtn = document.getElementById("closeSettingsBtn");
-  const addOperatorBtn = document.getElementById("addOperatorBtn");
-  const operatorsList = document.getElementById("operatorsList");
 
-  // Garantia: se algum ID faltar, loga e não trava a página
-  if(!btnSettings || !modalSettings || !closeSettingsBtn){
-    console.error("IDs do modal de configurações não encontrados.");
-  }
+  const addTechBtn = document.getElementById("addTechBtn");
+  const newTechInput = document.getElementById("newTech");
+  const techList = document.getElementById("techList");
+  const techSelect = document.getElementById("tech");
 
-  // ===== Abrir/Fechar modal de configurações (SIMPLIFICADO E CONFIÁVEL) =====
+  // --- MODAL ---
   function openSettings(){
-    // Preenche os campos com o que está salvo
-    document.getElementById("notifyEmail").value = settings.notifyEmail || "";
-    document.getElementById("emailjsKey").value = settings.emailjsKey || "";
-    document.getElementById("emailjsService").value = settings.emailjsService || "";
-    document.getElementById("emailjsTemplate").value = settings.emailjsTemplate || "";
-    renderOperators();
     modalSettings.classList.remove("hidden");
     modalSettings.classList.add("flex");
+    renderTechs();
   }
   function closeSettings(){
     modalSettings.classList.add("hidden");
     modalSettings.classList.remove("flex");
   }
-
   btnSettings.addEventListener("click", openSettings);
   closeSettingsBtn.addEventListener("click", closeSettings);
-
-  // Fecha ao clicar fora do conteúdo
   modalSettings.addEventListener("click", (e)=>{
     if(e.target === modalSettings) closeSettings();
   });
-  // Fecha com Esc
-  document.addEventListener("keydown", (e)=>{
-    if(e.key === "Escape" && !modalSettings.classList.contains("hidden")) closeSettings();
-  });
 
-  // ===== Operadores =====
-  function renderOperators(){
-    operatorsList.innerHTML = "";
-    settings.operators.forEach((op, index)=>{
-      const li = document.createElement("li");
-      li.className = "flex justify-between items-center";
-      li.innerHTML = `<span>${op}</span>
-        <button type="button" class="text-red-600 hover:underline" data-index="${index}">Remover</button>`;
-      operatorsList.appendChild(li);
-    });
-    populateTechSelect();
+  // --- CADASTRO DE TÉCNICOS ---
+  function getTechs(){
+    return JSON.parse(localStorage.getItem("techs") || "[]");
   }
-
-  function populateTechSelect(){
-    const techSelect = document.getElementById("tech");
-    techSelect.innerHTML = `<option value="">Selecione o Técnico</option>`;
-    settings.operators.forEach(op=>{
+  function saveTechs(techs){
+    localStorage.setItem("techs", JSON.stringify(techs));
+    renderTechs();
+    renderTechSelect();
+  }
+  function renderTechs(){
+    const techs = getTechs();
+    techList.innerHTML = "";
+    techs.forEach((t, i)=>{
+      const li = document.createElement("li");
+      li.textContent = t;
+      techList.appendChild(li);
+    });
+  }
+  function renderTechSelect(){
+    const techs = getTechs();
+    techSelect.innerHTML = '<option value="">Selecione o Técnico</option>';
+    techs.forEach(t=>{
       const opt = document.createElement("option");
-      opt.value = op; opt.textContent = op;
+      opt.value = t;
+      opt.textContent = t;
       techSelect.appendChild(opt);
     });
   }
-
-  addOperatorBtn.addEventListener("click", ()=>{
-    const input = document.getElementById("newOperator");
-    const name = (input.value || "").trim();
+  addTechBtn.addEventListener("click", ()=>{
+    const name = newTechInput.value.trim();
     if(name){
-      settings.operators.push(name);
-      input.value = "";
-      renderOperators();
+      const techs = getTechs();
+      if(!techs.includes(name)){
+        techs.push(name);
+        saveTechs(techs);
+        newTechInput.value = "";
+      } else {
+        alert("Este técnico já está cadastrado!");
+      }
     }
   });
 
-  // Delegação para remover operador
-  operatorsList.addEventListener("click", (e)=>{
-    const btn = e.target.closest("button[data-index]");
-    if(btn){
-      const idx = parseInt(btn.getAttribute("data-index"), 10);
-      settings.operators.splice(idx, 1);
-      renderOperators();
-    }
-  });
-
-  // Salvar configurações
-  document.getElementById("formSettings").addEventListener("submit", (e)=>{
-    e.preventDefault();
-    settings.notifyEmail = document.getElementById("notifyEmail").value.trim();
-    settings.emailjsKey = document.getElementById("emailjsKey").value.trim();
-    settings.emailjsService = document.getElementById("emailjsService").value.trim();
-    settings.emailjsTemplate = document.getElementById("emailjsTemplate").value.trim();
-    localStorage.setItem("settings", JSON.stringify(settings));
-    Email.init(settings.emailjsKey);
-    populateTechSelect();
-    closeSettings();
-    alert("Configurações salvas com sucesso!");
-  });
-
-  // ===== Tickets =====
-  let tickets = [];
-  let closeTicketId = null;
-  const list = document.getElementById("ticketsList");
-  const form = document.getElementById("ticketForm");
-
-  async function loadTickets(){
-    try{
-      const res = await fetch('/api/tickets', {cache: "no-store"});
-      tickets = await res.json();
-    }catch(e){
-      console.warn("Falha ao buscar /api/tickets; usando lista vazia.", e);
-      tickets = [];
-    }
-    renderTickets();
-  }
-
-  form.addEventListener("submit", async (e)=>{
-    e.preventDefault();
-    const ticket = {
-      subject: document.getElementById("subject").value,
-      client: document.getElementById("client").value,
-      tech: document.getElementById("tech").value,
-      priority: document.getElementById("priority").value,
-      description: document.getElementById("description").value,
-      status: "open",
-      date: new Date().toISOString()
-    };
-
-    try{
-      await fetch('/api/tickets', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(ticket)
-      });
-    }catch(e){ console.warn("Falha ao criar ticket (a UI seguirá):", e); }
-
-    Email.send(settings.emailjsService, settings.emailjsTemplate, {
-      subject: ticket.subject,
-      client: ticket.client,
-      tech: ticket.tech,
-      priority: ticket.priority,
-      description: ticket.description,
-      notify_email: settings.notifyEmail
-    });
-
-    form.reset();
-    await loadTickets();
-  });
-
-  function renderTickets(){
-    list.innerHTML = "";
-    tickets.forEach(ticket=>{
-      const tr = document.createElement("tr");
-      tr.classList.add(`priority-${ticket.priority}`);
-      tr.innerHTML = `
-        <td class="border px-4 py-2">${ticket.id ?? "-"}</td>
-        <td class="border px-4 py-2">${ticket.subject}</td>
-        <td class="border px-4 py-2">${ticket.client}</td>
-        <td class="border px-4 py-2">${ticket.tech}</td>
-        <td class="border px-4 py-2 capitalize">${ticket.priority}</td>
-        <td class="border px-4 py-2 capitalize">${ticket.status}</td>
-        <td class="border px-4 py-2 space-x-2">
-          <button onclick="viewDetails(${ticket.id})" class="text-blue-600 hover:underline">Detalhes</button>
-          ${ticket.status!=="resolved"
-            ? `<button onclick="openCloseModal(${ticket.id})" class="text-green-600 hover:underline">Encerrar</button>`
-            : "✅ Encerrado"}
-        </td>
-      `;
-      list.appendChild(tr);
-      if(ticket.priority === "critical") tr.classList.add("blink");
-    });
-  }
-
-  // ===== Modais: Detalhes & Encerramento =====
-  window.viewDetails = function(id){
-    const t = tickets.find(tt=>tt.id===id);
-    if(t){
-      document.getElementById("detailsContent").innerHTML = `
-        <p><strong>ID:</strong> ${t.id}</p>
-        <p><strong>Assunto:</strong> ${t.subject}</p>
-        <p><strong>Descrição:</strong> ${t.description}</p>
-        <p><strong>Cliente:</strong> ${t.client}</p>
-        <p><strong>Técnico:</strong> ${t.tech}</p>
-        <p><strong>Prioridade:</strong> ${t.priority}</p>
-        <p><strong>Status:</strong> ${t.status}</p>
-        <p><strong>Abertura:</strong> ${new Date(t.date).toLocaleString()}</p>
-      `;
-      const m = document.getElementById("detailsModal");
-      m.classList.remove("hidden"); m.classList.add("flex");
-    }
-  };
-  window.closeDetailsModal = function(){
-    const m = document.getElementById("detailsModal");
-    m.classList.add("hidden"); m.classList.remove("flex");
-  };
-
-  window.openCloseModal = function(id){
-    closeTicketId = id;
-    document.getElementById("closeMessage").textContent = `Deseja realmente encerrar o chamado #${id}?`;
-    const m = document.getElementById("closeModal");
-    m.classList.remove("hidden"); m.classList.add("flex");
-  };
-  window.closeCloseModal = function(){
-    const m = document.getElementById("closeModal");
-    m.classList.add("hidden"); m.classList.remove("flex");
-  };
-  window.confirmCloseTicket = async function(){
-    if(closeTicketId!==null){
-      const t = tickets.find(ticket=>ticket.id===closeTicketId);
-
-      try{
-        await fetch('/api/tickets', {
-          method:'PATCH',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({id: closeTicketId, status:'resolved'})
-        });
-      }catch(e){ console.warn("Falha ao atualizar ticket (UI seguirá):", e); }
-
-      Email.send(settings.emailjsService, settings.emailjsTemplate, {
-        subject: `Chamado #${t?.id ?? closeTicketId} encerrado`,
-        client: t?.client ?? "",
-        tech: t?.tech ?? "",
-        priority: t?.priority ?? "",
-        description: t?.description ?? "",
-        notify_email: settings.notifyEmail
-      });
-
-      window.closeCloseModal();
-      await loadTickets();
-      alert(`Chamado #${t?.id ?? closeTicketId} encerrado com sucesso!`);
-    }
-  };
-
-  // Inicializa seletores e lista
-  populateTechSelect();
-  loadTickets();
-
-  // Log útil para debug rápido no console
-  console.log("✅ App carregado. EmailJS:", hasEmailJS ? "OK" : "NÃO CARREGADO");
+  // inicia com lista de técnicos carregada
+  renderTechSelect();
 });
 </script>
 
