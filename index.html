@@ -68,26 +68,24 @@
 <div id="modalSettings" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-50">
   <div class="bg-white rounded-lg shadow-lg w-[28rem] p-6">
     <h3 class="text-lg font-bold text-gray-800 mb-4">⚙️ Configurações do Sistema</h3>
-    <form id="formSettings" class="space-y-3">
-      
-      <!-- Operadores -->
-      <h4 class="font-semibold mb-2">👷 Operadores/Técnicos</h4>
-      <div class="flex gap-2 mb-2">
-        <input type="text" id="newOperator" placeholder="Nome do operador" class="border p-2 w-full rounded">
-        <button type="button" id="addOperatorBtn" class="px-4 py-2 bg-green-600 text-white rounded">Adicionar</button>
-      </div>
-      <ul id="operatorsList" class="list-disc list-inside text-gray-800 space-y-1 max-h-40 overflow-auto"></ul>
+    
+    <!-- Operadores -->
+    <h4 class="font-semibold mb-2">👷 Operadores/Técnicos</h4>
+    <div class="flex gap-2 mb-2">
+      <input type="text" id="newOperator" placeholder="Nome do operador" class="border p-2 w-full rounded">
+      <button type="button" id="addOperatorBtn" class="px-4 py-2 bg-green-600 text-white rounded">Adicionar</button>
+    </div>
+    <ul id="operatorsList" class="list-disc list-inside text-gray-800 space-y-1 max-h-40 overflow-auto"></ul>
 
-      <!-- Configurações do Banco -->
-      <h4 class="font-semibold mt-4 mb-2">💾 Banco de Dados (Supabase)</h4>
-      <input type="text" id="supabaseUrl" placeholder="URL do Supabase" class="border p-2 w-full rounded mb-2">
-      <input type="text" id="supabaseKey" placeholder="Anon Key" class="border p-2 w-full rounded mb-2">
+    <!-- Configurações do Banco -->
+    <h4 class="font-semibold mt-4 mb-2">💾 Banco de Dados (Supabase)</h4>
+    <input type="text" id="supabaseUrl" placeholder="URL do Supabase" class="border p-2 w-full rounded mb-2">
+    <input type="text" id="supabaseKey" placeholder="Anon Key" class="border p-2 w-full rounded mb-2">
 
-      <div class="flex justify-end space-x-2 mt-4">
-        <button type="button" id="closeSettingsBtn" class="px-4 py-2 rounded bg-gray-400 text-white">Cancelar</button>
-        <button type="submit" class="px-4 py-2 rounded bg-blue-600 text-white">Salvar</button>
-      </div>
-    </form>
+    <div class="flex justify-end space-x-2 mt-4">
+      <button type="button" id="closeSettingsBtn" class="px-4 py-2 rounded bg-gray-400 text-white">Cancelar</button>
+      <button type="button" id="saveSettingsBtn" class="px-4 py-2 rounded bg-blue-600 text-white">Salvar</button>
+    </div>
   </div>
 </div>
 
@@ -120,7 +118,7 @@ let tickets = [];
 let operators = [];
 let closeTicketId = null;
 
-// ===== Carregar Configuração do Banco =====
+// ===== Carregar Configurações =====
 function loadDBSettings(){
   const dbSettings = JSON.parse(localStorage.getItem("dbSettings")||"{}");
   document.getElementById("supabaseUrl").value = dbSettings.url||"";
@@ -134,7 +132,7 @@ function loadDBSettings(){
 async function fetchOperators(){
   if(!supabase) return;
   const { data, error } = await supabase.from('operators').select('*').order('id');
-  if(error) console.error(error);
+  if(error){ console.error(error); operators=[]; }
   else operators = data.map(op=>({ id: op.id, name: op.name }));
   renderOperators();
 }
@@ -173,8 +171,9 @@ async function removeOperator(id){
 async function fetchTickets(){
   if(!supabase) return;
   const { data, error } = await supabase.from('tickets').select('*').order('id');
-  if(error) console.error(error);
-  else { tickets = data; renderTickets(); }
+  if(error){ console.error(error); tickets=[]; }
+  else tickets = data;
+  renderTickets();
 }
 
 function renderTickets(){
@@ -216,7 +215,7 @@ async function closeTicket(id){
 // ===== Eventos DOM =====
 document.addEventListener("DOMContentLoaded", async ()=>{
   loadDBSettings();
-  if(supabase){ 
+  if(supabase){
     await fetchOperators();
     await fetchTickets();
   }
@@ -244,6 +243,7 @@ const modalSettings = document.getElementById("modalSettings");
 const closeSettingsBtn = document.getElementById("closeSettingsBtn");
 const addOperatorBtn = document.getElementById("addOperatorBtn");
 const operatorsListEl = document.getElementById("operatorsList");
+const saveSettingsBtn = document.getElementById("saveSettingsBtn");
 
 btnSettings.addEventListener("click", ()=>{
   renderOperators();
@@ -265,18 +265,17 @@ operatorsListEl.addEventListener("click",(e)=>{
   if(btn){ removeOperator(parseInt(btn.dataset.id)); }
 });
 
-// Salvar Configurações
-document.getElementById("formSettings").addEventListener("submit", async (e)=>{
-  e.preventDefault();
+// Salvar Configurações do Supabase
+saveSettingsBtn.addEventListener("click", async ()=>{
   const url = document.getElementById("supabaseUrl").value.trim();
   const key = document.getElementById("supabaseKey").value.trim();
-  localStorage.setItem("dbSettings", JSON.stringify({url,key}));
+  if(!url || !key){ alert("Preencha URL e Key do Supabase!"); return; }
 
-  if(url && key){
-    supabase = supabase.createClient(url,key);
-    await fetchOperators();
-    await fetchTickets();
-  }
+  localStorage.setItem("dbSettings", JSON.stringify({url,key}));
+  supabase = supabase.createClient(url,key);
+
+  await fetchOperators();
+  await fetchTickets();
 
   modalSettings.classList.add("hidden");
   modalSettings.classList.remove("flex");
