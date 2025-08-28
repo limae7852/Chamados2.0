@@ -77,11 +77,6 @@
     </div>
     <ul id="operatorsList" class="list-disc list-inside text-gray-800 space-y-1 max-h-40 overflow-auto"></ul>
 
-    <!-- Configurações do Banco -->
-    <h4 class="font-semibold mt-4 mb-2">💾 Banco de Dados (Supabase)</h4>
-    <input type="text" id="supabaseUrl" placeholder="URL do Supabase" class="border p-2 w-full rounded mb-2">
-    <input type="text" id="supabaseKey" placeholder="Anon Key" class="border p-2 w-full rounded mb-2">
-
     <div class="flex justify-end space-x-2 mt-4">
       <button type="button" id="closeSettingsBtn" class="px-4 py-2 rounded bg-gray-400 text-white">Cancelar</button>
       <button type="button" id="saveSettingsBtn" class="px-4 py-2 rounded bg-blue-600 text-white">Salvar</button>
@@ -122,8 +117,6 @@ const modalSettings = document.getElementById("modalSettings");
 // ===== Carregar Configurações =====
 function loadDBSettings(){
   const dbSettings = JSON.parse(localStorage.getItem("dbSettings")||"{}");
-  document.getElementById("supabaseUrl").value = dbSettings.url||"";
-  document.getElementById("supabaseKey").value = dbSettings.key||"";
   if(dbSettings.url && dbSettings.key){
     supabase = supabase.createClient(dbSettings.url, dbSettings.key);
   }
@@ -268,30 +261,12 @@ document.getElementById("operatorsList").addEventListener("click",(e)=>{
   if(btn){ removeOperator(parseInt(btn.dataset.id)); }
 });
 
-// ===== Botão Salvar Configurações =====
-document.getElementById("saveSettingsBtn").addEventListener("click", async ()=>{
-  const url = document.getElementById("supabaseUrl").value.trim();
-  const key = document.getElementById("supabaseKey").value.trim();
-  if(!url || !key){ alert("Preencha URL e Key do Supabase!"); return; }
-
-  localStorage.setItem("dbSettings", JSON.stringify({url,key}));
-  supabase = supabase.createClient(url,key);
-
-  try{
-    const { data, error } = await supabase.from('operators').select('*').limit(1);
-    if(error) throw error;
-
-    await fetchOperators();
-    await fetchTickets();
-
-    modalSettings.classList.add("hidden");
-    modalSettings.classList.remove("flex");
-
-    alert("Configurações salvas e conexão com Supabase inicializada!");
-  }catch(err){
-    console.error(err);
-    alert("Erro ao conectar com Supabase. Verifique URL e Key!");
-  }
+// Botão Salvar (apenas salva operadores no localStorage)
+document.getElementById("saveSettingsBtn").addEventListener("click", ()=>{
+  localStorage.setItem("operators", JSON.stringify(operators));
+  modalSettings.classList.add("hidden");
+  modalSettings.classList.remove("flex");
+  alert("Configurações salvas!");
 });
 
 // ===== Modais Chamados =====
