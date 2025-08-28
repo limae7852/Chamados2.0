@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sistema de Chamados</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script type="text/javascript" src="https://cdn.emailjs.com/dist/email.min.js"></script>
+<script src="https://cdn.emailjs.com/dist/email.min.js"></script>
 <style>
   @keyframes blinkHighlight {
     0% { background-color: #fce7f3; }
@@ -119,18 +119,19 @@
   </div>
 </div>
 
-<script type="text/javascript">
-  // ======== CONFIGURAÇÕES ========
+<script>
+window.onload = function() {
+  // ===== CONFIGURAÇÕES =====
   let settings = JSON.parse(localStorage.getItem("settings")) || {
-    notifyEmail:"",
-    emailjsKey:"SUA_PUBLIC_KEY",
-    emailjsService:"SEU_SERVICE_ID",
-    emailjsTemplate:"SEU_TEMPLATE_ID",
-    operators:[]
+    notifyEmail: "",
+    emailjsKey: "SUA_PUBLIC_KEY",
+    emailjsService: "SEU_SERVICE_ID",
+    emailjsTemplate: "SEU_TEMPLATE_ID",
+    operators: []
   };
   emailjs.init(settings.emailjsKey);
 
-  function renderOperators(){
+  function renderOperators() {
     const list = document.getElementById("operatorsList");
     list.innerHTML = "";
     settings.operators.forEach((op,index)=>{
@@ -141,99 +142,101 @@
     });
     populateTechSelect();
   }
+
   function addOperator(){
     const name = document.getElementById("newOperator").value.trim();
-    if(name){ settings.operators.push(name); document.getElementById("newOperator").value=""; renderOperators();}
+    if(name){ settings.operators.push(name); document.getElementById("newOperator").value=""; renderOperators(); }
   }
-  function removeOperator(index){ settings.operators.splice(index,1); renderOperators();}
+
+  function removeOperator(index){ settings.operators.splice(index,1); renderOperators(); }
+
   function populateTechSelect(){
     const techSelect = document.getElementById("tech");
     techSelect.innerHTML = `<option value="">Selecione o Técnico</option>`;
     settings.operators.forEach(op=>{
-      const opt = document.createElement("option");
-      opt.value = op; opt.textContent=op; techSelect.appendChild(opt);
+      const opt = document.createElement("option"); opt.value=op; opt.textContent=op;
+      techSelect.appendChild(opt);
     });
   }
 
   const settingsModal = document.getElementById("settingsModal");
   const openSettingsBtn = document.getElementById("openSettingsBtn");
   openSettingsBtn.addEventListener("click", ()=>{
-    document.getElementById("notifyEmail").value=settings.notifyEmail;
-    document.getElementById("emailjsKey").value=settings.emailjsKey;
-    document.getElementById("emailjsService").value=settings.emailjsService;
-    document.getElementById("emailjsTemplate").value=settings.emailjsTemplate;
+    document.getElementById("notifyEmail").value = settings.notifyEmail;
+    document.getElementById("emailjsKey").value = settings.emailjsKey;
+    document.getElementById("emailjsService").value = settings.emailjsService;
+    document.getElementById("emailjsTemplate").value = settings.emailjsTemplate;
     renderOperators();
     settingsModal.classList.remove("hidden"); settingsModal.classList.add("flex");
   });
-  function closeSettingsModal(){settingsModal.classList.add("hidden"); settingsModal.classList.remove("flex");}
+
+  function closeSettingsModal(){ settingsModal.classList.add("hidden"); settingsModal.classList.remove("flex"); }
+
   document.getElementById("settingsForm").addEventListener("submit", e=>{
     e.preventDefault();
     settings.notifyEmail=document.getElementById("notifyEmail").value;
     settings.emailjsKey=document.getElementById("emailjsKey").value;
     settings.emailjsService=document.getElementById("emailjsService").value;
     settings.emailjsTemplate=document.getElementById("emailjsTemplate").value;
-    localStorage.setItem("settings",JSON.stringify(settings));
+    localStorage.setItem("settings", JSON.stringify(settings));
     emailjs.init(settings.emailjsKey);
     populateTechSelect();
     closeSettingsModal();
     alert("Configurações salvas com sucesso!");
   });
 
-  // ======== TICKETS ========
-  let tickets=[];
-  let closeTicketId=null;
+  // ===== TICKETS =====
+  let tickets = [];
+  let closeTicketId = null;
   const list = document.getElementById("ticketsList");
   const form = document.getElementById("ticketForm");
 
   async function loadTickets(){
     try{
-      const res=await fetch('/api/tickets'); tickets=await res.json();
+      const res = await fetch('/api/tickets'); tickets = await res.json();
       renderTickets(); populateTechSelect();
-    }catch(e){console.error("Erro ao carregar tickets",e);}
+    }catch(e){ console.error("Erro ao carregar tickets", e); }
   }
 
   form.addEventListener("submit", async e=>{
     e.preventDefault();
     const ticket={
-      subject:document.getElementById("subject").value,
-      client:document.getElementById("client").value,
-      tech:document.getElementById("tech").value,
-      priority:document.getElementById("priority").value,
-      description:document.getElementById("description").value,
-      status:"open",
-      date:new Date().toISOString()
+      subject: document.getElementById("subject").value,
+      client: document.getElementById("client").value,
+      tech: document.getElementById("tech").value,
+      priority: document.getElementById("priority").value,
+      description: document.getElementById("description").value,
+      status: "open",
+      date: new Date().toISOString()
     };
     await fetch('/api/tickets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(ticket)});
-    emailjs.send(settings.emailjsService,settings.emailjsTemplate,{...ticket,notify_email:settings.notifyEmail});
+    emailjs.send(settings.emailjsService, settings.emailjsTemplate, {...ticket, notify_email:settings.notifyEmail});
     form.reset(); await loadTickets();
   });
 
   function renderTickets(){
     list.innerHTML=""; tickets.forEach(ticket=>{
-      const tr=document.createElement("tr"); tr.classList.add(`priority-${ticket.priority}`);
+      const tr = document.createElement("tr"); tr.classList.add(`priority-${ticket.priority}`);
       tr.innerHTML=`
-      <td class="border px-4 py-2">${ticket.id}</td>
-      <td class="border px-4 py-2">${ticket.subject}</td>
-      <td class="border px-4 py-2">${ticket.client}</td>
-      <td class="border px-4 py-2">${ticket.tech}</td>
-      <td class="border px-4 py-2 capitalize">${ticket.priority}</td>
-      <td class="border px-4 py-2 capitalize">${ticket.status}</td>
-      <td class="border px-4 py-2 space-x-2">
-        <button onclick="viewDetails(${ticket.id})" class="text-blue-600 hover:underline">Detalhes</button>
-        ${ticket.status!=="resolved"? `<button onclick="openCloseModal(${ticket.id})" class="text-green-600 hover:underline">Encerrar</button>`: "✅ Encerrado"}
-      </td>`;
+        <td class="border px-4 py-2">${ticket.id}</td>
+        <td class="border px-4 py-2">${ticket.subject}</td>
+        <td class="border px-4 py-2">${ticket.client}</td>
+        <td class="border px-4 py-2">${ticket.tech}</td>
+        <td class="border px-4 py-2 capitalize">${ticket.priority}</td>
+        <td class="border px-4 py-2 capitalize">${ticket.status}</td>
+        <td class="border px-4 py-2 space-x-2">
+          <button onclick="viewDetails(${ticket.id})" class="text-blue-600 hover:underline">Detalhes</button>
+          ${ticket.status!=="resolved"? `<button onclick="openCloseModal(${ticket.id})" class="text-green-600 hover:underline">Encerrar</button>`:"✅ Encerrado"}
+        </td>`;
       list.appendChild(tr);
       if(ticket.priority==="critical") tr.classList.add("blink");
     });
   }
 
-  function openCloseModal(id){
-    closeTicketId=id;
-    document.getElementById("closeMessage").textContent=`Deseja realmente encerrar o chamado #${id}?`;
-    document.getElementById("closeModal").classList.remove("hidden"); document.getElementById("closeModal").classList.add("flex");
-  }
-  function closeCloseModal(){document.getElementById("closeModal").classList.add("hidden"); document.getElementById("closeModal").classList.remove("flex");}
-  async function confirmCloseTicket(){
+  // Modais Encerramento e Detalhes
+  window.openCloseModal = function(id){ closeTicketId=id; document.getElementById("closeMessage").textContent=`Deseja realmente encerrar o chamado #${id}?`; document.getElementById("closeModal").classList.remove("hidden"); document.getElementById("closeModal").classList.add("flex"); }
+  window.closeCloseModal = function(){ document.getElementById("closeModal").classList.add("hidden"); document.getElementById("closeModal").classList.remove("flex"); }
+  window.confirmCloseTicket = async function(){
     if(closeTicketId!==null){
       const t=tickets.find(ticket=>ticket.id===closeTicketId);
       await fetch('/api/tickets',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:closeTicketId,status:'resolved'})});
@@ -241,8 +244,7 @@
       closeCloseModal(); await loadTickets(); alert(`Chamado #${t.id} encerrado com sucesso!`);
     }
   }
-
-  function viewDetails(id){
+  window.viewDetails = function(id){
     const t=tickets.find(ticket=>ticket.id===id);
     if(t){
       document.getElementById("detailsContent").innerHTML=`
@@ -257,9 +259,10 @@
       document.getElementById("detailsModal").classList.remove("hidden"); document.getElementById("detailsModal").classList.add("flex");
     }
   }
-  function closeDetailsModal(){document.getElementById("detailsModal").classList.add("hidden"); document.getElementById("detailsModal").classList.remove("flex");}
+  window.closeDetailsModal = function(){ document.getElementById("detailsModal").classList.add("hidden"); document.getElementById("detailsModal").classList.remove("flex"); }
 
   loadTickets();
+};
 </script>
 
 </body>
