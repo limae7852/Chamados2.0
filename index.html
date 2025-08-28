@@ -25,7 +25,7 @@
   <!-- Cabeçalho -->
   <div class="flex justify-between items-center mb-6">
     <h1 class="text-2xl font-bold">📌 Sistema de Chamados</h1>
-    <button onclick="openSettingsModal()" class="px-4 py-2 bg-gray-700 text-white rounded">⚙️ Configurações</button>
+    <button id="openSettingsBtn" class="px-4 py-2 bg-gray-700 text-white rounded">⚙️ Configurações</button>
   </div>
 
   <!-- Formulário -->
@@ -70,7 +70,7 @@
 </div>
 
 <!-- Modal de Configurações -->
-<div id="settingsModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50">
+<div id="settingsModal" class="fixed inset-0 hidden z-50 items-center justify-center bg-black bg-opacity-50">
   <div class="bg-white rounded-lg shadow-lg w-[28rem] p-6 max-h-[90vh] overflow-y-auto">
     <h3 class="text-lg font-bold text-gray-800 mb-4">⚙️ Configurações do Sistema</h3>
     <form id="settingsForm" class="space-y-3">
@@ -171,20 +171,20 @@ function populateTechSelect(){
 }
 
 // Modal Configurações
-function openSettingsModal(){
+const settingsModal = document.getElementById("settingsModal");
+const openSettingsBtn = document.getElementById("openSettingsBtn");
+openSettingsBtn.addEventListener("click", () => {
   document.getElementById("notifyEmail").value = settings.notifyEmail;
   document.getElementById("emailjsKey").value = settings.emailjsKey;
   document.getElementById("emailjsService").value = settings.emailjsService;
   document.getElementById("emailjsTemplate").value = settings.emailjsTemplate;
   renderOperators();
-  const modal = document.getElementById("settingsModal");
-  modal.classList.remove("hidden");
-  modal.classList.add("flex");
-}
+  settingsModal.classList.remove("hidden");
+  settingsModal.classList.add("flex");
+});
 function closeSettingsModal(){
-  const modal = document.getElementById("settingsModal");
-  modal.classList.add("hidden");
-  modal.classList.remove("flex");
+  settingsModal.classList.add("hidden");
+  settingsModal.classList.remove("flex");
 }
 document.getElementById("settingsForm").addEventListener("submit", function(e){
   e.preventDefault();
