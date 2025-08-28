@@ -25,7 +25,7 @@
   <div class="flex justify-between items-center mb-6">
     <h1 class="text-2xl font-bold">📌 Sistema de Chamados</h1>
     <!-- Botão configurações -->
-    <button id="btnSettings" type="button" onclick="openSettings()" class="px-4 py-2 bg-gray-700 text-white rounded">⚙️ Configurações</button>
+    <button id="btnSettings" type="button" class="px-4 py-2 bg-gray-700 text-white rounded">⚙️ Configurações</button>
   </div>
 
   <!-- Formulário de Chamados -->
@@ -139,12 +139,12 @@ document.addEventListener("DOMContentLoaded", function(){
   };
   Email.init(settings.emailjsKey);
 
+  const btnSettings = document.getElementById("btnSettings");
   const modalSettings = document.getElementById("modalSettings");
   const closeSettingsBtn = document.getElementById("closeSettingsBtn");
   const addOperatorBtn = document.getElementById("addOperatorBtn");
   const operatorsList = document.getElementById("operatorsList");
 
-  // ===== Abrir/Fechar modal de configurações =====
   function openSettings(){
     document.getElementById("notifyEmail").value = settings.notifyEmail || "";
     document.getElementById("emailjsKey").value = settings.emailjsKey || "";
@@ -154,7 +154,8 @@ document.addEventListener("DOMContentLoaded", function(){
     modalSettings.classList.remove("hidden");
     modalSettings.classList.add("flex");
   }
-  window.openSettings = openSettings;
+
+  btnSettings.addEventListener("click", openSettings);
   function closeSettings(){ modalSettings.classList.add("hidden"); modalSettings.classList.remove("flex"); }
   closeSettingsBtn.addEventListener("click", closeSettings);
   modalSettings.addEventListener("click", (e)=>{ if(e.target===modalSettings) closeSettings(); });
@@ -264,7 +265,6 @@ document.addEventListener("DOMContentLoaded", function(){
     });
   }
 
-  // ===== Modais Detalhes & Encerramento =====
   window.viewDetails=function(id){
     const t=tickets.find(tt=>tt.id===id);
     if(t){
