@@ -277,12 +277,21 @@ document.getElementById("saveSettingsBtn").addEventListener("click", async ()=>{
   localStorage.setItem("dbSettings", JSON.stringify({url,key}));
   supabase = supabase.createClient(url,key);
 
-  await fetchOperators();
-  await fetchTickets();
+  try{
+    const { data, error } = await supabase.from('operators').select('*').limit(1);
+    if(error) throw error;
 
-  modalSettings.classList.add("hidden");
-  modalSettings.classList.remove("flex");
-  alert("Configurações salvas e conexão com Supabase inicializada!");
+    await fetchOperators();
+    await fetchTickets();
+
+    modalSettings.classList.add("hidden");
+    modalSettings.classList.remove("flex");
+
+    alert("Configurações salvas e conexão com Supabase inicializada!");
+  }catch(err){
+    console.error(err);
+    alert("Erro ao conectar com Supabase. Verifique URL e Key!");
+  }
 });
 
 // ===== Modais Chamados =====
