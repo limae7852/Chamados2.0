@@ -5,64 +5,71 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sistema de Chamados</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-gray-100 min-h-screen flex flex-col">
 
-  <!-- Navbar -->
-  <div class="bg-blue-600 text-white p-4 flex justify-between items-center">
+  <!-- Header -->
+  <header class="bg-blue-700 text-white p-4 flex justify-between items-center">
     <h1 class="text-xl font-bold">📌 Sistema de Chamados</h1>
-    <button onclick="openConfig()" class="bg-white text-blue-600 px-4 py-2 rounded">⚙️ Configurações</button>
-  </div>
+    <button onclick="openConfig()" class="bg-gray-800 px-3 py-1 rounded">⚙️ Configurações</button>
+  </header>
 
   <!-- Conteúdo -->
-  <div class="p-6">
-    <button onclick="openModal()" class="mb-4 bg-green-600 text-white px-4 py-2 rounded">+ Novo Chamado</button>
+  <main class="p-6 flex-1">
+    <!-- Formulário -->
+    <div class="bg-white p-6 rounded shadow mb-6">
+      <h2 class="text-lg font-bold mb-4">Abrir Chamado</h2>
+      <form id="ticketForm" class="grid gap-3">
+        <input type="text" id="title" placeholder="Título" class="border p-2 rounded" required>
+        <textarea id="description" placeholder="Descrição do problema" class="border p-2 rounded" required></textarea>
+        
+        <select id="priority" class="border p-2 rounded" required>
+          <option value="">Selecione prioridade</option>
+          <option value="Baixa">Baixa</option>
+          <option value="Média">Média</option>
+          <option value="Alta">Alta</option>
+          <option value="Crítica">Crítica</option>
+        </select>
 
-    <!-- Tabela de chamados -->
-    <table class="w-full border bg-white shadow-md rounded-lg overflow-hidden">
-      <thead class="bg-gray-200">
-        <tr>
-          <th class="p-2 border">ID</th>
-          <th class="p-2 border">Título</th>
-          <th class="p-2 border">Descrição</th>
-          <th class="p-2 border">Operador</th>
-          <th class="p-2 border">Status</th>
-          <th class="p-2 border">Ações</th>
-        </tr>
-      </thead>
-      <tbody id="ticketTable"></tbody>
-    </table>
-  </div>
+        <select id="tech" class="border p-2 rounded" required>
+          <option value="">Selecione operador</option>
+        </select>
 
-  <!-- Modal Novo Chamado -->
-  <div id="ticketModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center">
-    <div class="bg-white p-6 rounded-lg w-96 shadow-xl">
-      <h2 class="text-xl font-bold mb-4">Novo Chamado</h2>
-      <input id="ticketTitle" type="text" placeholder="Título" class="w-full border p-2 mb-2 rounded">
-      <textarea id="ticketDesc" placeholder="Descrição" class="w-full border p-2 mb-2 rounded"></textarea>
-      <select id="ticketOperator" class="w-full border p-2 mb-4 rounded"></select>
-      <div class="flex justify-end gap-2">
-        <button onclick="closeModal()" class="px-4 py-2 bg-gray-300 rounded">Cancelar</button>
-        <button onclick="createTicket()" class="px-4 py-2 bg-green-600 text-white rounded">Salvar</button>
-      </div>
+        <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Abrir</button>
+      </form>
     </div>
-  </div>
+
+    <!-- Lista de chamados -->
+    <div class="bg-white p-6 rounded shadow">
+      <h2 class="text-lg font-bold mb-4">Chamados Abertos</h2>
+      <table class="w-full border-collapse">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="p-2 border">Título</th>
+            <th class="p-2 border">Descrição</th>
+            <th class="p-2 border">Prioridade</th>
+            <th class="p-2 border">Operador</th>
+            <th class="p-2 border">Status</th>
+            <th class="p-2 border">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="ticketsTable"></tbody>
+      </table>
+    </div>
+  </main>
 
   <!-- Modal Configurações -->
   <div id="configModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center">
     <div class="bg-white p-6 rounded-lg w-96 shadow-xl">
-      <h2 class="text-xl font-bold mb-4">Configurações</h2>
+      <h2 class="text-xl font-bold mb-4">⚙️ Configurações</h2>
 
-      <!-- Config EmailJS -->
+      <!-- Config Email -->
       <h3 class="text-lg font-semibold">EmailJS</h3>
       <input id="emailPublicKey" type="text" placeholder="Public Key" class="w-full border p-2 mb-2 rounded">
       <input id="emailServiceId" type="text" placeholder="Service ID" class="w-full border p-2 mb-2 rounded">
-      <input id="emailTemplateId" type="text" placeholder="Template ID" class="w-full border p-2 mb-2 rounded">
-
-      <!-- Email de destino -->
-      <input id="destEmail" type="email" placeholder="E-mail para notificações" class="w-full border p-2 mb-4 rounded">
+      <input id="emailTemplateId" type="text" placeholder="Template ID" class="w-full border p-2 mb-4 rounded">
 
       <!-- Config Operadores -->
       <h3 class="text-lg font-semibold">Operadores</h3>
@@ -80,111 +87,151 @@
     </div>
   </div>
 
-  <script>
-    // ===== Supabase =====
-    const SUPABASE_URL = "https://seu-projeto.supabase.co"; // 🔧 altere aqui
-    const SUPABASE_KEY = "chave-anon"; // 🔧 altere aqui
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+<script>
+// ==================== Supabase =====================
+const SUPABASE_URL = "https://YOUR_SUPABASE_URL.supabase.co";
+const SUPABASE_KEY = "YOUR_SUPABASE_ANON_KEY";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // ===== Funções de Modal =====
-    function openModal(){ document.getElementById("ticketModal").classList.remove("hidden"); }
-    function closeModal(){ document.getElementById("ticketModal").classList.add("hidden"); }
-    function openConfig(){ loadConfig(); document.getElementById("configModal").classList.remove("hidden"); }
-    function closeConfig(){ document.getElementById("configModal").classList.add("hidden"); }
+// ==================== Configurações =====================
+function openConfig() {
+  loadConfig();
+  document.getElementById("configModal").classList.remove("hidden");
+  document.getElementById("configModal").classList.add("flex");
+}
 
-    // ===== Configurações =====
-    function saveConfig() {
-      localStorage.setItem("emailPublicKey", document.getElementById("emailPublicKey").value);
-      localStorage.setItem("emailServiceId", document.getElementById("emailServiceId").value);
-      localStorage.setItem("emailTemplateId", document.getElementById("emailTemplateId").value);
-      localStorage.setItem("destEmail", document.getElementById("destEmail").value);
+function closeConfig() {
+  document.getElementById("configModal").classList.add("hidden");
+  document.getElementById("configModal").classList.remove("flex");
+}
 
-      localStorage.setItem("operators", JSON.stringify(operators));
-      closeConfig();
-      renderOperators();
-      renderOperatorSelect();
-    }
+function saveConfig() {
+  localStorage.setItem("emailPublicKey", document.getElementById("emailPublicKey").value);
+  localStorage.setItem("emailServiceId", document.getElementById("emailServiceId").value);
+  localStorage.setItem("emailTemplateId", document.getElementById("emailTemplateId").value);
+  closeConfig();
+}
 
-    function loadConfig() {
-      document.getElementById("emailPublicKey").value = localStorage.getItem("emailPublicKey") || "";
-      document.getElementById("emailServiceId").value = localStorage.getItem("emailServiceId") || "";
-      document.getElementById("emailTemplateId").value = localStorage.getItem("emailTemplateId") || "";
-      document.getElementById("destEmail").value = localStorage.getItem("destEmail") || "";
-      operators = JSON.parse(localStorage.getItem("operators")) || [];
-      renderOperators();
-      renderOperatorSelect();
-    }
+function loadConfig() {
+  document.getElementById("emailPublicKey").value = localStorage.getItem("emailPublicKey") || "";
+  document.getElementById("emailServiceId").value = localStorage.getItem("emailServiceId") || "";
+  document.getElementById("emailTemplateId").value = localStorage.getItem("emailTemplateId") || "";
+  renderOperators();
+}
 
-    let operators = [];
+// ==================== Operadores =====================
+function addOperator() {
+  const name = document.getElementById("newOperator").value.trim();
+  if (!name) return;
+  let operators = JSON.parse(localStorage.getItem("operators") || "[]");
+  operators.push(name);
+  localStorage.setItem("operators", JSON.stringify(operators));
+  document.getElementById("newOperator").value = "";
+  renderOperators();
+  loadOperatorsSelect();
+}
 
-    function addOperator() {
-      const op = document.getElementById("newOperator").value;
-      if(op){ operators.push(op); document.getElementById("newOperator").value=""; renderOperators(); }
-    }
+function renderOperators() {
+  const operators = JSON.parse(localStorage.getItem("operators") || "[]");
+  const list = document.getElementById("operatorList");
+  list.innerHTML = "";
+  operators.forEach((op, i) => {
+    list.innerHTML += `
+      <div class="flex justify-between items-center bg-gray-100 p-2 rounded mb-1">
+        <span>${op}</span>
+        <button onclick="removeOperator(${i})" class="text-red-500">✖</button>
+      </div>`;
+  });
+}
 
-    function renderOperators() {
-      const list = document.getElementById("operatorList");
-      list.innerHTML = operators.map(o => `<div class='p-1 border mb-1 rounded'>${o}</div>`).join("");
-    }
+function removeOperator(index) {
+  let operators = JSON.parse(localStorage.getItem("operators") || "[]");
+  operators.splice(index, 1);
+  localStorage.setItem("operators", JSON.stringify(operators));
+  renderOperators();
+  loadOperatorsSelect();
+}
 
-    function renderOperatorSelect() {
-      const select = document.getElementById("ticketOperator");
-      select.innerHTML = operators.map(o => `<option>${o}</option>`).join("");
-    }
+function loadOperatorsSelect() {
+  const select = document.getElementById("tech");
+  select.innerHTML = `<option value="">Selecione operador</option>`;
+  const operators = JSON.parse(localStorage.getItem("operators") || "[]");
+  operators.forEach(op => {
+    const option = document.createElement("option");
+    option.value = op;
+    option.textContent = op;
+    select.appendChild(option);
+  });
+}
 
-    // ===== Tickets =====
-    async function loadTickets(){
-      const { data } = await supabaseClient.from("tickets").select("*").order("id", { ascending: false });
-      const tbody = document.getElementById("ticketTable");
-      tbody.innerHTML = data.map(t => `
-        <tr>
-          <td class="border p-2">${t.id}</td>
-          <td class="border p-2">${t.title}</td>
-          <td class="border p-2">${t.description}</td>
-          <td class="border p-2">${t.operator}</td>
-          <td class="border p-2">${t.status}</td>
-          <td class="border p-2">
-            ${t.status==="Aberto" ? `<button onclick="closeTicket(${t.id})" class="bg-red-600 text-white px-2 py-1 rounded">Encerrar</button>` : ""}
-          </td>
-        </tr>
-      `).join("");
-    }
+// ==================== Tickets =====================
+async function loadTickets() {
+  const { data, error } = await supabaseClient.from("tickets").select("*").order("id", { ascending: false });
+  if (error) return console.error(error);
+  const table = document.getElementById("ticketsTable");
+  table.innerHTML = "";
+  data.forEach(t => {
+    table.innerHTML += `
+      <tr class="border">
+        <td class="p-2 border">${t.title}</td>
+        <td class="p-2 border">${t.description}</td>
+        <td class="p-2 border">${t.priority}</td>
+        <td class="p-2 border">${t.tech}</td>
+        <td class="p-2 border">${t.status}</td>
+        <td class="p-2 border">
+          ${t.status === "Aberto" ? `<button onclick="closeTicket(${t.id})" class="bg-red-600 text-white px-2 py-1 rounded">Encerrar</button>` : ""}
+        </td>
+      </tr>
+    `;
+  });
+}
 
-    async function createTicket(){
-      const title = document.getElementById("ticketTitle").value;
-      const desc = document.getElementById("ticketDesc").value;
-      const operator = document.getElementById("ticketOperator").value;
+document.getElementById("ticketForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const title = document.getElementById("title").value;
+  const description = document.getElementById("description").value;
+  const priority = document.getElementById("priority").value;
+  const tech = document.getElementById("tech").value;
 
-      await supabaseClient.from("tickets").insert([{ title, description: desc, operator, status: "Aberto" }]);
-      await sendEmail("Novo Chamado Aberto", `Título: ${title}\nDescrição: ${desc}\nOperador: ${operator}`);
+  const { error } = await supabaseClient.from("tickets").insert([{ title, description, priority, tech, status: "Aberto" }]);
+  if (error) return alert("Erro ao abrir chamado");
 
-      closeModal();
-      loadTickets();
-    }
+  sendEmail("Novo chamado aberto", { title, description, priority, tech });
+  e.target.reset();
+  loadTickets();
+});
 
-    async function closeTicket(id){
-      await supabaseClient.from("tickets").update({ status: "Encerrado" }).eq("id", id);
-      await sendEmail("Chamado Encerrado", `Chamado ID ${id} foi encerrado.`);
-      loadTickets();
-    }
+async function closeTicket(id) {
+  const { error } = await supabaseClient.from("tickets").update({ status: "Encerrado" }).eq("id", id);
+  if (error) return alert("Erro ao encerrar chamado");
 
-    // ===== Envio de Email =====
-    function sendEmail(subject, message) {
-      emailjs.init(localStorage.getItem("emailPublicKey"));
-      return emailjs.send(
-        localStorage.getItem("emailServiceId"),
-        localStorage.getItem("emailTemplateId"),
-        {
-          to_email: localStorage.getItem("destEmail"),
-          subject: subject,
-          message: message
-        }
-      );
-    }
+  sendEmail("Chamado encerrado", { id });
+  loadTickets();
+}
 
-    // Inicializar
-    loadConfig();
-    loadTickets();
-  </script>
+// ==================== Email =====================
+function sendEmail(subject, data) {
+  const publicKey = localStorage.getItem("emailPublicKey");
+  const serviceId = localStorage.getItem("emailServiceId");
+  const templateId = localStorage.getItem("emailTemplateId");
+  if (!publicKey || !serviceId || !templateId) {
+    console.warn("Configurações de EmailJS não definidas.");
+    return;
+  }
+  emailjs.init(publicKey);
+  emailjs.send(serviceId, templateId, {
+    subject,
+    ...data
+  }).then(() => {
+    console.log("Email enviado");
+  }).catch(err => {
+    console.error("Erro email:", err);
+  });
+}
+
+// ==================== Inicialização =====================
+loadOperatorsSelect();
+loadTickets();
+</script>
 </body>
 </html>
