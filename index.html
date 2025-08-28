@@ -117,6 +117,7 @@ let supabase;
 let tickets = [];
 let operators = [];
 let closeTicketId = null;
+const modalSettings = document.getElementById("modalSettings");
 
 // ===== Carregar Configurações =====
 function loadDBSettings(){
@@ -138,15 +139,15 @@ async function fetchOperators(){
 }
 
 function renderOperators(){
-  const operatorsList = document.getElementById("operatorsList");
+  const operatorsListEl = document.getElementById("operatorsList");
   const techSelect = document.getElementById("tech");
-  operatorsList.innerHTML="";
+  operatorsListEl.innerHTML="";
   techSelect.innerHTML='<option value="">Selecione o Técnico</option>';
   operators.forEach(op=>{
     const li = document.createElement("li");
     li.className="flex justify-between items-center";
     li.innerHTML=`<span>${op.name}</span><button type="button" data-id="${op.id}" class="text-red-600 hover:underline">Remover</button>`;
-    operatorsList.appendChild(li);
+    operatorsListEl.appendChild(li);
     const opt = document.createElement("option");
     opt.value = op.name; opt.textContent = op.name;
     techSelect.appendChild(opt);
@@ -238,35 +239,37 @@ document.getElementById("ticketForm").addEventListener("submit", async (e)=>{
 });
 
 // Configurações
-const btnSettings = document.getElementById("btnSettings");
-const modalSettings = document.getElementById("modalSettings");
-const closeSettingsBtn = document.getElementById("closeSettingsBtn");
-const addOperatorBtn = document.getElementById("addOperatorBtn");
-const operatorsListEl = document.getElementById("operatorsList");
-const saveSettingsBtn = document.getElementById("saveSettingsBtn");
-
-btnSettings.addEventListener("click", ()=>{
+document.getElementById("btnSettings").addEventListener("click", ()=>{
   renderOperators();
   modalSettings.classList.remove("hidden");
   modalSettings.classList.add("flex");
 });
 
-closeSettingsBtn.addEventListener("click", ()=>{ modalSettings.classList.add("hidden"); modalSettings.classList.remove("flex"); });
-modalSettings.addEventListener("click",(e)=>{ if(e.target===modalSettings){ modalSettings.classList.add("hidden"); modalSettings.classList.remove("flex");}});
+document.getElementById("closeSettingsBtn").addEventListener("click", ()=>{
+  modalSettings.classList.add("hidden");
+  modalSettings.classList.remove("flex");
+});
 
-addOperatorBtn.addEventListener("click",()=>{
+modalSettings.addEventListener("click",(e)=>{
+  if(e.target===modalSettings){
+    modalSettings.classList.add("hidden");
+    modalSettings.classList.remove("flex");
+  }
+});
+
+document.getElementById("addOperatorBtn").addEventListener("click", ()=>{
   const input = document.getElementById("newOperator");
   const name = input.value.trim();
   if(name){ addOperator(name); input.value=""; }
 });
 
-operatorsListEl.addEventListener("click",(e)=>{
+document.getElementById("operatorsList").addEventListener("click",(e)=>{
   const btn = e.target.closest("button[data-id]");
   if(btn){ removeOperator(parseInt(btn.dataset.id)); }
 });
 
-// Salvar Configurações do Supabase
-saveSettingsBtn.addEventListener("click", async ()=>{
+// ===== Botão Salvar Configurações =====
+document.getElementById("saveSettingsBtn").addEventListener("click", async ()=>{
   const url = document.getElementById("supabaseUrl").value.trim();
   const key = document.getElementById("supabaseKey").value.trim();
   if(!url || !key){ alert("Preencha URL e Key do Supabase!"); return; }
@@ -279,9 +282,10 @@ saveSettingsBtn.addEventListener("click", async ()=>{
 
   modalSettings.classList.add("hidden");
   modalSettings.classList.remove("flex");
+  alert("Configurações salvas e conexão com Supabase inicializada!");
 });
 
-// ===== Modais =====
+// ===== Modais Chamados =====
 window.viewDetails = function(id){
   const t = tickets.find(tt=>tt.id===id);
   if(t){
@@ -295,8 +299,8 @@ window.viewDetails = function(id){
       <p><strong>Status:</strong> ${t.status}</p>
       <p><strong>Abertura:</strong> ${new Date(t.date).toLocaleString()}</p>
     `;
-    const m = document.getElementById("detailsModal");
-    m.classList.remove("hidden"); m.classList.add("flex");
+    document.getElementById("detailsModal").classList.remove("hidden");
+    document.getElementById("detailsModal").classList.add("flex");
   }
 };
 window.closeDetailsModal = function(){ const m = document.getElementById("detailsModal"); m.classList.add("hidden"); m.classList.remove("flex"); };
