@@ -24,7 +24,8 @@
 <div class="container mx-auto p-6">
   <div class="flex justify-between items-center mb-6">
     <h1 class="text-2xl font-bold">📌 Sistema de Chamados</h1>
-    <button id="btnSettings" type="button" class="px-4 py-2 bg-gray-700 text-white rounded">⚙️ Configurações</button>
+    <!-- ✅ Botão agora chama openSettings() -->
+    <button id="btnSettings" type="button" onclick="openSettings()" class="px-4 py-2 bg-gray-700 text-white rounded">⚙️ Configurações</button>
   </div>
 
   <!-- Formulário de Chamados -->
@@ -68,23 +69,24 @@
   </div>
 </div>
 
-<!-- Modal Configurações -->
+<!-- Modal Configurações (inicia oculto) -->
 <div id="modalSettings" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-50">
-  <div class="bg-white rounded-lg shadow-lg w-[32rem] p-6">
-    <h3 class="text-lg font-bold mb-4">⚙️ Configurações do Sistema</h3>
+  <div class="bg-white rounded-lg shadow-lg w-[28rem] p-6" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <h3 id="settingsTitle" class="text-lg font-bold text-gray-800 mb-4">⚙️ Configurações do Sistema</h3>
     <form id="formSettings" class="space-y-3">
       <input type="email" id="notifyEmail" placeholder="E-mail para notificações" class="border p-2 w-full rounded" required>
       <input type="text" id="emailjsKey" placeholder="EmailJS Public Key" class="border p-2 w-full rounded" required>
       <input type="text" id="emailjsService" placeholder="EmailJS Service ID" class="border p-2 w-full rounded" required>
       <input type="text" id="emailjsTemplate" placeholder="EmailJS Template ID" class="border p-2 w-full rounded" required>
 
-      <hr class="my-4">
-      <h4 class="font-semibold">👷 Cadastro de Técnicos</h4>
-      <div class="flex space-x-2">
-        <input type="text" id="newTech" placeholder="Nome do técnico" class="border p-2 rounded flex-1">
-        <button type="button" id="addTechBtn" class="px-4 py-2 rounded bg-green-600 text-white">Adicionar</button>
+      <hr class="my-3">
+
+      <h4 class="font-semibold mb-2">👷 Operadores/Técnicos</h4>
+      <div class="flex gap-2 mb-2">
+        <input type="text" id="newOperator" placeholder="Nome do operador" class="border p-2 w-full rounded">
+        <button type="button" id="addOperatorBtn" class="px-4 py-2 bg-green-600 text-white rounded">Adicionar</button>
       </div>
-      <ul id="techList" class="list-disc pl-5 mt-2 text-sm text-gray-700"></ul>
+      <ul id="operatorsList" class="list-disc list-inside text-gray-800 space-y-1 max-h-40 overflow-auto"></ul>
 
       <div class="flex justify-end space-x-2 mt-4">
         <button type="button" id="closeSettingsBtn" class="px-4 py-2 rounded bg-gray-400 text-white">Cancelar</button>
@@ -94,77 +96,113 @@
   </div>
 </div>
 
+<!-- Outros modais (Detalhes & Encerramento) ficam iguais ao que você já tem -->
+
 <script>
 document.addEventListener("DOMContentLoaded", function(){
-  const btnSettings = document.getElementById("btnSettings");
+  // ===== Fallback/Proteção EmailJS =====
+  const hasEmailJS = typeof window.emailjs !== "undefined";
+  const Email = {
+    init(key){ if(hasEmailJS){ try{ emailjs.init(key||""); }catch(e){ console.warn("Falha ao inicializar EmailJS:", e);} } },
+    send(service, template, params){
+      if(hasEmailJS){
+        return emailjs.send(service, template, params).catch(err=>console.warn("Erro EmailJS:", err));
+      } else {
+        console.warn("EmailJS não carregado — envio simulado:", {service, template, params});
+        return Promise.resolve(); // não bloqueia fluxo
+      }
+    }
+  };
+
+  // ===== Configurações =====
+  let settings = JSON.parse(localStorage.getItem("settings")) || {
+    notifyEmail:"",
+    emailjsKey:"SUA_PUBLIC_KEY",
+    emailjsService:"SEU_SERVICE_ID",
+    emailjsTemplate:"SEU_TEMPLATE_ID",
+    operators:[]
+  };
+  Email.init(settings.emailjsKey);
+
   const modalSettings = document.getElementById("modalSettings");
   const closeSettingsBtn = document.getElementById("closeSettingsBtn");
+  const addOperatorBtn = document.getElementById("addOperatorBtn");
+  const operatorsList = document.getElementById("operatorsList");
 
-  const addTechBtn = document.getElementById("addTechBtn");
-  const newTechInput = document.getElementById("newTech");
-  const techList = document.getElementById("techList");
-  const techSelect = document.getElementById("tech");
-
-  // --- MODAL ---
+  // ===== Abrir/Fechar modal de configurações =====
   function openSettings(){
+    document.getElementById("notifyEmail").value = settings.notifyEmail || "";
+    document.getElementById("emailjsKey").value = settings.emailjsKey || "";
+    document.getElementById("emailjsService").value = settings.emailjsService || "";
+    document.getElementById("emailjsTemplate").value = settings.emailjsTemplate || "";
+    renderOperators();
     modalSettings.classList.remove("hidden");
     modalSettings.classList.add("flex");
-    renderTechs();
   }
   function closeSettings(){
     modalSettings.classList.add("hidden");
     modalSettings.classList.remove("flex");
   }
-  btnSettings.addEventListener("click", openSettings);
-  closeSettingsBtn.addEventListener("click", closeSettings);
-  modalSettings.addEventListener("click", (e)=>{
-    if(e.target === modalSettings) closeSettings();
-  });
+  // 🔥 expõe a função globalmente para o botão funcionar
+  window.openSettings = openSettings;
 
-  // --- CADASTRO DE TÉCNICOS ---
-  function getTechs(){
-    return JSON.parse(localStorage.getItem("techs") || "[]");
-  }
-  function saveTechs(techs){
-    localStorage.setItem("techs", JSON.stringify(techs));
-    renderTechs();
-    renderTechSelect();
-  }
-  function renderTechs(){
-    const techs = getTechs();
-    techList.innerHTML = "";
-    techs.forEach((t, i)=>{
+  closeSettingsBtn.addEventListener("click", closeSettings);
+  modalSettings.addEventListener("click", (e)=>{ if(e.target === modalSettings) closeSettings(); });
+  document.addEventListener("keydown", (e)=>{ if(e.key === "Escape" && !modalSettings.classList.contains("hidden")) closeSettings(); });
+
+  // ===== Operadores =====
+  function renderOperators(){
+    operatorsList.innerHTML = "";
+    settings.operators.forEach((op, index)=>{
       const li = document.createElement("li");
-      li.textContent = t;
-      techList.appendChild(li);
+      li.className = "flex justify-between items-center";
+      li.innerHTML = `<span>${op}</span>
+        <button type="button" class="text-red-600 hover:underline" data-index="${index}">Remover</button>`;
+      operatorsList.appendChild(li);
     });
+    populateTechSelect();
   }
-  function renderTechSelect(){
-    const techs = getTechs();
-    techSelect.innerHTML = '<option value="">Selecione o Técnico</option>';
-    techs.forEach(t=>{
+  function populateTechSelect(){
+    const techSelect = document.getElementById("tech");
+    techSelect.innerHTML = `<option value="">Selecione o Técnico</option>`;
+    settings.operators.forEach(op=>{
       const opt = document.createElement("option");
-      opt.value = t;
-      opt.textContent = t;
+      opt.value = op; opt.textContent = op;
       techSelect.appendChild(opt);
     });
   }
-  addTechBtn.addEventListener("click", ()=>{
-    const name = newTechInput.value.trim();
+  addOperatorBtn.addEventListener("click", ()=>{
+    const input = document.getElementById("newOperator");
+    const name = (input.value || "").trim();
     if(name){
-      const techs = getTechs();
-      if(!techs.includes(name)){
-        techs.push(name);
-        saveTechs(techs);
-        newTechInput.value = "";
-      } else {
-        alert("Este técnico já está cadastrado!");
-      }
+      settings.operators.push(name);
+      input.value = "";
+      renderOperators();
+    }
+  });
+  operatorsList.addEventListener("click", (e)=>{
+    const btn = e.target.closest("button[data-index]");
+    if(btn){
+      const idx = parseInt(btn.getAttribute("data-index"), 10);
+      settings.operators.splice(idx, 1);
+      renderOperators();
     }
   });
 
-  // inicia com lista de técnicos carregada
-  renderTechSelect();
+  document.getElementById("formSettings").addEventListener("submit", (e)=>{
+    e.preventDefault();
+    settings.notifyEmail = document.getElementById("notifyEmail").value.trim();
+    settings.emailjsKey = document.getElementById("emailjsKey").value.trim();
+    settings.emailjsService = document.getElementById("emailjsService").value.trim();
+    settings.emailjsTemplate = document.getElementById("emailjsTemplate").value.trim();
+    localStorage.setItem("settings", JSON.stringify(settings));
+    Email.init(settings.emailjsKey);
+    populateTechSelect();
+    closeSettings();
+    alert("Configurações salvas com sucesso!");
+  });
+
+  // ... resto do seu JS de tickets permanece igual ...
 });
 </script>
 
