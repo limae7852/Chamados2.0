@@ -212,8 +212,15 @@ document.getElementById("ticketForm").addEventListener("submit", async e => {
   const priority = document.getElementById("priority").value;
   const tech = document.getElementById("tech").value;
 
-  const { error } = await supabaseClient.from("tickets").insert([{ title, description, priority, tech, status: "Aberto" }]);
-  if (error) return alert("Erro ao abrir chamado");
+  const { error } = await supabaseClient.from("tickets").insert([
+    { title, description, priority, tech, status: "Aberto" }
+  ]);
+
+  if (error) {
+    console.error("Supabase error:", error);
+    alert("Erro ao abrir chamado:\n" + error.message);
+    return;
+  }
 
   sendEmail("Novo chamado aberto", { title, description, priority, tech });
   e.target.reset();
@@ -221,8 +228,16 @@ document.getElementById("ticketForm").addEventListener("submit", async e => {
 });
 
 async function closeTicket(id) {
-  const { error } = await supabaseClient.from("tickets").update({ status: "Encerrado" }).eq("id", id);
-  if (error) return alert("Erro ao encerrar chamado");
+  const { error } = await supabaseClient
+    .from("tickets")
+    .update({ status: "Encerrado" })
+    .eq("id", id);
+
+  if (error) {
+    console.error("Supabase error:", error);
+    alert("Erro ao encerrar chamado:\n" + error.message);
+    return;
+  }
 
   sendEmail("Chamado encerrado", { id });
   loadTickets();
