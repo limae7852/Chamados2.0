@@ -118,7 +118,7 @@ let tickets = [];
 let operators = [];
 let closeTicketId = null;
 
-// ===== Funções =====
+// ===== Operadores =====
 async function fetchOperators(){
   const { data, error } = await supabase.from('operators').select('*').order('id');
   if(error){ console.error(error); operators=[]; }
@@ -248,7 +248,7 @@ document.getElementById("operatorsList").addEventListener("click",(e)=>{
   if(btn){ removeOperator(parseInt(btn.dataset.id)); }
 });
 
-// Botão Salvar (só fecha o modal)
+// Botão Salvar (fecha modal)
 document.getElementById("saveSettingsBtn").addEventListener("click", ()=>{
   document.getElementById("modalSettings").classList.add("hidden");
   document.getElementById("modalSettings").classList.remove("flex");
