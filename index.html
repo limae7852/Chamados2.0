@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Sistema de Chamados</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.emailjs.com/dist/email.min.js"></script>
 <style>
   @keyframes blinkHighlight {
     0% { background-color: #fce7f3; }
@@ -70,23 +69,15 @@
 
 <!-- Modal Configurações -->
 <div id="modalSettings" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-50">
-  <div class="bg-white rounded-lg shadow-lg w-[28rem] p-6" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
-    <h3 id="settingsTitle" class="text-lg font-bold text-gray-800 mb-4">⚙️ Configurações do Sistema</h3>
+  <div class="bg-white rounded-lg shadow-lg w-[28rem] p-6">
+    <h3 class="text-lg font-bold text-gray-800 mb-4">⚙️ Configurações do Sistema</h3>
     <form id="formSettings" class="space-y-3">
-      <input type="email" id="notifyEmail" placeholder="E-mail para notificações" class="border p-2 w-full rounded" required>
-      <input type="text" id="emailjsKey" placeholder="EmailJS Public Key" class="border p-2 w-full rounded" required>
-      <input type="text" id="emailjsService" placeholder="EmailJS Service ID" class="border p-2 w-full rounded" required>
-      <input type="text" id="emailjsTemplate" placeholder="EmailJS Template ID" class="border p-2 w-full rounded" required>
-
-      <hr class="my-3">
-
       <h4 class="font-semibold mb-2">👷 Operadores/Técnicos</h4>
       <div class="flex gap-2 mb-2">
         <input type="text" id="newOperator" placeholder="Nome do operador" class="border p-2 w-full rounded">
         <button type="button" id="addOperatorBtn" class="px-4 py-2 bg-green-600 text-white rounded">Adicionar</button>
       </div>
       <ul id="operatorsList" class="list-disc list-inside text-gray-800 space-y-1 max-h-40 overflow-auto"></ul>
-
       <div class="flex justify-end space-x-2 mt-4">
         <button type="button" id="closeSettingsBtn" class="px-4 py-2 rounded bg-gray-400 text-white">Cancelar</button>
         <button type="submit" class="px-4 py-2 rounded bg-blue-600 text-white">Salvar</button>
@@ -95,7 +86,7 @@
   </div>
 </div>
 
-<!-- Modais Detalhes e Encerramento -->
+<!-- Modal Detalhes -->
 <div id="detailsModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-40">
   <div class="bg-white rounded-lg shadow-lg w-[28rem] p-6">
     <h3 class="text-lg font-bold text-blue-600 mb-4">Detalhes do Chamado</h3>
@@ -106,6 +97,7 @@
   </div>
 </div>
 
+<!-- Modal Encerrar -->
 <div id="closeModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-40">
   <div class="bg-white rounded-lg shadow-lg w-96 p-6">
     <h3 class="text-lg font-bold text-red-600 mb-4">Encerrar Chamado</h3>
@@ -119,62 +111,21 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function(){
-  // ===== Proteção EmailJS =====
-  const hasEmailJS = typeof window.emailjs !== "undefined";
-  const Email = {
-    init(key){ if(hasEmailJS){ try{ emailjs.init(key||""); }catch(e){ console.warn("Falha ao inicializar EmailJS:", e);} } },
-    send(service, template, params){ 
-      if(hasEmailJS) return emailjs.send(service, template, params).catch(err=>console.warn("Erro EmailJS:", err));
-      console.warn("EmailJS não carregado — envio simulado:", {service, template, params});
-      return Promise.resolve(); 
-    }
-  };
-
-  // ===== Configurações seguras =====
-  let settings = {};
-  try { settings = JSON.parse(localStorage.getItem("settings")) || {}; } 
-  catch(e){ console.warn("localStorage.settings inválido."); settings={}; }
-  settings.operators = Array.isArray(settings.operators) ? settings.operators : [];
-  settings.notifyEmail = settings.notifyEmail || "";
-  settings.emailjsKey = settings.emailjsKey || "";
-  settings.emailjsService = settings.emailjsService || "";
-  settings.emailjsTemplate = settings.emailjsTemplate || "";
-  Email.init(settings.emailjsKey);
-
-  // ===== Elementos =====
+  // ===== Inicialização Configurações =====
+  let settings = JSON.parse(localStorage.getItem("settings")||"{}");
+  settings.operators = Array.isArray(settings.operators)?settings.operators:[];
   const btnSettings = document.getElementById("btnSettings");
   const modalSettings = document.getElementById("modalSettings");
   const closeSettingsBtn = document.getElementById("closeSettingsBtn");
   const addOperatorBtn = document.getElementById("addOperatorBtn");
   const operatorsList = document.getElementById("operatorsList");
 
-  // ===== Funções do Modal =====
-  function openSettings(){
-    document.getElementById("notifyEmail").value = settings.notifyEmail;
-    document.getElementById("emailjsKey").value = settings.emailjsKey;
-    document.getElementById("emailjsService").value = settings.emailjsService;
-    document.getElementById("emailjsTemplate").value = settings.emailjsTemplate;
-    renderOperators();
-    modalSettings.classList.remove("hidden");
-    modalSettings.classList.add("flex");
-  }
-  function closeSettings(){
-    modalSettings.classList.add("hidden");
-    modalSettings.classList.remove("flex");
-  }
-
-  btnSettings.addEventListener("click", openSettings);
-  closeSettingsBtn.addEventListener("click", closeSettings);
-  modalSettings.addEventListener("click", (e)=>{ if(e.target===modalSettings) closeSettings(); });
-  document.addEventListener("keydown", (e)=>{ if(e.key==="Escape" && !modalSettings.classList.contains("hidden")) closeSettings(); });
-
-  // ===== Operadores/Técnicos =====
   function renderOperators(){
     operatorsList.innerHTML="";
     settings.operators.forEach((op,index)=>{
       const li=document.createElement("li");
       li.className="flex justify-between items-center";
-      li.innerHTML=`<span>${op}</span><button type="button" class="text-red-600 hover:underline" data-index="${index}">Remover</button>`;
+      li.innerHTML=`<span>${op}</span><button type="button" data-index="${index}" class="text-red-600 hover:underline">Remover</button>`;
       operatorsList.appendChild(li);
     });
     populateTechSelect();
@@ -190,34 +141,122 @@ document.addEventListener("DOMContentLoaded", function(){
     });
   }
 
+  btnSettings.addEventListener("click", ()=>{ renderOperators(); modalSettings.classList.remove("hidden"); modalSettings.classList.add("flex"); });
+  closeSettingsBtn.addEventListener("click", ()=>{ modalSettings.classList.add("hidden"); modalSettings.classList.remove("flex"); });
+  modalSettings.addEventListener("click", (e)=>{ if(e.target===modalSettings) modalSettings.classList.add("hidden"); modalSettings.classList.remove("flex"); });
+
   addOperatorBtn.addEventListener("click", ()=>{
-    const input=document.getElementById("newOperator");
-    const name=(input.value||"").trim();
+    const input = document.getElementById("newOperator");
+    const name = input.value.trim();
     if(name){ settings.operators.push(name); input.value=""; renderOperators(); }
   });
 
   operatorsList.addEventListener("click",(e)=>{
     const btn=e.target.closest("button[data-index]");
-    if(btn){ settings.operators.splice(parseInt(btn.getAttribute("data-index"),10),1); renderOperators(); }
+    if(btn){ settings.operators.splice(parseInt(btn.dataset.index),1); renderOperators(); }
   });
 
   document.getElementById("formSettings").addEventListener("submit",(e)=>{
     e.preventDefault();
-    settings.notifyEmail=document.getElementById("notifyEmail").value.trim();
-    settings.emailjsKey=document.getElementById("emailjsKey").value.trim();
-    settings.emailjsService=document.getElementById("emailjsService").value.trim();
-    settings.emailjsTemplate=document.getElementById("emailjsTemplate").value.trim();
     localStorage.setItem("settings",JSON.stringify(settings));
-    Email.init(settings.emailjsKey);
-    populateTechSelect();
-    closeSettings();
-    alert("Configurações salvas com sucesso!");
+    modalSettings.classList.add("hidden"); modalSettings.classList.remove("flex");
   });
 
-  // ===== Inicializa lista de técnicos =====
+  // ===== Tickets =====
+  let tickets = JSON.parse(localStorage.getItem("tickets")||"[]");
+  const ticketsList = document.getElementById("ticketsList");
+  let closeTicketId = null;
+
+  function saveTickets(){ localStorage.setItem("tickets",JSON.stringify(tickets)); }
+  function renderTickets(){
+    ticketsList.innerHTML="";
+    tickets.forEach(ticket=>{
+      const tr=document.createElement("tr");
+      tr.classList.add(`priority-${ticket.priority}`);
+      tr.innerHTML=`
+        <td class="border px-4 py-2">${ticket.id}</td>
+        <td class="border px-4 py-2">${ticket.subject}</td>
+        <td class="border px-4 py-2">${ticket.client}</td>
+        <td class="border px-4 py-2">${ticket.tech}</td>
+        <td class="border px-4 py-2 capitalize">${ticket.priority}</td>
+        <td class="border px-4 py-2 capitalize">${ticket.status}</td>
+        <td class="border px-4 py-2 space-x-2">
+          <button onclick="viewDetails(${ticket.id})" class="text-blue-600 hover:underline">Detalhes</button>
+          ${ticket.status!=="resolved"?`<button onclick="openCloseModal(${ticket.id})" class="text-green-600 hover:underline">Encerrar</button>`:"✅ Encerrado"}
+        </td>`;
+      ticketsList.appendChild(tr);
+      if(ticket.priority==="critical") tr.classList.add("blink");
+    });
+  }
+
+  document.getElementById("ticketForm").addEventListener("submit",(e)=>{
+    e.preventDefault();
+    const id = tickets.length>0?tickets[tickets.length-1].id+1:1;
+    const ticket={
+      id,
+      subject: document.getElementById("subject").value,
+      client: document.getElementById("client").value,
+      tech: document.getElementById("tech").value,
+      priority: document.getElementById("priority").value,
+      description: document.getElementById("description").value,
+      status:"open",
+      date: new Date().toISOString()
+    };
+    tickets.push(ticket);
+    saveTickets();
+    renderTickets();
+    e.target.reset();
+  });
+
+  window.viewDetails = function(id){
+    const t = tickets.find(tt=>tt.id===id);
+    if(t){
+      document.getElementById("detailsContent").innerHTML = `
+        <p><strong>ID:</strong> ${t.id}</p>
+        <p><strong>Assunto:</strong> ${t.subject}</p>
+        <p><strong>Descrição:</strong> ${t.description}</p>
+        <p><strong>Cliente:</strong> ${t.client}</p>
+        <p><strong>Técnico:</strong> ${t.tech}</p>
+        <p><strong>Prioridade:</strong> ${t.priority}</p>
+        <p><strong>Status:</strong> ${t.status}</p>
+        <p><strong>Abertura:</strong> ${new Date(t.date).toLocaleString()}</p>
+      `;
+      const m = document.getElementById("detailsModal");
+      m.classList.remove("hidden"); m.classList.add("flex");
+    }
+  };
+
+  window.closeDetailsModal = function(){
+    const m = document.getElementById("detailsModal");
+    m.classList.add("hidden"); m.classList.remove("flex");
+  };
+
+  window.openCloseModal = function(id){
+    closeTicketId = id;
+    document.getElementById("closeMessage").textContent = `Deseja realmente encerrar o chamado #${id}?`;
+    const m = document.getElementById("closeModal");
+    m.classList.remove("hidden"); m.classList.add("flex");
+  };
+
+  window.closeCloseModal = function(){
+    const m = document.getElementById("closeModal");
+    m.classList.add("hidden"); m.classList.remove("flex");
+  };
+
+  window.confirmCloseTicket = function(){
+    if(closeTicketId!==null){
+      const t = tickets.find(ticket=>ticket.id===closeTicketId);
+      if(t){ t.status = "resolved"; saveTickets(); renderTickets(); }
+      closeCloseModal();
+    }
+  };
+
+  // Inicializa tickets na tela
+  renderTickets();
   populateTechSelect();
 });
 </script>
 
 </body>
 </html>
+
