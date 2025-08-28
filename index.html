@@ -108,23 +108,18 @@
 </div>
 
 <script>
-let supabase;
+// ===== Conexão Supabase =====
+const SUPABASE_URL = "https://rrejbfjddrsznhwlmmjj.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyZWpiZmpkZHJzem5od2xtbWpqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjMyNDg4NywiZXhwIjoyMDcxOTAwODg3fQ.bBR_NR6z-iVQgHK_wPMTeoZetEgONt_7dERnmYc665U";
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ===== Variáveis =====
 let tickets = [];
 let operators = [];
 let closeTicketId = null;
-const modalSettings = document.getElementById("modalSettings");
 
-// ===== Carregar Configurações =====
-function loadDBSettings(){
-  const dbSettings = JSON.parse(localStorage.getItem("dbSettings")||"{}");
-  if(dbSettings.url && dbSettings.key){
-    supabase = supabase.createClient(dbSettings.url, dbSettings.key);
-  }
-}
-
-// ===== Operadores =====
+// ===== Funções =====
 async function fetchOperators(){
-  if(!supabase) return;
   const { data, error } = await supabase.from('operators').select('*').order('id');
   if(error){ console.error(error); operators=[]; }
   else operators = data.map(op=>({ id: op.id, name: op.name }));
@@ -148,14 +143,12 @@ function renderOperators(){
 }
 
 async function addOperator(name){
-  if(!supabase) return;
   const { error } = await supabase.from('operators').insert([{ name }]);
   if(error) console.error(error);
   else fetchOperators();
 }
 
 async function removeOperator(id){
-  if(!supabase) return;
   const { error } = await supabase.from('operators').delete().eq('id', id);
   if(error) console.error(error);
   else fetchOperators();
@@ -163,7 +156,6 @@ async function removeOperator(id){
 
 // ===== Tickets =====
 async function fetchTickets(){
-  if(!supabase) return;
   const { data, error } = await supabase.from('tickets').select('*').order('id');
   if(error){ console.error(error); tickets=[]; }
   else tickets = data;
@@ -193,26 +185,21 @@ function renderTickets(){
 }
 
 async function addTicket(ticket){
-  if(!supabase) return;
   const { error } = await supabase.from('tickets').insert([ticket]);
   if(error) console.error(error);
   else fetchTickets();
 }
 
 async function closeTicket(id){
-  if(!supabase) return;
   const { error } = await supabase.from('tickets').update({ status:'resolved' }).eq('id',id);
   if(error) console.error(error);
   else fetchTickets();
 }
 
-// ===== Eventos DOM =====
+// ===== DOM =====
 document.addEventListener("DOMContentLoaded", async ()=>{
-  loadDBSettings();
-  if(supabase){
-    await fetchOperators();
-    await fetchTickets();
-  }
+  await fetchOperators();
+  await fetchTickets();
 });
 
 // Abrir Chamado
@@ -234,19 +221,19 @@ document.getElementById("ticketForm").addEventListener("submit", async (e)=>{
 // Configurações
 document.getElementById("btnSettings").addEventListener("click", ()=>{
   renderOperators();
-  modalSettings.classList.remove("hidden");
-  modalSettings.classList.add("flex");
+  document.getElementById("modalSettings").classList.remove("hidden");
+  document.getElementById("modalSettings").classList.add("flex");
 });
 
 document.getElementById("closeSettingsBtn").addEventListener("click", ()=>{
-  modalSettings.classList.add("hidden");
-  modalSettings.classList.remove("flex");
+  document.getElementById("modalSettings").classList.add("hidden");
+  document.getElementById("modalSettings").classList.remove("flex");
 });
 
-modalSettings.addEventListener("click",(e)=>{
-  if(e.target===modalSettings){
-    modalSettings.classList.add("hidden");
-    modalSettings.classList.remove("flex");
+document.getElementById("modalSettings").addEventListener("click",(e)=>{
+  if(e.target===document.getElementById("modalSettings")){
+    document.getElementById("modalSettings").classList.add("hidden");
+    document.getElementById("modalSettings").classList.remove("flex");
   }
 });
 
@@ -261,11 +248,10 @@ document.getElementById("operatorsList").addEventListener("click",(e)=>{
   if(btn){ removeOperator(parseInt(btn.dataset.id)); }
 });
 
-// Botão Salvar (apenas salva operadores no localStorage)
+// Botão Salvar (só fecha o modal)
 document.getElementById("saveSettingsBtn").addEventListener("click", ()=>{
-  localStorage.setItem("operators", JSON.stringify(operators));
-  modalSettings.classList.add("hidden");
-  modalSettings.classList.remove("flex");
+  document.getElementById("modalSettings").classList.add("hidden");
+  document.getElementById("modalSettings").classList.remove("flex");
   alert("Configurações salvas!");
 });
 
