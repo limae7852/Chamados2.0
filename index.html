@@ -18,10 +18,10 @@
   .priority-high { background-color: #fee2e2; }
   .priority-critical { background-color: #fce7f3; font-weight: bold; }
 
-  /* Modal fade */
+  /* Modal */
   .modal-bg { background-color: rgba(0,0,0,0.5); }
-  .modal { opacity: 0; pointer-events: none; transition: opacity 0.3s ease-in-out; }
-  .modal.show { opacity: 1; pointer-events: auto; }
+  .modal { display: none; }
+  .modal.show { display: flex; }
 </style>
 </head>
 <body class="bg-gray-100 text-gray-900">
@@ -74,9 +74,9 @@
 </div>
 
 <!-- Modal Configurações -->
-<div id="modalSettings" class="fixed inset-0 flex items-center justify-center modal modal-bg">
+<div id="modalSettings" class="fixed inset-0 items-center justify-center modal modal-bg flex-col">
   <div class="bg-white rounded-lg shadow-lg w-[28rem] p-6">
-    <h3 class="text-lg font-bold text-gray-800 mb-4">⚙️ Configurações do Sistema</h3>
+    <h3 class="text-lg font-bold mb-4">⚙️ Configurações do Sistema</h3>
     <form id="formSettings" class="space-y-3">
       <input type="email" id="notifyEmail" placeholder="E-mail para notificações" class="border p-2 w-full rounded" required>
       <input type="text" id="emailjsKey" placeholder="EmailJS Public Key" class="border p-2 w-full rounded" required>
@@ -100,7 +100,7 @@
   </div>
 </div>
 
-<!-- Modais de Detalhes e Encerramento -->
+<!-- Modais Detalhes e Encerramento -->
 <div id="detailsModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50">
   <div class="bg-white rounded-lg shadow-lg w-[28rem] p-6">
     <h3 class="text-lg font-bold text-blue-600 mb-4">Detalhes do Chamado</h3>
@@ -171,6 +171,7 @@ document.addEventListener("DOMContentLoaded", function(){
     settings.operators.splice(index,1); renderOperators();
   }
 
+  // Abrir modal de configurações
   btnSettings.addEventListener("click", ()=>{
     document.getElementById("notifyEmail").value = settings.notifyEmail;
     document.getElementById("emailjsKey").value = settings.emailjsKey;
@@ -180,6 +181,7 @@ document.addEventListener("DOMContentLoaded", function(){
     modalSettings.classList.add("show");
   });
 
+  // Fechar modal de configurações
   closeSettingsBtn.addEventListener("click", ()=>{
     modalSettings.classList.remove("show");
   });
@@ -224,7 +226,6 @@ document.addEventListener("DOMContentLoaded", function(){
       date: new Date().toISOString()
     };
     await fetch('/api/tickets', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(ticket)});
-    // EmailJS
     emailjs.send(settings.emailjsService, settings.emailjsTemplate,{
       subject: ticket.subject,
       client: ticket.client,
@@ -259,7 +260,7 @@ document.addEventListener("DOMContentLoaded", function(){
     });
   }
 
-  // ===== Modais Detalhes e Encerramento =====
+  // Modais detalhes e encerramento
   window.viewDetails = function(id){
     const t = tickets.find(t=>t.id===id);
     if(t){
@@ -281,7 +282,6 @@ document.addEventListener("DOMContentLoaded", function(){
     document.getElementById("detailsModal").classList.add("hidden");
     document.getElementById("detailsModal").classList.remove("flex");
   }
-
   window.openCloseModal=function(id){
     closeTicketId = id;
     document.getElementById("closeMessage").textContent = `Deseja realmente encerrar o chamado #${id}?`;
