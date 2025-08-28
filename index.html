@@ -6,11 +6,7 @@
 <title>Sistema de Chamados</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-  @keyframes blinkHighlight {
-    0% { background-color: #fce7f3; }
-    50% { background-color: #f9a8d4; }
-    100% { background-color: #fce7f3; }
-  }
+  @keyframes blinkHighlight { 0% { background-color: #fce7f3; } 50% { background-color: #f9a8d4; } 100% { background-color: #fce7f3; } }
   .blink { animation: blinkHighlight 1s ease-in-out 3; }
   .priority-low { background-color: #ecfdf5; }
   .priority-medium { background-color: #fef9c3; }
@@ -49,7 +45,7 @@
 
   <!-- Lista de Chamados -->
   <div class="bg-white p-6 rounded shadow">
-    <h2 class="text-xl font-semibold mb-4">Chamados Abertos</h2>
+    <h2 class="text-xl font-semibold mb-4">Chamados</h2>
     <table class="w-full border-collapse">
       <thead>
         <tr class="bg-gray-200">
@@ -111,9 +107,10 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function(){
-  // ===== Inicialização Configurações =====
+  // ===== Configurações =====
   let settings = JSON.parse(localStorage.getItem("settings")||"{}");
   settings.operators = Array.isArray(settings.operators)?settings.operators:[];
+
   const btnSettings = document.getElementById("btnSettings");
   const modalSettings = document.getElementById("modalSettings");
   const closeSettingsBtn = document.getElementById("closeSettingsBtn");
@@ -123,9 +120,9 @@ document.addEventListener("DOMContentLoaded", function(){
   function renderOperators(){
     operatorsList.innerHTML="";
     settings.operators.forEach((op,index)=>{
-      const li=document.createElement("li");
-      li.className="flex justify-between items-center";
-      li.innerHTML=`<span>${op}</span><button type="button" data-index="${index}" class="text-red-600 hover:underline">Remover</button>`;
+      const li = document.createElement("li");
+      li.className = "flex justify-between items-center";
+      li.innerHTML = `<span>${op}</span><button type="button" data-index="${index}" class="text-red-600 hover:underline">Remover</button>`;
       operatorsList.appendChild(li);
     });
     populateTechSelect();
@@ -135,31 +132,44 @@ document.addEventListener("DOMContentLoaded", function(){
     const techSelect = document.getElementById("tech");
     techSelect.innerHTML=`<option value="">Selecione o Técnico</option>`;
     settings.operators.forEach(op=>{
-      const opt=document.createElement("option");
-      opt.value=op; opt.textContent=op;
+      const opt = document.createElement("option");
+      opt.value = op; opt.textContent = op;
       techSelect.appendChild(opt);
     });
   }
 
-  btnSettings.addEventListener("click", ()=>{ renderOperators(); modalSettings.classList.remove("hidden"); modalSettings.classList.add("flex"); });
-  closeSettingsBtn.addEventListener("click", ()=>{ modalSettings.classList.add("hidden"); modalSettings.classList.remove("flex"); });
-  modalSettings.addEventListener("click", (e)=>{ if(e.target===modalSettings) modalSettings.classList.add("hidden"); modalSettings.classList.remove("flex"); });
+  btnSettings.addEventListener("click", ()=>{
+    renderOperators();
+    modalSettings.classList.remove("hidden");
+    modalSettings.classList.add("flex");
+  });
+  closeSettingsBtn.addEventListener("click", ()=>{
+    modalSettings.classList.add("hidden");
+    modalSettings.classList.remove("flex");
+  });
+  modalSettings.addEventListener("click",(e)=>{
+    if(e.target===modalSettings){
+      modalSettings.classList.add("hidden");
+      modalSettings.classList.remove("flex");
+    }
+  });
 
-  addOperatorBtn.addEventListener("click", ()=>{
+  addOperatorBtn.addEventListener("click",()=>{
     const input = document.getElementById("newOperator");
     const name = input.value.trim();
     if(name){ settings.operators.push(name); input.value=""; renderOperators(); }
   });
 
   operatorsList.addEventListener("click",(e)=>{
-    const btn=e.target.closest("button[data-index]");
+    const btn = e.target.closest("button[data-index]");
     if(btn){ settings.operators.splice(parseInt(btn.dataset.index),1); renderOperators(); }
   });
 
   document.getElementById("formSettings").addEventListener("submit",(e)=>{
     e.preventDefault();
     localStorage.setItem("settings",JSON.stringify(settings));
-    modalSettings.classList.add("hidden"); modalSettings.classList.remove("flex");
+    modalSettings.classList.add("hidden");
+    modalSettings.classList.remove("flex");
   });
 
   // ===== Tickets =====
@@ -168,10 +178,11 @@ document.addEventListener("DOMContentLoaded", function(){
   let closeTicketId = null;
 
   function saveTickets(){ localStorage.setItem("tickets",JSON.stringify(tickets)); }
+
   function renderTickets(){
     ticketsList.innerHTML="";
     tickets.forEach(ticket=>{
-      const tr=document.createElement("tr");
+      const tr = document.createElement("tr");
       tr.classList.add(`priority-${ticket.priority}`);
       tr.innerHTML=`
         <td class="border px-4 py-2">${ticket.id}</td>
@@ -200,7 +211,7 @@ document.addEventListener("DOMContentLoaded", function(){
       priority: document.getElementById("priority").value,
       description: document.getElementById("description").value,
       status:"open",
-      date: new Date().toISOString()
+      date:new Date().toISOString()
     };
     tickets.push(ticket);
     saveTickets();
@@ -246,17 +257,15 @@ document.addEventListener("DOMContentLoaded", function(){
   window.confirmCloseTicket = function(){
     if(closeTicketId!==null){
       const t = tickets.find(ticket=>ticket.id===closeTicketId);
-      if(t){ t.status = "resolved"; saveTickets(); renderTickets(); }
+      if(t){ t.status="resolved"; saveTickets(); renderTickets(); }
       closeCloseModal();
     }
   };
 
-  // Inicializa tickets na tela
-  renderTickets();
+  // Inicializa
   populateTechSelect();
+  renderTickets();
 });
 </script>
-
 </body>
 </html>
-
