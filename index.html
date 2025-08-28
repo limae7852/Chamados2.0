@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Sistema de Chamados</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
 <style>
   @keyframes blinkHighlight { 0% { background-color: #fce7f3; } 50% { background-color: #f9a8d4; } 100% { background-color: #fce7f3; } }
   .blink { animation: blinkHighlight 1s ease-in-out 3; }
@@ -68,12 +69,20 @@
   <div class="bg-white rounded-lg shadow-lg w-[28rem] p-6">
     <h3 class="text-lg font-bold text-gray-800 mb-4">⚙️ Configurações do Sistema</h3>
     <form id="formSettings" class="space-y-3">
+      
+      <!-- Operadores -->
       <h4 class="font-semibold mb-2">👷 Operadores/Técnicos</h4>
       <div class="flex gap-2 mb-2">
         <input type="text" id="newOperator" placeholder="Nome do operador" class="border p-2 w-full rounded">
         <button type="button" id="addOperatorBtn" class="px-4 py-2 bg-green-600 text-white rounded">Adicionar</button>
       </div>
       <ul id="operatorsList" class="list-disc list-inside text-gray-800 space-y-1 max-h-40 overflow-auto"></ul>
+
+      <!-- Configurações do Banco -->
+      <h4 class="font-semibold mt-4 mb-2">💾 Banco de Dados (Supabase)</h4>
+      <input type="text" id="supabaseUrl" placeholder="URL do Supabase" class="border p-2 w-full rounded mb-2">
+      <input type="text" id="supabaseKey" placeholder="Anon Key" class="border p-2 w-full rounded mb-2">
+
       <div class="flex justify-end space-x-2 mt-4">
         <button type="button" id="closeSettingsBtn" class="px-4 py-2 rounded bg-gray-400 text-white">Cancelar</button>
         <button type="submit" class="px-4 py-2 rounded bg-blue-600 text-white">Salvar</button>
@@ -106,166 +115,193 @@
 </div>
 
 <script>
-document.addEventListener("DOMContentLoaded", function(){
-  // ===== Configurações =====
-  let settings = JSON.parse(localStorage.getItem("settings")||"{}");
-  settings.operators = Array.isArray(settings.operators)?settings.operators:[];
+let supabase;
+let tickets = [];
+let operators = [];
+let closeTicketId = null;
 
-  const btnSettings = document.getElementById("btnSettings");
-  const modalSettings = document.getElementById("modalSettings");
-  const closeSettingsBtn = document.getElementById("closeSettingsBtn");
-  const addOperatorBtn = document.getElementById("addOperatorBtn");
+// ===== Carregar Configuração do Banco =====
+function loadDBSettings(){
+  const dbSettings = JSON.parse(localStorage.getItem("dbSettings")||"{}");
+  document.getElementById("supabaseUrl").value = dbSettings.url||"";
+  document.getElementById("supabaseKey").value = dbSettings.key||"";
+  if(dbSettings.url && dbSettings.key){
+    supabase = supabaseJs.createClient(dbSettings.url, dbSettings.key);
+  }
+}
+
+// ===== Operadores =====
+async function fetchOperators(){
+  if(!supabase) return;
+  const { data, error } = await supabase.from('operators').select('*').order('id');
+  if(error) console.error(error);
+  else operators = data.map(op=>({ id: op.id, name: op.name }));
+  renderOperators();
+}
+
+function renderOperators(){
   const operatorsList = document.getElementById("operatorsList");
-
-  function renderOperators(){
-    operatorsList.innerHTML="";
-    settings.operators.forEach((op,index)=>{
-      const li = document.createElement("li");
-      li.className = "flex justify-between items-center";
-      li.innerHTML = `<span>${op}</span><button type="button" data-index="${index}" class="text-red-600 hover:underline">Remover</button>`;
-      operatorsList.appendChild(li);
-    });
-    populateTechSelect();
-  }
-
-  function populateTechSelect(){
-    const techSelect = document.getElementById("tech");
-    techSelect.innerHTML=`<option value="">Selecione o Técnico</option>`;
-    settings.operators.forEach(op=>{
-      const opt = document.createElement("option");
-      opt.value = op; opt.textContent = op;
-      techSelect.appendChild(opt);
-    });
-  }
-
-  btnSettings.addEventListener("click", ()=>{
-    renderOperators();
-    modalSettings.classList.remove("hidden");
-    modalSettings.classList.add("flex");
+  const techSelect = document.getElementById("tech");
+  operatorsList.innerHTML="";
+  techSelect.innerHTML='<option value="">Selecione o Técnico</option>';
+  operators.forEach(op=>{
+    const li = document.createElement("li");
+    li.className="flex justify-between items-center";
+    li.innerHTML=`<span>${op.name}</span><button type="button" data-id="${op.id}" class="text-red-600 hover:underline">Remover</button>`;
+    operatorsList.appendChild(li);
+    const opt = document.createElement("option");
+    opt.value = op.name; opt.textContent = op.name;
+    techSelect.appendChild(opt);
   });
-  closeSettingsBtn.addEventListener("click", ()=>{
-    modalSettings.classList.add("hidden");
-    modalSettings.classList.remove("flex");
-  });
-  modalSettings.addEventListener("click",(e)=>{
-    if(e.target===modalSettings){
-      modalSettings.classList.add("hidden");
-      modalSettings.classList.remove("flex");
-    }
-  });
+}
 
-  addOperatorBtn.addEventListener("click",()=>{
-    const input = document.getElementById("newOperator");
-    const name = input.value.trim();
-    if(name){ settings.operators.push(name); input.value=""; renderOperators(); }
-  });
+async function addOperator(name){
+  if(!supabase) return;
+  const { error } = await supabase.from('operators').insert([{ name }]);
+  if(error) console.error(error);
+  else fetchOperators();
+}
 
-  operatorsList.addEventListener("click",(e)=>{
-    const btn = e.target.closest("button[data-index]");
-    if(btn){ settings.operators.splice(parseInt(btn.dataset.index),1); renderOperators(); }
-  });
+async function removeOperator(id){
+  if(!supabase) return;
+  const { error } = await supabase.from('operators').delete().eq('id', id);
+  if(error) console.error(error);
+  else fetchOperators();
+}
 
-  document.getElementById("formSettings").addEventListener("submit",(e)=>{
-    e.preventDefault();
-    localStorage.setItem("settings",JSON.stringify(settings));
-    modalSettings.classList.add("hidden");
-    modalSettings.classList.remove("flex");
-  });
+// ===== Tickets =====
+async function fetchTickets(){
+  if(!supabase) return;
+  const { data, error } = await supabase.from('tickets').select('*').order('id');
+  if(error) console.error(error);
+  else { tickets = data; renderTickets(); }
+}
 
-  // ===== Tickets =====
-  let tickets = JSON.parse(localStorage.getItem("tickets")||"[]");
+function renderTickets(){
   const ticketsList = document.getElementById("ticketsList");
-  let closeTicketId = null;
-
-  function saveTickets(){ localStorage.setItem("tickets",JSON.stringify(tickets)); }
-
-  function renderTickets(){
-    ticketsList.innerHTML="";
-    tickets.forEach(ticket=>{
-      const tr = document.createElement("tr");
-      tr.classList.add(`priority-${ticket.priority}`);
-      tr.innerHTML=`
-        <td class="border px-4 py-2">${ticket.id}</td>
-        <td class="border px-4 py-2">${ticket.subject}</td>
-        <td class="border px-4 py-2">${ticket.client}</td>
-        <td class="border px-4 py-2">${ticket.tech}</td>
-        <td class="border px-4 py-2 capitalize">${ticket.priority}</td>
-        <td class="border px-4 py-2 capitalize">${ticket.status}</td>
-        <td class="border px-4 py-2 space-x-2">
-          <button onclick="viewDetails(${ticket.id})" class="text-blue-600 hover:underline">Detalhes</button>
-          ${ticket.status!=="resolved"?`<button onclick="openCloseModal(${ticket.id})" class="text-green-600 hover:underline">Encerrar</button>`:"✅ Encerrado"}
-        </td>`;
-      ticketsList.appendChild(tr);
-      if(ticket.priority==="critical") tr.classList.add("blink");
-    });
-  }
-
-  document.getElementById("ticketForm").addEventListener("submit",(e)=>{
-    e.preventDefault();
-    const id = tickets.length>0?tickets[tickets.length-1].id+1:1;
-    const ticket={
-      id,
-      subject: document.getElementById("subject").value,
-      client: document.getElementById("client").value,
-      tech: document.getElementById("tech").value,
-      priority: document.getElementById("priority").value,
-      description: document.getElementById("description").value,
-      status:"open",
-      date:new Date().toISOString()
-    };
-    tickets.push(ticket);
-    saveTickets();
-    renderTickets();
-    e.target.reset();
+  ticketsList.innerHTML="";
+  tickets.forEach(ticket=>{
+    const tr = document.createElement("tr");
+    tr.classList.add(`priority-${ticket.priority}`);
+    tr.innerHTML=`
+      <td class="border px-4 py-2">${ticket.id}</td>
+      <td class="border px-4 py-2">${ticket.subject}</td>
+      <td class="border px-4 py-2">${ticket.client}</td>
+      <td class="border px-4 py-2">${ticket.tech}</td>
+      <td class="border px-4 py-2 capitalize">${ticket.priority}</td>
+      <td class="border px-4 py-2 capitalize">${ticket.status}</td>
+      <td class="border px-4 py-2 space-x-2">
+        <button onclick="viewDetails(${ticket.id})" class="text-blue-600 hover:underline">Detalhes</button>
+        ${ticket.status!=="resolved"?`<button onclick="openCloseModal(${ticket.id})" class="text-green-600 hover:underline">Encerrar</button>`:"✅ Encerrado"}
+      </td>`;
+    ticketsList.appendChild(tr);
+    if(ticket.priority==="critical") tr.classList.add("blink");
   });
+}
 
-  window.viewDetails = function(id){
-    const t = tickets.find(tt=>tt.id===id);
-    if(t){
-      document.getElementById("detailsContent").innerHTML = `
-        <p><strong>ID:</strong> ${t.id}</p>
-        <p><strong>Assunto:</strong> ${t.subject}</p>
-        <p><strong>Descrição:</strong> ${t.description}</p>
-        <p><strong>Cliente:</strong> ${t.client}</p>
-        <p><strong>Técnico:</strong> ${t.tech}</p>
-        <p><strong>Prioridade:</strong> ${t.priority}</p>
-        <p><strong>Status:</strong> ${t.status}</p>
-        <p><strong>Abertura:</strong> ${new Date(t.date).toLocaleString()}</p>
-      `;
-      const m = document.getElementById("detailsModal");
-      m.classList.remove("hidden"); m.classList.add("flex");
-    }
-  };
+async function addTicket(ticket){
+  if(!supabase) return;
+  const { error } = await supabase.from('tickets').insert([ticket]);
+  if(error) console.error(error);
+  else fetchTickets();
+}
 
-  window.closeDetailsModal = function(){
-    const m = document.getElementById("detailsModal");
-    m.classList.add("hidden"); m.classList.remove("flex");
-  };
+async function closeTicket(id){
+  if(!supabase) return;
+  const { error } = await supabase.from('tickets').update({ status:'resolved' }).eq('id',id);
+  if(error) console.error(error);
+  else fetchTickets();
+}
 
-  window.openCloseModal = function(id){
-    closeTicketId = id;
-    document.getElementById("closeMessage").textContent = `Deseja realmente encerrar o chamado #${id}?`;
-    const m = document.getElementById("closeModal");
-    m.classList.remove("hidden"); m.classList.add("flex");
-  };
-
-  window.closeCloseModal = function(){
-    const m = document.getElementById("closeModal");
-    m.classList.add("hidden"); m.classList.remove("flex");
-  };
-
-  window.confirmCloseTicket = function(){
-    if(closeTicketId!==null){
-      const t = tickets.find(ticket=>ticket.id===closeTicketId);
-      if(t){ t.status="resolved"; saveTickets(); renderTickets(); }
-      closeCloseModal();
-    }
-  };
-
-  // Inicializa
-  populateTechSelect();
-  renderTickets();
+// ===== Eventos DOM =====
+document.addEventListener("DOMContentLoaded", async ()=>{
+  loadDBSettings();
+  if(supabase){ 
+    await fetchOperators();
+    await fetchTickets();
+  }
 });
+
+// Abrir Chamado
+document.getElementById("ticketForm").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const ticket = {
+    subject: document.getElementById("subject").value,
+    client: document.getElementById("client").value,
+    tech: document.getElementById("tech").value,
+    priority: document.getElementById("priority").value,
+    description: document.getElementById("description").value,
+    status: "open",
+    date: new Date().toISOString()
+  };
+  await addTicket(ticket);
+  e.target.reset();
+});
+
+// Configurações
+const btnSettings = document.getElementById("btnSettings");
+const modalSettings = document.getElementById("modalSettings");
+const closeSettingsBtn = document.getElementById("closeSettingsBtn");
+const addOperatorBtn = document.getElementById("addOperatorBtn");
+const operatorsListEl = document.getElementById("operatorsList");
+
+btnSettings.addEventListener("click", ()=>{
+  renderOperators();
+  modalSettings.classList.remove("hidden");
+  modalSettings.classList.add("flex");
+});
+
+closeSettingsBtn.addEventListener("click", ()=>{ modalSettings.classList.add("hidden"); modalSettings.classList.remove("flex"); });
+modalSettings.addEventListener("click",(e)=>{ if(e.target===modalSettings){ modalSettings.classList.add("hidden"); modalSettings.classList.remove("flex");}});
+
+addOperatorBtn.addEventListener("click",()=>{
+  const input = document.getElementById("newOperator");
+  const name = input.value.trim();
+  if(name){ addOperator(name); input.value=""; }
+});
+
+operatorsListEl.addEventListener("click",(e)=>{
+  const btn = e.target.closest("button[data-id]");
+  if(btn){ removeOperator(parseInt(btn.dataset.id)); }
+});
+
+// Salvar Configurações
+document.getElementById("formSettings").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const url = document.getElementById("supabaseUrl").value.trim();
+  const key = document.getElementById("supabaseKey").value.trim();
+  localStorage.setItem("dbSettings", JSON.stringify({url,key}));
+  if(url && key){
+    supabase = supabaseJs.createClient(url,key);
+    await fetchOperators();
+    await fetchTickets();
+  }
+  modalSettings.classList.add("hidden");
+  modalSettings.classList.remove("flex");
+});
+
+// ===== Modais =====
+window.viewDetails = function(id){
+  const t = tickets.find(tt=>tt.id===id);
+  if(t){
+    document.getElementById("detailsContent").innerHTML = `
+      <p><strong>ID:</strong> ${t.id}</p>
+      <p><strong>Assunto:</strong> ${t.subject}</p>
+      <p><strong>Descrição:</strong> ${t.description}</p>
+      <p><strong>Cliente:</strong> ${t.client}</p>
+      <p><strong>Técnico:</strong> ${t.tech}</p>
+      <p><strong>Prioridade:</strong> ${t.priority}</p>
+      <p><strong>Status:</strong> ${t.status}</p>
+      <p><strong>Abertura:</strong> ${new Date(t.date).toLocaleString()}</p>
+    `;
+    const m = document.getElementById("detailsModal");
+    m.classList.remove("hidden"); m.classList.add("flex");
+  }
+};
+window.closeDetailsModal = function(){ const m = document.getElementById("detailsModal"); m.classList.add("hidden"); m.classList.remove("flex"); };
+window.openCloseModal = function(id){ closeTicketId=id; document.getElementById("closeMessage").textContent=`Deseja realmente encerrar o chamado #${id}?`; const m = document.getElementById("closeModal"); m.classList.remove("hidden"); m.classList.add("flex"); };
+window.closeCloseModal = function(){ const m = document.getElementById("closeModal"); m.classList.add("hidden"); m.classList.remove("flex"); };
+window.confirmCloseTicket = async function(){ if(closeTicketId!==null){ await closeTicket(closeTicketId); closeCloseModal(); } };
 </script>
 </body>
 </html>
