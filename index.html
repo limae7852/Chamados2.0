@@ -136,6 +136,40 @@ let settings = JSON.parse(localStorage.getItem("settings")) || {
 };
 emailjs.init(settings.emailjsKey);
 
+// Funções de Operadores
+function renderOperators(){
+  const list = document.getElementById("operatorsList");
+  list.innerHTML = "";
+  settings.operators.forEach((op,index)=>{
+    const li = document.createElement("li");
+    li.classList.add("flex","justify-between","items-center");
+    li.innerHTML = `<span>${op}</span> <button onclick="removeOperator(${index})" class="text-red-600 hover:underline">Remover</button>`;
+    list.appendChild(li);
+  });
+  populateTechSelect();
+}
+function addOperator(){
+  const name = document.getElementById("newOperator").value.trim();
+  if(name){
+    settings.operators.push(name);
+    document.getElementById("newOperator").value = "";
+    renderOperators();
+  }
+}
+function removeOperator(index){
+  settings.operators.splice(index,1);
+  renderOperators();
+}
+function populateTechSelect(){
+  techSelect.innerHTML = `<option value="">Selecione o Técnico</option>`;
+  settings.operators.forEach(op=>{
+    const opt = document.createElement("option");
+    opt.value = op;
+    opt.textContent = op;
+    techSelect.appendChild(opt);
+  });
+}
+
 // Modal Configurações
 function openSettingsModal(){
   document.getElementById("notifyEmail").value = settings.notifyEmail;
@@ -143,12 +177,14 @@ function openSettingsModal(){
   document.getElementById("emailjsService").value = settings.emailjsService;
   document.getElementById("emailjsTemplate").value = settings.emailjsTemplate;
   renderOperators();
-  document.getElementById("settingsModal").classList.remove("hidden");
-  document.getElementById("settingsModal").classList.add("flex");
+  const modal = document.getElementById("settingsModal");
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
 }
 function closeSettingsModal(){
-  document.getElementById("settingsModal").classList.add("hidden");
-  document.getElementById("settingsModal").classList.remove("flex");
+  const modal = document.getElementById("settingsModal");
+  modal.classList.add("hidden");
+  modal.classList.remove("flex");
 }
 document.getElementById("settingsForm").addEventListener("submit", function(e){
   e.preventDefault();
@@ -162,41 +198,6 @@ document.getElementById("settingsForm").addEventListener("submit", function(e){
   closeSettingsModal();
   alert("Configurações salvas com sucesso!");
 });
-
-// Operadores
-function renderOperators(){
-  const list = document.getElementById("operatorsList");
-  list.innerHTML = "";
-  settings.operators.forEach((op,index)=>{
-    const li = document.createElement("li");
-    li.classList.add("flex","justify-between","items-center");
-    li.innerHTML = `<span>${op}</span> <button onclick="removeOperator(${index})" class="text-red-600 hover:underline">Remover</button>`;
-    list.appendChild(li);
-  });
-}
-function addOperator(){
-  const name = document.getElementById("newOperator").value.trim();
-  if(name){
-    settings.operators.push(name);
-    document.getElementById("newOperator").value = "";
-    renderOperators();
-    populateTechSelect();
-  }
-}
-function removeOperator(index){
-  settings.operators.splice(index,1);
-  renderOperators();
-  populateTechSelect();
-}
-function populateTechSelect(){
-  techSelect.innerHTML = `<option value="">Selecione o Técnico</option>`;
-  settings.operators.forEach(op=>{
-    const opt = document.createElement("option");
-    opt.value = op;
-    opt.textContent = op;
-    techSelect.appendChild(opt);
-  });
-}
 
 // Carregar tickets
 async function loadTickets(){
