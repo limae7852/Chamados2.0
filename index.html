@@ -175,6 +175,118 @@ document.addEventListener("DOMContentLoaded", function(){
     alert("Configurações salvas com sucesso!");
   });
 
+  // ===== Tickets =====
+  let tickets = [];
+  let closeTicketId = null;
+  const list = document.getElementById("ticketsList");
+  const form = document.getElementById("ticketForm");
+
+  async function loadTickets(){
+    try{
+      const res = await fetch('/api/tickets'); tickets = await res.json();
+      renderTickets();
+    }catch(e){ console.error("Erro ao carregar tickets", e);}
+  }
+
+  form.addEventListener("submit", async e=>{
+    e.preventDefault();
+    const ticket={
+      subject: document.getElementById("subject").value,
+      client: document.getElementById("client").value,
+      tech: document.getElementById("tech").value,
+      priority: document.getElementById("priority").value,
+      description: document.getElementById("description").value,
+      status: "open",
+      date: new Date().toISOString()
+    };
+    await fetch('/api/tickets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(ticket)});
+
+    // Envio de email usando configurações salvas
+    emailjs.send(settings.emailjsService, settings.emailjsTemplate, {
+      subject: ticket.subject,
+      client: ticket.client,
+      tech: ticket.tech,
+      priority: ticket.priority,
+      description: ticket.description,
+      notify_email: settings.notifyEmail
+    });
+
+    form.reset(); await loadTickets();
+  });
+
+  function renderTickets(){
+    list.innerHTML="";
+    tickets.forEach(ticket=>{
+      const tr = document.createElement("tr");
+      tr.classList.add(`priority-${ticket.priority}`);
+      tr.innerHTML=`
+        <td class="border px-4 py-2">${ticket.id}</td>
+        <td class="border px-4 py-2">${ticket.subject}</td>
+        <td class="border px-4 py-2">${ticket.client}</td>
+        <td class="border px-4 py-2">${ticket.tech}</td>
+        <td class="border px-4 py-2 capitalize">${ticket.priority}</td>
+        <td class="border px-4 py-2 capitalize">${ticket.status}</td>
+        <td class="border px-4 py-2 space-x-2">
+          <button onclick="viewDetails(${ticket.id})" class="text-blue-600 hover:underline">Detalhes</button>
+          ${ticket.status!=="resolved"? `<button onclick="openCloseModal(${ticket.id})" class="text-green-600 hover:underline">Encerrar</button>`:"✅ Encerrado"}
+        </td>`;
+      list.appendChild(tr);
+      if(ticket.priority==="critical") tr.classList.add("blink");
+    });
+  }
+
+  window.openCloseModal = function(id){ 
+    closeTicketId=id; 
+    document.getElementById("closeMessage").textContent=`Deseja realmente encerrar o chamado #${id}?`; 
+    document.getElementById("closeModal").classList.remove("hidden"); 
+    document.getElementById("closeModal").classList.add("flex"); 
+  }
+  window.closeCloseModal = function(){ 
+    document.getElementById("closeModal").classList.add("hidden"); 
+    document.getElementById("closeModal").classList.remove("flex"); 
+  }
+  window.confirmCloseTicket = async function(){
+    if(closeTicketId!==null){
+      const t=tickets.find(ticket=>ticket.id===closeTicketId);
+      await fetch('/api/tickets',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:closeTicketId,status:'resolved'})});
+
+      // Email de encerramento usando configurações salvas
+      emailjs.send(settings.emailjsService, settings.emailjsTemplate, {
+        subject: `Chamado #${t.id} encerrado`,
+        client: t.client,
+        tech: t.tech,
+        priority: t.priority,
+        description: t.description,
+        notify_email: settings.notifyEmail
+      });
+
+      closeCloseModal(); await loadTickets(); 
+      alert(`Chamado #${t.id} encerrado com sucesso!`);
+    }
+  }
+
+  window.viewDetails = function(id){
+    const t=tickets.find(ticket=>ticket.id===id);
+    if(t){
+      document.getElementById("detailsContent").innerHTML=`
+      <p><strong>ID:</strong> ${t.id}</p>
+      <p><strong>Assunto:</strong> ${t.subject}</p>
+      <p><strong>Descrição:</strong> ${t.description}</p>
+      <p><strong>Cliente:</strong> ${t.client}</p>
+      <p><strong>Técnico:</strong> ${t.tech}</p>
+      <p><strong>Prioridade:</strong> ${t.priority}</p>
+      <p><strong>Status:</strong> ${t.status}</p>
+      <p><strong>Abertura:</strong> ${new Date(t.date).toLocaleString()}</p>`;
+      document.getElementById("detailsModal").classList.remove("hidden"); 
+      document.getElementById("detailsModal").classList.add("flex");
+    }
+  }
+  window.closeDetailsModal = function(){ 
+    document.getElementById("detailsModal").classList.add("hidden"); 
+    document.getElementById("detailsModal").classList.remove("flex"); 
+  }
+
+  loadTickets();
 });
 </script>
 </body>
