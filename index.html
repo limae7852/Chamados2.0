@@ -84,19 +84,19 @@
       <h4 class="font-semibold mb-2">👷 Operadores/Técnicos</h4>
       <div class="flex gap-2 mb-2">
         <input type="text" id="newOperator" placeholder="Nome do operador" class="border p-2 w-full rounded">
-        <button type="button" onclick="addOperator()" class="px-4 py-2 bg-green-600 text-white rounded">Adicionar</button>
+        <button type="button" id="addOperatorBtn" class="px-4 py-2 bg-green-600 text-white rounded">Adicionar</button>
       </div>
       <ul id="operatorsList" class="list-disc list-inside text-gray-800 space-y-1"></ul>
 
       <div class="flex justify-end space-x-2 mt-4">
-        <button type="button" onclick="closeSettingsModal()" class="px-4 py-2 rounded bg-gray-400 text-white">Cancelar</button>
+        <button type="button" id="closeSettingsBtn" class="px-4 py-2 rounded bg-gray-400 text-white">Cancelar</button>
         <button type="submit" class="px-4 py-2 rounded bg-blue-600 text-white">Salvar</button>
       </div>
     </form>
   </div>
 </div>
 
-<!-- Modal Encerramento -->
+<!-- Modais Encerramento e Detalhes -->
 <div id="closeModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50">
   <div class="bg-white rounded-lg shadow-lg w-96 p-6">
     <h3 class="text-lg font-bold text-red-600 mb-4">Encerrar Chamado</h3>
@@ -107,8 +107,6 @@
     </div>
   </div>
 </div>
-
-<!-- Modal Detalhes -->
 <div id="detailsModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50">
   <div class="bg-white rounded-lg shadow-lg w-[28rem] p-6">
     <h3 class="text-lg font-bold text-blue-600 mb-4">Detalhes do Chamado</h3>
@@ -120,8 +118,8 @@
 </div>
 
 <script>
-window.onload = function() {
-  // ===== CONFIGURAÇÕES =====
+document.addEventListener("DOMContentLoaded", function() {
+  // ===== Configurações =====
   let settings = JSON.parse(localStorage.getItem("settings")) || {
     notifyEmail: "",
     emailjsKey: "SUA_PUBLIC_KEY",
@@ -130,6 +128,11 @@ window.onload = function() {
     operators: []
   };
   emailjs.init(settings.emailjsKey);
+
+  const settingsModal = document.getElementById("settingsModal");
+  const openSettingsBtn = document.getElementById("openSettingsBtn");
+  const closeSettingsBtn = document.getElementById("closeSettingsBtn");
+  const addOperatorBtn = document.getElementById("addOperatorBtn");
 
   function renderOperators() {
     const list = document.getElementById("operatorsList");
@@ -143,13 +146,6 @@ window.onload = function() {
     populateTechSelect();
   }
 
-  function addOperator(){
-    const name = document.getElementById("newOperator").value.trim();
-    if(name){ settings.operators.push(name); document.getElementById("newOperator").value=""; renderOperators(); }
-  }
-
-  function removeOperator(index){ settings.operators.splice(index,1); renderOperators(); }
-
   function populateTechSelect(){
     const techSelect = document.getElementById("tech");
     techSelect.innerHTML = `<option value="">Selecione o Técnico</option>`;
@@ -159,33 +155,43 @@ window.onload = function() {
     });
   }
 
-  const settingsModal = document.getElementById("settingsModal");
-  const openSettingsBtn = document.getElementById("openSettingsBtn");
-  openSettingsBtn.addEventListener("click", ()=>{
+  window.addOperator = function() {
+    const name = document.getElementById("newOperator").value.trim();
+    if(name){ settings.operators.push(name); document.getElementById("newOperator").value=""; renderOperators(); }
+  }
+
+  window.removeOperator = function(index) { settings.operators.splice(index,1); renderOperators(); }
+
+  openSettingsBtn.addEventListener("click", function() {
     document.getElementById("notifyEmail").value = settings.notifyEmail;
     document.getElementById("emailjsKey").value = settings.emailjsKey;
     document.getElementById("emailjsService").value = settings.emailjsService;
     document.getElementById("emailjsTemplate").value = settings.emailjsTemplate;
     renderOperators();
-    settingsModal.classList.remove("hidden"); settingsModal.classList.add("flex");
+    settingsModal.classList.remove("hidden");
+    settingsModal.classList.add("flex");
   });
 
-  function closeSettingsModal(){ settingsModal.classList.add("hidden"); settingsModal.classList.remove("flex"); }
+  closeSettingsBtn.addEventListener("click", function() {
+    settingsModal.classList.add("hidden");
+    settingsModal.classList.remove("flex");
+  });
 
-  document.getElementById("settingsForm").addEventListener("submit", e=>{
+  document.getElementById("settingsForm").addEventListener("submit", function(e){
     e.preventDefault();
-    settings.notifyEmail=document.getElementById("notifyEmail").value;
-    settings.emailjsKey=document.getElementById("emailjsKey").value;
-    settings.emailjsService=document.getElementById("emailjsService").value;
-    settings.emailjsTemplate=document.getElementById("emailjsTemplate").value;
+    settings.notifyEmail = document.getElementById("notifyEmail").value;
+    settings.emailjsKey = document.getElementById("emailjsKey").value;
+    settings.emailjsService = document.getElementById("emailjsService").value;
+    settings.emailjsTemplate = document.getElementById("emailjsTemplate").value;
     localStorage.setItem("settings", JSON.stringify(settings));
     emailjs.init(settings.emailjsKey);
     populateTechSelect();
-    closeSettingsModal();
+    settingsModal.classList.add("hidden");
+    settingsModal.classList.remove("flex");
     alert("Configurações salvas com sucesso!");
   });
 
-  // ===== TICKETS =====
+  // ===== Tickets =====
   let tickets = [];
   let closeTicketId = null;
   const list = document.getElementById("ticketsList");
@@ -195,7 +201,7 @@ window.onload = function() {
     try{
       const res = await fetch('/api/tickets'); tickets = await res.json();
       renderTickets(); populateTechSelect();
-    }catch(e){ console.error("Erro ao carregar tickets", e); }
+    }catch(e){ console.error("Erro ao carregar tickets", e);}
   }
 
   form.addEventListener("submit", async e=>{
@@ -215,8 +221,10 @@ window.onload = function() {
   });
 
   function renderTickets(){
-    list.innerHTML=""; tickets.forEach(ticket=>{
-      const tr = document.createElement("tr"); tr.classList.add(`priority-${ticket.priority}`);
+    list.innerHTML="";
+    tickets.forEach(ticket=>{
+      const tr = document.createElement("tr");
+      tr.classList.add(`priority-${ticket.priority}`);
       tr.innerHTML=`
         <td class="border px-4 py-2">${ticket.id}</td>
         <td class="border px-4 py-2">${ticket.subject}</td>
@@ -233,7 +241,6 @@ window.onload = function() {
     });
   }
 
-  // Modais Encerramento e Detalhes
   window.openCloseModal = function(id){ closeTicketId=id; document.getElementById("closeMessage").textContent=`Deseja realmente encerrar o chamado #${id}?`; document.getElementById("closeModal").classList.remove("hidden"); document.getElementById("closeModal").classList.add("flex"); }
   window.closeCloseModal = function(){ document.getElementById("closeModal").classList.add("hidden"); document.getElementById("closeModal").classList.remove("flex"); }
   window.confirmCloseTicket = async function(){
@@ -262,7 +269,7 @@ window.onload = function() {
   window.closeDetailsModal = function(){ document.getElementById("detailsModal").classList.add("hidden"); document.getElementById("detailsModal").classList.remove("flex"); }
 
   loadTickets();
-};
+});
 </script>
 
 </body>
