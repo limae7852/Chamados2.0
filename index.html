@@ -109,8 +109,7 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-
-  // ===== DOM ELEMENTS =====
+  // ===== ELEMENTOS =====
   const btnSettings = document.getElementById("btnSettings");
   const modalSettings = document.getElementById("modalSettings");
   const closeSettingsBtn = document.getElementById("closeSettingsBtn");
@@ -122,7 +121,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ===== SUPABASE =====
   const SUPABASE_URL = "https://rrejbfjddrsznhwlmmjj.supabase.co";
-  const SUPABASE_KEY = "SUA_CHAVE_SUPABASE"; // Coloque sua chave real
+  const SUPABASE_KEY = "SUA_CHAVE_SUPABASE"; // Troque pela sua chave
   const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   let tickets = [];
@@ -181,13 +180,13 @@ document.addEventListener("DOMContentLoaded", () => {
   async function addOperator(name){
     const { error } = await client.from('operators').insert([{ name }]);
     if(error) alert("Erro: "+error.message);
-    await fetchOperators();
+    fetchOperators();
   }
 
   async function removeOperator(id){
     const { error } = await client.from('operators').delete().eq('id', id);
     if(error) alert("Erro: "+error.message);
-    await fetchOperators();
+    fetchOperators();
   }
 
   async function addTicket(ticket){
@@ -251,8 +250,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // ===== INICIALIZAÇÃO =====
   fetchOperators();
   fetchTickets();
-
 });
 </script>
+
 </body>
 </html>
