@@ -85,28 +85,41 @@
   </div>
 </div>
 
+<!-- Modais Detalhes e Encerrar -->
+<div id="detailsModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-40">
+  <div class="bg-white rounded-lg shadow-lg w-[28rem] p-6">
+    <h3 class="text-lg font-bold text-blue-600 mb-4">Detalhes do Chamado</h3>
+    <div id="detailsContent" class="space-y-2 text-gray-800"></div>
+    <div class="flex justify-end mt-4">
+      <button onclick="closeDetailsModal()" class="px-4 py-2 rounded bg-blue-600 text-white">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div id="closeModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-40">
+  <div class="bg-white rounded-lg shadow-lg w-96 p-6">
+    <h3 class="text-lg font-bold text-red-600 mb-4">Encerrar Chamado</h3>
+    <p id="closeMessage" class="mb-4 text-gray-700"></p>
+    <div class="flex justify-end space-x-2">
+      <button onclick="closeCloseModal()" class="px-4 py-2 rounded bg-gray-400 text-white">Cancelar</button>
+      <button onclick="confirmCloseTicket()" class="px-4 py-2 rounded bg-green-600 text-white">Confirmar</button>
+    </div>
+  </div>
+</div>
+
 <script>
-// ===== Inicialização segura =====
 document.addEventListener("DOMContentLoaded", async ()=>{
+  // Inicialização Supabase
+  const SUPABASE_URL = "https://rrejbfjddrsznhwlmmjj.supabase.co";
+  const SUPABASE_KEY = "SUA_CHAVE_SUPABASE";
+  const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  // Supabase inicializado dentro do DOMContentLoaded
-  let client;
-  try{
-    const SUPABASE_URL = "https://rrejbfjddrsznhwlmmjj.supabase.co";
-    const SUPABASE_KEY = "SUA_CHAVE_SUPABASE";
-    client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  }catch(e){
-    console.error("Erro inicializando Supabase:", e);
-  }
-
-  // Variáveis
   let tickets = [];
   let operators = [];
   let closeTicketId = null;
 
   // ===== Operadores =====
   async function fetchOperators(){
-    if(!client) return;
     const { data, error } = await client.from('operators').select('*').order('id');
     operators = error ? [] : data;
     renderOperators();
@@ -126,20 +139,9 @@ document.addEventListener("DOMContentLoaded", async ()=>{
       techSelect.appendChild(opt);
     });
   }
-  async function addOperator(name){
-    if(!client) return;
-    const { error } = await client.from('operators').insert([{ name }]);
-    if(!error) fetchOperators();
-  }
-  async function removeOperator(id){
-    if(!client) return;
-    const { error } = await client.from('operators').delete().eq('id', id);
-    if(!error) fetchOperators();
-  }
 
   // ===== Tickets =====
   async function fetchTickets(){
-    if(!client) return;
     const { data, error } = await client.from('tickets').select('*').order('id');
     tickets = error ? [] : data;
     renderTickets();
@@ -165,7 +167,7 @@ document.addEventListener("DOMContentLoaded", async ()=>{
     });
   }
 
-  // ===== Botão Configurações funcionando =====
+  // ===== Botão Configurações =====
   const btnSettings = document.getElementById("btnSettings");
   const modalSettings = document.getElementById("modalSettings");
 
@@ -187,21 +189,32 @@ document.addEventListener("DOMContentLoaded", async ()=>{
     }
   });
 
-  document.getElementById("addOperatorBtn").addEventListener("click", ()=>{
+  // Adicionar operador
+  document.getElementById("addOperatorBtn").addEventListener("click", async ()=>{
     const input = document.getElementById("newOperator");
     const name = input.value.trim();
-    if(name){ addOperator(name); input.value=""; }
+    if(!name) return;
+    const { error } = await client.from('operators').insert([{ name }]);
+    if(error){ alert("Erro ao adicionar operador: "+error.message); return; }
+    input.value="";
+    await fetchOperators();
   });
 
-  document.getElementById("operatorsList").addEventListener("click",(e)=>{
+  // Remover operador
+  document.getElementById("operatorsList").addEventListener("click", async (e)=>{
     const btn = e.target.closest("button[data-id]");
-    if(btn) removeOperator(parseInt(btn.dataset.id));
+    if(!btn) return;
+    const id = parseInt(btn.dataset.id);
+    const { error } = await client.from('operators').delete().eq('id', id);
+    if(error){ alert("Erro ao remover operador: "+error.message); return; }
+    await fetchOperators();
   });
 
+  // Salvar Configurações
   document.getElementById("saveSettingsBtn").addEventListener("click", ()=>{
     modalSettings.classList.add("hidden");
     modalSettings.classList.remove("flex");
-    alert("Configurações salvas!");
+    alert("Configurações salvas no banco!");
   });
 
   // ===== Formulário Chamados =====
@@ -216,7 +229,8 @@ document.addEventListener("DOMContentLoaded", async ()=>{
       status: "open",
       date: new Date().toISOString()
     };
-    if(client) await client.from('tickets').insert([ticket]);
+    const { error } = await client.from('tickets').insert([ticket]);
+    if(error){ alert("Erro ao abrir chamado: "+error.message); return; }
     e.target.reset();
     fetchTickets();
   });
@@ -257,9 +271,11 @@ document.addEventListener("DOMContentLoaded", async ()=>{
     m.classList.add("hidden"); m.classList.remove("flex");
   };
   window.confirmCloseTicket = async function(){
-    if(closeTicketId!==null && client){
-      await client.from('tickets').update({status:'resolved'}).eq('id',closeTicketId);
-      closeCloseModal(); fetchTickets();
+    if(closeTicketId!==null){
+      const { error } = await client.from('tickets').update({status:'resolved'}).eq('id',closeTicketId);
+      if(error){ alert("Erro ao encerrar chamado: "+error.message); return; }
+      closeCloseModal();
+      fetchTickets();
     }
   };
 });
