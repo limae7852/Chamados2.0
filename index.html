@@ -24,7 +24,9 @@
 <div class="container mx-auto p-6">
   <div class="flex justify-between items-center mb-6">
     <h1 class="text-2xl font-bold">📌 Sistema de Chamados</h1>
-    <button id="btnSettings" type="button" class="px-4 py-2 bg-gray-700 text-white rounded">⚙️ Configurações</button>
+    <button id="btnSettings" type="button" class="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-900">
+      ⚙️ Configurações
+    </button>
   </div>
 
   <!-- Formulário de Chamados -->
@@ -69,18 +71,18 @@
 </div>
 
 <!-- Modal Configurações -->
-<div id="modalSettings" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-50">
+<div id="modalSettings" class="fixed inset-0 hidden bg-black bg-opacity-50 z-50 items-center justify-center">
   <div class="bg-white rounded-lg shadow-lg w-[28rem] p-6">
-    <h3 class="text-lg font-bold text-gray-800 mb-4">⚙️ Configurações do Sistema</h3>
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-lg font-bold text-gray-800">⚙️ Configurações do Sistema</h3>
+      <button id="closeSettingsBtn" class="text-red-500 text-xl font-bold">✖</button>
+    </div>
     <h4 class="font-semibold mb-2">👷 Operadores/Técnicos</h4>
     <div class="flex gap-2 mb-2">
       <input type="text" id="newOperator" placeholder="Nome do operador" class="border p-2 w-full rounded">
-      <button type="button" id="addOperatorBtn" class="px-4 py-2 bg-green-600 text-white rounded">Adicionar</button>
+      <button type="button" id="addOperatorBtn" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-800">Adicionar</button>
     </div>
     <ul id="operatorsList" class="list-disc list-inside text-gray-800 space-y-1 max-h-40 overflow-auto"></ul>
-    <div class="flex justify-end space-x-2 mt-4">
-      <button type="button" id="closeSettingsBtn" class="px-4 py-2 rounded bg-gray-400 text-white">Fechar</button>
-    </div>
   </div>
 </div>
 
@@ -160,7 +162,7 @@ document.addEventListener("DOMContentLoaded", () => {
     fetchOperators();
   }
 
-  // ===== Botão Configurações =====
+  // ===== Modal Configurações =====
   btnSettings.addEventListener("click", ()=>{
     modalSettings.classList.remove("hidden");
     modalSettings.classList.add("flex");
@@ -244,7 +246,7 @@ document.addEventListener("DOMContentLoaded", () => {
     e.target.reset();
   });
 
-  // ===== Modais =====
+  // ===== Modais Detalhes e Encerrar =====
   window.viewDetails = function(id){
     const t = tickets.find(tt=>tt.id===id);
     if(t){
@@ -262,10 +264,30 @@ document.addEventListener("DOMContentLoaded", () => {
       detailsModal.classList.remove("hidden"); detailsModal.classList.add("flex");
     }
   };
-  window.closeDetailsModal = function(){ const m=document.getElementById("detailsModal"); m.classList.add("hidden"); m.classList.remove("flex"); };
-  window.openCloseModal = function(id){ closeTicketId=id; document.getElementById("closeMessage").textContent=`Deseja realmente encerrar o chamado #${id}?`; const m=document.getElementById("closeModal"); m.classList.remove("hidden"); m.classList.add("flex"); };
-  window.closeCloseModal = function(){ const m=document.getElementById("closeModal"); m.classList.add("hidden"); m.classList.remove("flex"); };
-  window.confirmCloseTicket = function(){ if(closeTicketId!==null){ closeTicket(closeTicketId); closeCloseModal(); } };
+
+  window.closeDetailsModal = function(){
+    const m=document.getElementById("detailsModal");
+    m.classList.add("hidden"); m.classList.remove("flex");
+  };
+
+  window.openCloseModal = function(id){
+    closeTicketId=id;
+    document.getElementById("closeMessage").textContent=`Deseja realmente encerrar o chamado #${id}?`;
+    const m=document.getElementById("closeModal");
+    m.classList.remove("hidden"); m.classList.add("flex");
+  };
+
+  window.closeCloseModal = function(){
+    const m=document.getElementById("closeModal");
+    m.classList.add("hidden"); m.classList.remove("flex");
+  };
+
+  window.confirmCloseTicket = function(){
+    if(closeTicketId!==null){
+      closeTicket(closeTicketId);
+      closeCloseModal();
+    }
+  };
 
   fetchTickets();
   fetchOperators();
