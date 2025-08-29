@@ -17,6 +17,10 @@
   .priority-medium { background-color: #fef9c3; }
   .priority-high { background-color: #fee2e2; }
   .priority-critical { background-color: #fce7f3; font-weight: bold; }
+
+  /* Força modais a abrirem corretamente */
+  .modal { display: none; }
+  .modal.flex { display: flex !important; }
 </style>
 </head>
 <body class="bg-gray-100 text-gray-900">
@@ -69,7 +73,7 @@
 </div>
 
 <!-- Modal Configurações -->
-<div id="modalSettings" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-50">
+<div id="modalSettings" class="modal fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-50">
   <div class="bg-white rounded-lg shadow-lg w-[28rem] p-6">
     <h3 class="text-lg font-bold text-gray-800 mb-4">⚙️ Configurações do Sistema</h3>
     
@@ -89,7 +93,7 @@
 </div>
 
 <!-- Modal Detalhes -->
-<div id="detailsModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-40">
+<div id="detailsModal" class="modal fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-40">
   <div class="bg-white rounded-lg shadow-lg w-[28rem] p-6">
     <h3 class="text-lg font-bold text-blue-600 mb-4">Detalhes do Chamado</h3>
     <div id="detailsContent" class="space-y-2 text-gray-800"></div>
@@ -100,7 +104,7 @@
 </div>
 
 <!-- Modal Encerrar -->
-<div id="closeModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-40">
+<div id="closeModal" class="modal fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-40">
   <div class="bg-white rounded-lg shadow-lg w-96 p-6">
     <h3 class="text-lg font-bold text-red-600 mb-4">Encerrar Chamado</h3>
     <p id="closeMessage" class="mb-4 text-gray-700"></p>
@@ -135,13 +139,16 @@ function renderOperators(){
   const techSelect = document.getElementById("tech");
   operatorsListEl.innerHTML="";
   techSelect.innerHTML='<option value="">Selecione o Técnico</option>';
+  
   operators.forEach(op=>{
     const li = document.createElement("li");
     li.className="flex justify-between items-center";
     li.innerHTML=`<span>${op.name}</span><button type="button" data-id="${op.id}" class="text-red-600 hover:underline">Remover</button>`;
     operatorsListEl.appendChild(li);
+
     const opt = document.createElement("option");
-    opt.value = op.name; opt.textContent = op.name;
+    opt.value = op.id; 
+    opt.textContent = op.name;
     techSelect.appendChild(opt);
   });
 }
@@ -176,12 +183,14 @@ function renderTickets(){
       <td class="border px-4 py-2">${ticket.id}</td>
       <td class="border px-4 py-2">${ticket.subject}</td>
       <td class="border px-4 py-2">${ticket.client}</td>
-      <td class="border px-4 py-2">${ticket.tech}</td>
+      <td class="border px-4 py-2">${operators.find(o=>o.id==ticket.tech)?.name || "—"}</td>
       <td class="border px-4 py-2 capitalize">${ticket.priority}</td>
       <td class="border px-4 py-2 capitalize">${ticket.status}</td>
       <td class="border px-4 py-2 space-x-2">
         <button onclick="viewDetails(${ticket.id})" class="text-blue-600 hover:underline">Detalhes</button>
-        ${ticket.status!=="resolved"?`<button onclick="openCloseModal(${ticket.id})" class="text-green-600 hover:underline">Encerrar</button>`:"✅ Encerrado"}
+        ${ticket.status!=="resolved"
+          ? `<button onclick="openCloseModal(${ticket.id})" class="text-green-600 hover:underline">Encerrar</button>`
+          : "✅ Encerrado"}
       </td>`;
     ticketsList.appendChild(tr);
     if(ticket.priority==="critical") tr.classList.add("blink");
@@ -189,6 +198,8 @@ function renderTickets(){
 }
 
 async function addTicket(ticket){
+  if(!ticket.status) ticket.status = "open";
+  if(!ticket.date) ticket.date = new Date().toISOString();
   const { error } = await client.from('tickets').insert([ticket]);
   if(error) console.error(error);
   else fetchTickets();
@@ -214,9 +225,7 @@ document.getElementById("ticketForm").addEventListener("submit", async (e)=>{
     client: document.getElementById("client").value,
     tech: document.getElementById("tech").value,
     priority: document.getElementById("priority").value,
-    description: document.getElementById("description").value,
-    status: "open",
-    date: new Date().toISOString()
+    description: document.getElementById("description").value
   };
   await addTicket(ticket);
   e.target.reset();
@@ -268,7 +277,7 @@ window.viewDetails = function(id){
       <p><strong>Assunto:</strong> ${t.subject}</p>
       <p><strong>Descrição:</strong> ${t.description}</p>
       <p><strong>Cliente:</strong> ${t.client}</p>
-      <p><strong>Técnico:</strong> ${t.tech}</p>
+      <p><strong>Técnico:</strong> ${operators.find(o=>o.id==t.tech)?.name || "—"}</p>
       <p><strong>Prioridade:</strong> ${t.priority}</p>
       <p><strong>Status:</strong> ${t.status}</p>
       <p><strong>Abertura:</strong> ${new Date(t.date).toLocaleString()}</p>
