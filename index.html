@@ -24,6 +24,7 @@
 <div class="container mx-auto p-6">
   <div class="flex justify-between items-center mb-6">
     <h1 class="text-2xl font-bold">📌 Sistema de Chamados</h1>
+    <button id="btnSettings" type="button" class="px-4 py-2 bg-gray-700 text-white rounded">⚙️ Configurações</button>
   </div>
 
   <!-- Formulário de Chamados -->
@@ -67,6 +68,23 @@
   </div>
 </div>
 
+<!-- Modal Configurações -->
+<div id="modalSettings" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-50">
+  <div class="bg-white rounded-lg shadow-lg w-[28rem] p-6">
+    <h3 class="text-lg font-bold text-gray-800 mb-4">⚙️ Configurações do Sistema</h3>
+    <h4 class="font-semibold mb-2">👷 Operadores/Técnicos</h4>
+    <div class="flex gap-2 mb-2">
+      <input type="text" id="newOperator" placeholder="Nome do operador" class="border p-2 w-full rounded">
+      <button type="button" id="addOperatorBtn" class="px-4 py-2 bg-green-600 text-white rounded">Adicionar</button>
+    </div>
+    <ul id="operatorsList" class="list-disc list-inside text-gray-800 space-y-1 max-h-40 overflow-auto"></ul>
+    <div class="flex justify-end space-x-2 mt-4">
+      <button type="button" id="closeSettingsBtn" class="px-4 py-2 rounded bg-gray-400 text-white">Cancelar</button>
+      <button type="button" id="saveSettingsBtn" class="px-4 py-2 rounded bg-blue-600 text-white">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modais Detalhes e Encerrar -->
 <div id="detailsModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-40">
   <div class="bg-white rounded-lg shadow-lg w-[28rem] p-6">
@@ -91,15 +109,47 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
+
+  // ===== DOM ELEMENTS =====
+  const btnSettings = document.getElementById("btnSettings");
+  const modalSettings = document.getElementById("modalSettings");
+  const closeSettingsBtn = document.getElementById("closeSettingsBtn");
+  const addOperatorBtn = document.getElementById("addOperatorBtn");
+  const operatorsListEl = document.getElementById("operatorsList");
+  const saveSettingsBtn = document.getElementById("saveSettingsBtn");
   const ticketForm = document.getElementById("ticketForm");
   const ticketsList = document.getElementById("ticketsList");
 
+  // ===== SUPABASE =====
   const SUPABASE_URL = "https://rrejbfjddrsznhwlmmjj.supabase.co";
-  const SUPABASE_KEY = "SUA_CHAVE_SUPABASE"; // Troque pela sua chave
+  const SUPABASE_KEY = "SUA_CHAVE_SUPABASE"; // Coloque sua chave real
   const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   let tickets = [];
+  let operators = [];
   let closeTicketId = null;
+
+  // ===== FUNÇÕES =====
+  async function fetchOperators(){
+    const { data, error } = await client.from('operators').select('*').order('id');
+    operators = error ? [] : data;
+    renderOperators();
+  }
+
+  function renderOperators(){
+    operatorsListEl.innerHTML = "";
+    const techSelect = document.getElementById("tech");
+    techSelect.innerHTML = '<option value="">Selecione o Técnico</option>';
+    operators.forEach(op=>{
+      const li = document.createElement("li");
+      li.className="flex justify-between items-center";
+      li.innerHTML=`<span>${op.name}</span><button type="button" data-id="${op.id}" class="text-red-600 hover:underline">Remover</button>`;
+      operatorsListEl.appendChild(li);
+      const opt = document.createElement("option");
+      opt.value = op.name; opt.textContent = op.name;
+      techSelect.appendChild(opt);
+    });
+  }
 
   async function fetchTickets(){
     const { data, error } = await client.from('tickets').select('*').order('id');
@@ -128,6 +178,18 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  async function addOperator(name){
+    const { error } = await client.from('operators').insert([{ name }]);
+    if(error) alert("Erro: "+error.message);
+    await fetchOperators();
+  }
+
+  async function removeOperator(id){
+    const { error } = await client.from('operators').delete().eq('id', id);
+    if(error) alert("Erro: "+error.message);
+    await fetchOperators();
+  }
+
   async function addTicket(ticket){
     const { error } = await client.from('tickets').insert([ticket]);
     if(error) alert("Erro: "+error.message);
@@ -135,12 +197,19 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function closeTicket(id){
-    const { error } = await client.from('tickets').update({ status:'resolved' }).eq('id', id);
+    const { error } = await client.from('tickets').update({ status:'resolved' }).eq('id',id);
     if(error) alert("Erro: "+error.message);
     fetchTickets();
   }
 
-  // Form submit
+  // ===== EVENTOS MODAIS =====
+  btnSettings.addEventListener("click", ()=>{ modalSettings.classList.remove("hidden"); modalSettings.classList.add("flex"); fetchOperators(); });
+  closeSettingsBtn.addEventListener("click", ()=>{ modalSettings.classList.add("hidden"); modalSettings.classList.remove("flex"); });
+  modalSettings.addEventListener("click",(e)=>{ if(e.target===modalSettings){ modalSettings.classList.add("hidden"); modalSettings.classList.remove("flex"); } });
+  addOperatorBtn.addEventListener("click", ()=>{ const input=document.getElementById("newOperator"); if(input.value.trim()){ addOperator(input.value.trim()); input.value=""; } });
+  operatorsListEl.addEventListener("click",(e)=>{ const btn=e.target.closest("button[data-id]"); if(btn) removeOperator(parseInt(btn.dataset.id)); });
+  saveSettingsBtn.addEventListener("click", ()=>{ modalSettings.classList.add("hidden"); modalSettings.classList.remove("flex"); alert("Configurações salvas!"); });
+
   ticketForm.addEventListener("submit", (e)=>{
     e.preventDefault();
     const ticket = {
@@ -156,7 +225,7 @@ document.addEventListener("DOMContentLoaded", () => {
     e.target.reset();
   });
 
-  // Modais
+  // ===== MODAIS CHAMADOS =====
   window.viewDetails = function(id){
     const t = tickets.find(tt=>tt.id===id);
     if(t){
@@ -179,9 +248,11 @@ document.addEventListener("DOMContentLoaded", () => {
   window.closeCloseModal = function(){ const m=document.getElementById("closeModal"); m.classList.add("hidden"); m.classList.remove("flex"); };
   window.confirmCloseTicket = function(){ if(closeTicketId!==null){ closeTicket(closeTicketId); closeCloseModal(); } };
 
+  // ===== INICIALIZAÇÃO =====
+  fetchOperators();
   fetchTickets();
+
 });
 </script>
-
 </body>
 </html>
