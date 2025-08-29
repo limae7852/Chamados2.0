@@ -72,15 +72,12 @@
 <div id="modalSettings" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-50">
   <div class="bg-white rounded-lg shadow-lg w-[28rem] p-6">
     <h3 class="text-lg font-bold text-gray-800 mb-4">⚙️ Configurações do Sistema</h3>
-    
-    <!-- Operadores -->
     <h4 class="font-semibold mb-2">👷 Operadores/Técnicos</h4>
     <div class="flex gap-2 mb-2">
       <input type="text" id="newOperator" placeholder="Nome do operador" class="border p-2 w-full rounded">
       <button type="button" id="addOperatorBtn" class="px-4 py-2 bg-green-600 text-white rounded">Adicionar</button>
     </div>
     <ul id="operatorsList" class="list-disc list-inside text-gray-800 space-y-1 max-h-40 overflow-auto"></ul>
-
     <div class="flex justify-end space-x-2 mt-4">
       <button type="button" id="closeSettingsBtn" class="px-4 py-2 rounded bg-gray-400 text-white">Cancelar</button>
       <button type="button" id="saveSettingsBtn" class="px-4 py-2 rounded bg-blue-600 text-white">Salvar</button>
@@ -88,125 +85,105 @@
   </div>
 </div>
 
-<!-- Modal Detalhes -->
-<div id="detailsModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-40">
-  <div class="bg-white rounded-lg shadow-lg w-[28rem] p-6">
-    <h3 class="text-lg font-bold text-blue-600 mb-4">Detalhes do Chamado</h3>
-    <div id="detailsContent" class="space-y-2 text-gray-800"></div>
-    <div class="flex justify-end mt-4">
-      <button onclick="closeDetailsModal()" class="px-4 py-2 rounded bg-blue-600 text-white">Fechar</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal Encerrar -->
-<div id="closeModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-40">
-  <div class="bg-white rounded-lg shadow-lg w-96 p-6">
-    <h3 class="text-lg font-bold text-red-600 mb-4">Encerrar Chamado</h3>
-    <p id="closeMessage" class="mb-4 text-gray-700"></p>
-    <div class="flex justify-end space-x-2">
-      <button onclick="closeCloseModal()" class="px-4 py-2 rounded bg-gray-400 text-white">Cancelar</button>
-      <button onclick="confirmCloseTicket()" class="px-4 py-2 rounded bg-green-600 text-white">Confirmar</button>
-    </div>
-  </div>
-</div>
-
 <script>
-// ===== Conexão Supabase =====
-const SUPABASE_URL = "https://rrejbfjddrsznhwlmmjj.supabase.co";
-const SUPABASE_KEY = "SUA_CHAVE_SUPABASE";
-const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-let tickets = [];
-let operators = [];
-let closeTicketId = null;
-
-// ===== Operadores =====
-async function fetchOperators(){
-  const { data, error } = await client.from('operators').select('*').order('id');
-  operators = error ? [] : data;
-  renderOperators();
-}
-function renderOperators(){
-  const operatorsListEl = document.getElementById("operatorsList");
-  const techSelect = document.getElementById("tech");
-  operatorsListEl.innerHTML="";
-  techSelect.innerHTML='<option value="">Selecione o Técnico</option>';
-  operators.forEach(op=>{
-    const li = document.createElement("li");
-    li.className="flex justify-between items-center";
-    li.innerHTML=`<span>${op.name}</span><button type="button" data-id="${op.id}" class="text-red-600 hover:underline">Remover</button>`;
-    operatorsListEl.appendChild(li);
-    const opt = document.createElement("option");
-    opt.value = op.name; opt.textContent = op.name;
-    techSelect.appendChild(opt);
-  });
-}
-async function addOperator(name){
-  const { error } = await client.from('operators').insert([{ name }]);
-  if(!error) fetchOperators();
-}
-async function removeOperator(id){
-  const { error } = await client.from('operators').delete().eq('id', id);
-  if(!error) fetchOperators();
-}
-
-// ===== Tickets =====
-async function fetchTickets(){
-  const { data, error } = await client.from('tickets').select('*').order('id');
-  tickets = error ? [] : data;
-  renderTickets();
-}
-function renderTickets(){
-  const ticketsList = document.getElementById("ticketsList");
-  ticketsList.innerHTML="";
-  tickets.forEach(ticket=>{
-    const tr = document.createElement("tr");
-    tr.classList.add(`priority-${ticket.priority}`);
-    tr.innerHTML=`<td class="border px-4 py-2">${ticket.id}</td>
-      <td class="border px-4 py-2">${ticket.subject}</td>
-      <td class="border px-4 py-2">${ticket.client}</td>
-      <td class="border px-4 py-2">${ticket.tech}</td>
-      <td class="border px-4 py-2 capitalize">${ticket.priority}</td>
-      <td class="border px-4 py-2 capitalize">${ticket.status}</td>
-      <td class="border px-4 py-2 space-x-2">
-        <button onclick="viewDetails(${ticket.id})" class="text-blue-600 hover:underline">Detalhes</button>
-        ${ticket.status!=="resolved"?`<button onclick="openCloseModal(${ticket.id})" class="text-green-600 hover:underline">Encerrar</button>`:"✅ Encerrado"}
-      </td>`;
-    ticketsList.appendChild(tr);
-    if(ticket.priority==="critical") tr.classList.add("blink");
-  });
-}
-async function addTicket(ticket){
-  const { error } = await client.from('tickets').insert([ticket]);
-  if(!error) fetchTickets();
-}
-async function closeTicket(id){
-  const { error } = await client.from('tickets').update({ status:'resolved' }).eq('id',id);
-  if(!error) fetchTickets();
-}
-
-// ===== DOM =====
+// ===== Inicialização segura =====
 document.addEventListener("DOMContentLoaded", async ()=>{
-  // Botão Configurações funcionando
-  document.getElementById("btnSettings").addEventListener("click", ()=>{
+
+  // Supabase inicializado dentro do DOMContentLoaded
+  let client;
+  try{
+    const SUPABASE_URL = "https://rrejbfjddrsznhwlmmjj.supabase.co";
+    const SUPABASE_KEY = "SUA_CHAVE_SUPABASE";
+    client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  }catch(e){
+    console.error("Erro inicializando Supabase:", e);
+  }
+
+  // Variáveis
+  let tickets = [];
+  let operators = [];
+  let closeTicketId = null;
+
+  // ===== Operadores =====
+  async function fetchOperators(){
+    if(!client) return;
+    const { data, error } = await client.from('operators').select('*').order('id');
+    operators = error ? [] : data;
     renderOperators();
-    const modal = document.getElementById("modalSettings");
-    modal.classList.remove("hidden");
-    modal.classList.add("flex");
+  }
+  function renderOperators(){
+    const operatorsListEl = document.getElementById("operatorsList");
+    const techSelect = document.getElementById("tech");
+    operatorsListEl.innerHTML="";
+    techSelect.innerHTML='<option value="">Selecione o Técnico</option>';
+    operators.forEach(op=>{
+      const li = document.createElement("li");
+      li.className="flex justify-between items-center";
+      li.innerHTML=`<span>${op.name}</span><button type="button" data-id="${op.id}" class="text-red-600 hover:underline">Remover</button>`;
+      operatorsListEl.appendChild(li);
+      const opt = document.createElement("option");
+      opt.value = op.name; opt.textContent = op.name;
+      techSelect.appendChild(opt);
+    });
+  }
+  async function addOperator(name){
+    if(!client) return;
+    const { error } = await client.from('operators').insert([{ name }]);
+    if(!error) fetchOperators();
+  }
+  async function removeOperator(id){
+    if(!client) return;
+    const { error } = await client.from('operators').delete().eq('id', id);
+    if(!error) fetchOperators();
+  }
+
+  // ===== Tickets =====
+  async function fetchTickets(){
+    if(!client) return;
+    const { data, error } = await client.from('tickets').select('*').order('id');
+    tickets = error ? [] : data;
+    renderTickets();
+  }
+  function renderTickets(){
+    const ticketsList = document.getElementById("ticketsList");
+    ticketsList.innerHTML="";
+    tickets.forEach(ticket=>{
+      const tr = document.createElement("tr");
+      tr.classList.add(`priority-${ticket.priority}`);
+      tr.innerHTML=`<td class="border px-4 py-2">${ticket.id}</td>
+        <td class="border px-4 py-2">${ticket.subject}</td>
+        <td class="border px-4 py-2">${ticket.client}</td>
+        <td class="border px-4 py-2">${ticket.tech}</td>
+        <td class="border px-4 py-2 capitalize">${ticket.priority}</td>
+        <td class="border px-4 py-2 capitalize">${ticket.status}</td>
+        <td class="border px-4 py-2 space-x-2">
+          <button onclick="viewDetails(${ticket.id})" class="text-blue-600 hover:underline">Detalhes</button>
+          ${ticket.status!=="resolved"?`<button onclick="openCloseModal(${ticket.id})" class="text-green-600 hover:underline">Encerrar</button>`:"✅ Encerrado"}
+        </td>`;
+      ticketsList.appendChild(tr);
+      if(ticket.priority==="critical") tr.classList.add("blink");
+    });
+  }
+
+  // ===== Botão Configurações funcionando =====
+  const btnSettings = document.getElementById("btnSettings");
+  const modalSettings = document.getElementById("modalSettings");
+
+  btnSettings.addEventListener("click", ()=>{
+    renderOperators();
+    modalSettings.classList.remove("hidden");
+    modalSettings.classList.add("flex");
   });
 
   document.getElementById("closeSettingsBtn").addEventListener("click", ()=>{
-    const modal = document.getElementById("modalSettings");
-    modal.classList.add("hidden");
-    modal.classList.remove("flex");
+    modalSettings.classList.add("hidden");
+    modalSettings.classList.remove("flex");
   });
 
-  document.getElementById("modalSettings").addEventListener("click",(e)=>{
-    if(e.target===document.getElementById("modalSettings")){
-      const modal = document.getElementById("modalSettings");
-      modal.classList.add("hidden");
-      modal.classList.remove("flex");
+  modalSettings.addEventListener("click",(e)=>{
+    if(e.target===modalSettings){
+      modalSettings.classList.add("hidden");
+      modalSettings.classList.remove("flex");
     }
   });
 
@@ -222,13 +199,12 @@ document.addEventListener("DOMContentLoaded", async ()=>{
   });
 
   document.getElementById("saveSettingsBtn").addEventListener("click", ()=>{
-    const modal = document.getElementById("modalSettings");
-    modal.classList.add("hidden");
-    modal.classList.remove("flex");
+    modalSettings.classList.add("hidden");
+    modalSettings.classList.remove("flex");
     alert("Configurações salvas!");
   });
 
-  // Chamados
+  // ===== Formulário Chamados =====
   document.getElementById("ticketForm").addEventListener("submit", async (e)=>{
     e.preventDefault();
     const ticket = {
@@ -240,49 +216,53 @@ document.addEventListener("DOMContentLoaded", async ()=>{
       status: "open",
       date: new Date().toISOString()
     };
-    await addTicket(ticket);
+    if(client) await client.from('tickets').insert([ticket]);
     e.target.reset();
+    fetchTickets();
   });
 
   await fetchOperators();
   await fetchTickets();
-});
 
-// ===== Modais Chamados =====
-window.viewDetails = function(id){
-  const t = tickets.find(tt=>tt.id===id);
-  if(t){
-    document.getElementById("detailsContent").innerHTML = `
-      <p><strong>ID:</strong> ${t.id}</p>
-      <p><strong>Assunto:</strong> ${t.subject}</p>
-      <p><strong>Descrição:</strong> ${t.description}</p>
-      <p><strong>Cliente:</strong> ${t.client}</p>
-      <p><strong>Técnico:</strong> ${t.tech}</p>
-      <p><strong>Prioridade:</strong> ${t.priority}</p>
-      <p><strong>Status:</strong> ${t.status}</p>
-      <p><strong>Abertura:</strong> ${new Date(t.date).toLocaleString()}</p>
-    `;
-    const modal = document.getElementById("detailsModal");
-    modal.classList.remove("hidden"); modal.classList.add("flex");
-  }
-};
-window.closeDetailsModal = function(){
-  const m = document.getElementById("detailsModal");
-  m.classList.add("hidden"); m.classList.remove("flex");
-};
-window.openCloseModal = function(id){
-  closeTicketId=id;
-  document.getElementById("closeMessage").textContent=`Deseja realmente encerrar o chamado #${id}?`;
-  const m = document.getElementById("closeModal");
-  m.classList.remove("hidden"); m.classList.add("flex");
-};
-window.closeCloseModal = function(){
-  const m = document.getElementById("closeModal");
-  m.classList.add("hidden"); m.classList.remove("flex");
-};
-window.confirmCloseTicket = async function(){
-  if(closeTicketId!==null){ await closeTicket(closeTicketId); closeCloseModal(); }
-};
+  // ===== Modais Chamados =====
+  window.viewDetails = function(id){
+    const t = tickets.find(tt=>tt.id===id);
+    if(t){
+      document.getElementById("detailsContent").innerHTML = `
+        <p><strong>ID:</strong> ${t.id}</p>
+        <p><strong>Assunto:</strong> ${t.subject}</p>
+        <p><strong>Descrição:</strong> ${t.description}</p>
+        <p><strong>Cliente:</strong> ${t.client}</p>
+        <p><strong>Técnico:</strong> ${t.tech}</p>
+        <p><strong>Prioridade:</strong> ${t.priority}</p>
+        <p><strong>Status:</strong> ${t.status}</p>
+        <p><strong>Abertura:</strong> ${new Date(t.date).toLocaleString()}</p>
+      `;
+      const detailsModal = document.getElementById("detailsModal");
+      detailsModal.classList.remove("hidden"); detailsModal.classList.add("flex");
+    }
+  };
+  window.closeDetailsModal = function(){
+    const m = document.getElementById("detailsModal");
+    m.classList.add("hidden"); m.classList.remove("flex");
+  };
+  window.openCloseModal = function(id){
+    closeTicketId=id;
+    document.getElementById("closeMessage").textContent=`Deseja realmente encerrar o chamado #${id}?`;
+    const m = document.getElementById("closeModal");
+    m.classList.remove("hidden"); m.classList.add("flex");
+  };
+  window.closeCloseModal = function(){
+    const m = document.getElementById("closeModal");
+    m.classList.add("hidden"); m.classList.remove("flex");
+  };
+  window.confirmCloseTicket = async function(){
+    if(closeTicketId!==null && client){
+      await client.from('tickets').update({status:'resolved'}).eq('id',closeTicketId);
+      closeCloseModal(); fetchTickets();
+    }
+  };
+});
 </script>
 </body>
 </html>
