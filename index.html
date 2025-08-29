@@ -108,6 +108,11 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
+  const SUPABASE_URL = "https://rrejbfjddrsznhwlmmjj.supabase.co";
+  const SUPABASE_KEY = "SUA_CHAVE_SUPABASE"; // Troque pela sua chave
+  const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // ===== Variáveis =====
   const ticketForm = document.getElementById("ticketForm");
   const ticketsList = document.getElementById("ticketsList");
   const btnSettings = document.getElementById("btnSettings");
@@ -115,16 +120,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const closeSettingsBtn = document.getElementById("closeSettingsBtn");
   const addOperatorBtn = document.getElementById("addOperatorBtn");
   const operatorsListEl = document.getElementById("operatorsList");
-
-  const SUPABASE_URL = "https://rrejbfjddrsznhwlmmjj.supabase.co";
-  const SUPABASE_KEY = "SUA_CHAVE_SUPABASE"; // Troque pela sua chave
-  const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const techSelect = document.getElementById("tech");
 
   let tickets = [];
   let operators = [];
   let closeTicketId = null;
 
-  // ===== OPERADORES =====
+  // ===== Operadores =====
   async function fetchOperators(){
     const { data, error } = await client.from('operators').select('*').order('id');
     operators = error ? [] : data;
@@ -133,12 +135,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function renderOperators(){
     operatorsListEl.innerHTML = "";
-    const techSelect = document.getElementById("tech");
     techSelect.innerHTML = '<option value="">Selecione o Técnico</option>';
     operators.forEach(op=>{
       const li = document.createElement("li");
-      li.className="flex justify-between items-center";
-      li.innerHTML=`<span>${op.name}</span> <button data-id="${op.id}" class="text-red-600 hover:underline">Remover</button>`;
+      li.className = "flex justify-between items-center";
+      li.innerHTML = `<span>${op.name}</span> <button data-id="${op.id}" class="text-red-600 hover:underline">Remover</button>`;
       operatorsListEl.appendChild(li);
 
       const opt = document.createElement("option");
@@ -159,9 +160,24 @@ document.addEventListener("DOMContentLoaded", () => {
     fetchOperators();
   }
 
-  btnSettings.addEventListener("click", ()=>{ modalSettings.classList.remove("hidden"); modalSettings.classList.add("flex"); fetchOperators(); });
-  closeSettingsBtn.addEventListener("click", ()=>{ modalSettings.classList.add("hidden"); modalSettings.classList.remove("flex"); });
-  modalSettings.addEventListener("click",(e)=>{ if(e.target===modalSettings){ modalSettings.classList.add("hidden"); modalSettings.classList.remove("flex"); } });
+  // ===== Botão Configurações =====
+  btnSettings.addEventListener("click", ()=>{
+    modalSettings.classList.remove("hidden");
+    modalSettings.classList.add("flex");
+    fetchOperators();
+  });
+
+  closeSettingsBtn.addEventListener("click", ()=>{
+    modalSettings.classList.add("hidden");
+    modalSettings.classList.remove("flex");
+  });
+
+  modalSettings.addEventListener("click",(e)=>{
+    if(e.target === modalSettings){
+      modalSettings.classList.add("hidden");
+      modalSettings.classList.remove("flex");
+    }
+  });
 
   addOperatorBtn.addEventListener("click", ()=>{
     const input = document.getElementById("newOperator");
@@ -173,7 +189,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if(btn) removeOperator(parseInt(btn.dataset.id));
   });
 
-  // ===== TICKETS =====
+  // ===== Tickets =====
   async function fetchTickets(){
     const { data, error } = await client.from('tickets').select('*').order('id');
     tickets = error ? [] : data;
@@ -213,7 +229,6 @@ document.addEventListener("DOMContentLoaded", () => {
     fetchTickets();
   }
 
-  // Form submit
   ticketForm.addEventListener("submit", (e)=>{
     e.preventDefault();
     const ticket = {
@@ -229,7 +244,7 @@ document.addEventListener("DOMContentLoaded", () => {
     e.target.reset();
   });
 
-  // Modais tickets
+  // ===== Modais =====
   window.viewDetails = function(id){
     const t = tickets.find(tt=>tt.id===id);
     if(t){
