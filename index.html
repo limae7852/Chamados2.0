@@ -7,7 +7,11 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
 <style>
-  @keyframes blinkHighlight { 0% { background-color: #fce7f3; } 50% { background-color: #f9a8d4; } 100% { background-color: #fce7f3; } }
+  @keyframes blinkHighlight { 
+    0% { background-color: #fce7f3; } 
+    50% { background-color: #f9a8d4; } 
+    100% { background-color: #fce7f3; } 
+  }
   .blink { animation: blinkHighlight 1s ease-in-out 3; }
   .priority-low { background-color: #ecfdf5; }
   .priority-medium { background-color: #fef9c3; }
@@ -111,7 +115,7 @@
 // ===== Conexão Supabase =====
 const SUPABASE_URL = "https://rrejbfjddrsznhwlmmjj.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyZWpiZmpkZHJzem5od2xtbWpqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjMyNDg4NywiZXhwIjoyMDcxOTAwODg3fQ.bBR_NR6z-iVQgHK_wPMTeoZetEgONt_7dERnmYc665U";
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ===== Variáveis =====
 let tickets = [];
@@ -120,7 +124,7 @@ let closeTicketId = null;
 
 // ===== Operadores =====
 async function fetchOperators(){
-  const { data, error } = await supabase.from('operators').select('*').order('id');
+  const { data, error } = await client.from('operators').select('*').order('id');
   if(error){ console.error(error); operators=[]; }
   else operators = data.map(op=>({ id: op.id, name: op.name }));
   renderOperators();
@@ -143,20 +147,20 @@ function renderOperators(){
 }
 
 async function addOperator(name){
-  const { error } = await supabase.from('operators').insert([{ name }]);
+  const { error } = await client.from('operators').insert([{ name }]);
   if(error) console.error(error);
   else fetchOperators();
 }
 
 async function removeOperator(id){
-  const { error } = await supabase.from('operators').delete().eq('id', id);
+  const { error } = await client.from('operators').delete().eq('id', id);
   if(error) console.error(error);
   else fetchOperators();
 }
 
 // ===== Tickets =====
 async function fetchTickets(){
-  const { data, error } = await supabase.from('tickets').select('*').order('id');
+  const { data, error } = await client.from('tickets').select('*').order('id');
   if(error){ console.error(error); tickets=[]; }
   else tickets = data;
   renderTickets();
@@ -185,13 +189,13 @@ function renderTickets(){
 }
 
 async function addTicket(ticket){
-  const { error } = await supabase.from('tickets').insert([ticket]);
+  const { error } = await client.from('tickets').insert([ticket]);
   if(error) console.error(error);
   else fetchTickets();
 }
 
 async function closeTicket(id){
-  const { error } = await supabase.from('tickets').update({ status:'resolved' }).eq('id',id);
+  const { error } = await client.from('tickets').update({ status:'resolved' }).eq('id',id);
   if(error) console.error(error);
   else fetchTickets();
 }
