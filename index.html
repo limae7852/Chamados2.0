@@ -108,177 +108,173 @@
 </div>
 
 <script>
-document.addEventListener("DOMContentLoaded", async ()=>{
-  // Inicialização Supabase
-  const SUPABASE_URL = "https://rrejbfjddrsznhwlmmjj.supabase.co";
-  const SUPABASE_KEY = "SUA_CHAVE_SUPABASE";
-  const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// ===== DOM ELEMENTS =====
+const btnSettings = document.getElementById("btnSettings");
+const modalSettings = document.getElementById("modalSettings");
+const closeSettingsBtn = document.getElementById("closeSettingsBtn");
+const addOperatorBtn = document.getElementById("addOperatorBtn");
+const operatorsListEl = document.getElementById("operatorsList");
+const saveSettingsBtn = document.getElementById("saveSettingsBtn");
+const ticketForm = document.getElementById("ticketForm");
+const ticketsList = document.getElementById("ticketsList");
 
-  let tickets = [];
-  let operators = [];
-  let closeTicketId = null;
+// ===== SUPABASE =====
+const SUPABASE_URL = "https://rrejbfjddrsznhwlmmjj.supabase.co";
+const SUPABASE_KEY = "SUA_CHAVE_SUPABASE"; // Coloque sua chave real
+const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  // ===== Operadores =====
-  async function fetchOperators(){
-    const { data, error } = await client.from('operators').select('*').order('id');
-    operators = error ? [] : data;
-    renderOperators();
-  }
-  function renderOperators(){
-    const operatorsListEl = document.getElementById("operatorsList");
-    const techSelect = document.getElementById("tech");
-    operatorsListEl.innerHTML="";
-    techSelect.innerHTML='<option value="">Selecione o Técnico</option>';
-    operators.forEach(op=>{
-      const li = document.createElement("li");
-      li.className="flex justify-between items-center";
-      li.innerHTML=`<span>${op.name}</span><button type="button" data-id="${op.id}" class="text-red-600 hover:underline">Remover</button>`;
-      operatorsListEl.appendChild(li);
-      const opt = document.createElement("option");
-      opt.value = op.name; opt.textContent = op.name;
-      techSelect.appendChild(opt);
-    });
-  }
+let tickets = [];
+let operators = [];
+let closeTicketId = null;
 
-  // ===== Tickets =====
-  async function fetchTickets(){
-    const { data, error } = await client.from('tickets').select('*').order('id');
-    tickets = error ? [] : data;
-    renderTickets();
-  }
-  function renderTickets(){
-    const ticketsList = document.getElementById("ticketsList");
-    ticketsList.innerHTML="";
-    tickets.forEach(ticket=>{
-      const tr = document.createElement("tr");
-      tr.classList.add(`priority-${ticket.priority}`);
-      tr.innerHTML=`<td class="border px-4 py-2">${ticket.id}</td>
-        <td class="border px-4 py-2">${ticket.subject}</td>
-        <td class="border px-4 py-2">${ticket.client}</td>
-        <td class="border px-4 py-2">${ticket.tech}</td>
-        <td class="border px-4 py-2 capitalize">${ticket.priority}</td>
-        <td class="border px-4 py-2 capitalize">${ticket.status}</td>
-        <td class="border px-4 py-2 space-x-2">
-          <button onclick="viewDetails(${ticket.id})" class="text-blue-600 hover:underline">Detalhes</button>
-          ${ticket.status!=="resolved"?`<button onclick="openCloseModal(${ticket.id})" class="text-green-600 hover:underline">Encerrar</button>`:"✅ Encerrado"}
-        </td>`;
-      ticketsList.appendChild(tr);
-      if(ticket.priority==="critical") tr.classList.add("blink");
-    });
-  }
+// ===== OPERADORES =====
+async function fetchOperators(){
+  const { data, error } = await client.from('operators').select('*').order('id');
+  operators = error ? [] : data;
+  renderOperators();
+}
 
-  // ===== Botão Configurações =====
-  const btnSettings = document.getElementById("btnSettings");
-  const modalSettings = document.getElementById("modalSettings");
-
-  btnSettings.addEventListener("click", ()=>{
-    renderOperators();
-    modalSettings.classList.remove("hidden");
-    modalSettings.classList.add("flex");
+function renderOperators(){
+  operatorsListEl.innerHTML = "";
+  const techSelect = document.getElementById("tech");
+  techSelect.innerHTML = '<option value="">Selecione o Técnico</option>';
+  operators.forEach(op=>{
+    const li = document.createElement("li");
+    li.className="flex justify-between items-center";
+    li.innerHTML=`<span>${op.name}</span><button type="button" data-id="${op.id}" class="text-red-600 hover:underline">Remover</button>`;
+    operatorsListEl.appendChild(li);
+    const opt = document.createElement("option");
+    opt.value = op.name; opt.textContent = op.name;
+    techSelect.appendChild(opt);
   });
+}
 
-  document.getElementById("closeSettingsBtn").addEventListener("click", ()=>{
-    modalSettings.classList.add("hidden");
-    modalSettings.classList.remove("flex");
+// ===== TICKETS =====
+async function fetchTickets(){
+  const { data, error } = await client.from('tickets').select('*').order('id');
+  tickets = error ? [] : data;
+  renderTickets();
+}
+
+function renderTickets(){
+  ticketsList.innerHTML = "";
+  tickets.forEach(ticket=>{
+    const tr = document.createElement("tr");
+    tr.classList.add(`priority-${ticket.priority}`);
+    tr.innerHTML=`
+      <td class="border px-4 py-2">${ticket.id}</td>
+      <td class="border px-4 py-2">${ticket.subject}</td>
+      <td class="border px-4 py-2">${ticket.client}</td>
+      <td class="border px-4 py-2">${ticket.tech}</td>
+      <td class="border px-4 py-2 capitalize">${ticket.priority}</td>
+      <td class="border px-4 py-2 capitalize">${ticket.status}</td>
+      <td class="border px-4 py-2 space-x-2">
+        <button onclick="viewDetails(${ticket.id})" class="text-blue-600 hover:underline">Detalhes</button>
+        ${ticket.status!=="resolved"?`<button onclick="openCloseModal(${ticket.id})" class="text-green-600 hover:underline">Encerrar</button>`:"✅ Encerrado"}
+      </td>`;
+    ticketsList.appendChild(tr);
+    if(ticket.priority==="critical") tr.classList.add("blink");
   });
+}
 
-  modalSettings.addEventListener("click",(e)=>{
-    if(e.target===modalSettings){
-      modalSettings.classList.add("hidden");
-      modalSettings.classList.remove("flex");
-    }
-  });
-
-  // Adicionar operador
-  document.getElementById("addOperatorBtn").addEventListener("click", async ()=>{
-    const input = document.getElementById("newOperator");
-    const name = input.value.trim();
-    if(!name) return;
-    const { error } = await client.from('operators').insert([{ name }]);
-    if(error){ alert("Erro ao adicionar operador: "+error.message); return; }
-    input.value="";
-    await fetchOperators();
-  });
-
-  // Remover operador
-  document.getElementById("operatorsList").addEventListener("click", async (e)=>{
-    const btn = e.target.closest("button[data-id]");
-    if(!btn) return;
-    const id = parseInt(btn.dataset.id);
-    const { error } = await client.from('operators').delete().eq('id', id);
-    if(error){ alert("Erro ao remover operador: "+error.message); return; }
-    await fetchOperators();
-  });
-
-  // Salvar Configurações
-  document.getElementById("saveSettingsBtn").addEventListener("click", ()=>{
-    modalSettings.classList.add("hidden");
-    modalSettings.classList.remove("flex");
-    alert("Configurações salvas no banco!");
-  });
-
-  // ===== Formulário Chamados =====
-  document.getElementById("ticketForm").addEventListener("submit", async (e)=>{
-    e.preventDefault();
-    const ticket = {
-      subject: document.getElementById("subject").value,
-      client: document.getElementById("client").value,
-      tech: document.getElementById("tech").value,
-      priority: document.getElementById("priority").value,
-      description: document.getElementById("description").value,
-      status: "open",
-      date: new Date().toISOString()
-    };
-    const { error } = await client.from('tickets').insert([ticket]);
-    if(error){ alert("Erro ao abrir chamado: "+error.message); return; }
-    e.target.reset();
-    fetchTickets();
-  });
-
-  await fetchOperators();
-  await fetchTickets();
-
-  // ===== Modais Chamados =====
-  window.viewDetails = function(id){
-    const t = tickets.find(tt=>tt.id===id);
-    if(t){
-      document.getElementById("detailsContent").innerHTML = `
-        <p><strong>ID:</strong> ${t.id}</p>
-        <p><strong>Assunto:</strong> ${t.subject}</p>
-        <p><strong>Descrição:</strong> ${t.description}</p>
-        <p><strong>Cliente:</strong> ${t.client}</p>
-        <p><strong>Técnico:</strong> ${t.tech}</p>
-        <p><strong>Prioridade:</strong> ${t.priority}</p>
-        <p><strong>Status:</strong> ${t.status}</p>
-        <p><strong>Abertura:</strong> ${new Date(t.date).toLocaleString()}</p>
-      `;
-      const detailsModal = document.getElementById("detailsModal");
-      detailsModal.classList.remove("hidden"); detailsModal.classList.add("flex");
-    }
-  };
-  window.closeDetailsModal = function(){
-    const m = document.getElementById("detailsModal");
-    m.classList.add("hidden"); m.classList.remove("flex");
-  };
-  window.openCloseModal = function(id){
-    closeTicketId=id;
-    document.getElementById("closeMessage").textContent=`Deseja realmente encerrar o chamado #${id}?`;
-    const m = document.getElementById("closeModal");
-    m.classList.remove("hidden"); m.classList.add("flex");
-  };
-  window.closeCloseModal = function(){
-    const m = document.getElementById("closeModal");
-    m.classList.add("hidden"); m.classList.remove("flex");
-  };
-  window.confirmCloseTicket = async function(){
-    if(closeTicketId!==null){
-      const { error } = await client.from('tickets').update({status:'resolved'}).eq('id',closeTicketId);
-      if(error){ alert("Erro ao encerrar chamado: "+error.message); return; }
-      closeCloseModal();
-      fetchTickets();
-    }
-  };
+// ===== EVENTOS CONFIGURAÇÕES =====
+btnSettings.addEventListener("click", ()=>{
+  renderOperators();
+  modalSettings.classList.remove("hidden");
+  modalSettings.classList.add("flex");
 });
+
+closeSettingsBtn.addEventListener("click", ()=>{
+  modalSettings.classList.add("hidden");
+  modalSettings.classList.remove("flex");
+});
+
+modalSettings.addEventListener("click",(e)=>{
+  if(e.target===modalSettings){
+    modalSettings.classList.add("hidden");
+    modalSettings.classList.remove("flex");
+  }
+});
+
+// Adicionar operador
+addOperatorBtn.addEventListener("click", async ()=>{
+  const input = document.getElementById("newOperator");
+  const name = input.value.trim();
+  if(!name) return;
+  const { error } = await client.from('operators').insert([{ name }]);
+  if(error){ alert("Erro ao adicionar operador: "+error.message); return; }
+  input.value="";
+  await fetchOperators();
+});
+
+// Remover operador
+operatorsListEl.addEventListener("click", async (e)=>{
+  const btn = e.target.closest("button[data-id]");
+  if(!btn) return;
+  const id = parseInt(btn.dataset.id);
+  const { error } = await client.from('operators').delete().eq('id', id);
+  if(error){ alert("Erro ao remover operador: "+error.message); return; }
+  await fetchOperators();
+});
+
+// Salvar configurações (fecha modal)
+saveSettingsBtn.addEventListener("click", ()=>{
+  modalSettings.classList.add("hidden");
+  modalSettings.classList.remove("flex");
+  alert("Configurações salvas no banco!");
+});
+
+// ===== FORMULÁRIO CHAMADOS =====
+ticketForm.addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const ticket = {
+    subject: document.getElementById("subject").value,
+    client: document.getElementById("client").value,
+    tech: document.getElementById("tech").value,
+    priority: document.getElementById("priority").value,
+    description: document.getElementById("description").value,
+    status: "open",
+    date: new Date().toISOString()
+  };
+  const { error } = await client.from('tickets').insert([ticket]);
+  if(error){ alert("Erro ao abrir chamado: "+error.message); return; }
+  e.target.reset();
+  fetchTickets();
+});
+
+// ===== MODAIS CHAMADOS =====
+window.viewDetails = function(id){
+  const t = tickets.find(tt=>tt.id===id);
+  if(t){
+    document.getElementById("detailsContent").innerHTML = `
+      <p><strong>ID:</strong> ${t.id}</p>
+      <p><strong>Assunto:</strong> ${t.subject}</p>
+      <p><strong>Descrição:</strong> ${t.description}</p>
+      <p><strong>Cliente:</strong> ${t.client}</p>
+      <p><strong>Técnico:</strong> ${t.tech}</p>
+      <p><strong>Prioridade:</strong> ${t.priority}</p>
+      <p><strong>Status:</strong> ${t.status}</p>
+      <p><strong>Abertura:</strong> ${new Date(t.date).toLocaleString()}</p>
+    `;
+    const detailsModal = document.getElementById("detailsModal");
+    detailsModal.classList.remove("hidden"); detailsModal.classList.add("flex");
+  }
+};
+window.closeDetailsModal = function(){ const m = document.getElementById("detailsModal"); m.classList.add("hidden"); m.classList.remove("flex"); };
+window.openCloseModal = function(id){ closeTicketId=id; document.getElementById("closeMessage").textContent=`Deseja realmente encerrar o chamado #${id}?`; const m = document.getElementById("closeModal"); m.classList.remove("hidden"); m.classList.add("flex"); };
+window.closeCloseModal = function(){ const m = document.getElementById("closeModal"); m.classList.add("hidden"); m.classList.remove("flex"); };
+window.confirmCloseTicket = async function(){ 
+  if(closeTicketId!==null){
+    const { error } = await client.from('tickets').update({status:'resolved'}).eq('id',closeTicketId);
+    if(error){ alert("Erro ao encerrar chamado: "+error.message); return; }
+    closeCloseModal();
+    fetchTickets();
+  }
+};
+
+// ===== INICIALIZAÇÃO =====
+fetchOperators();
+fetchTickets();
 </script>
 </body>
 </html>
