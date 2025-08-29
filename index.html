@@ -1,276 +1,47 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Sistema de Chamados</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teste Configurações</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
-  <style>
-    @keyframes blinkHighlight {
-      0%, 49% { background-color: inherit; }
-      50%, 100% { background-color: #ffcccc; }
-    }
-    .blink { animation: blinkHighlight 1s infinite; }
-    .modal { display: none; }
-    .modal.flex { display: flex !important; }
-  </style>
 </head>
-<body class="bg-gray-100 text-gray-900 min-h-screen flex flex-col">
+<body class="bg-gray-100 h-screen flex items-center justify-center">
 
-  <!-- Header -->
-  <header class="bg-blue-600 text-white p-4 flex justify-between items-center">
-    <h1 class="text-lg font-bold">📋 Sistema de Chamados</h1>
-    <button id="btnSettings" type="button" class="bg-white text-blue-600 px-3 py-1 rounded hover:bg-gray-100">⚙️ Configurações</button>
-  </header>
+  <!-- Botão -->
+  <button id="btnSettings" class="px-4 py-2 bg-blue-600 text-white rounded-lg shadow">
+    ⚙️ Configurações
+  </button>
 
-  <!-- Conteúdo -->
-  <main class="flex-1 p-4 space-y-6">
-    <!-- Abrir Chamado -->
-    <section class="bg-white rounded-lg shadow p-4">
-      <h2 class="font-semibold mb-2">➕ Abrir Chamado</h2>
-      <form id="ticketForm" class="grid gap-2">
-        <input id="subject" type="text" placeholder="Assunto" class="border p-2 rounded" required>
-        <input id="client" type="text" placeholder="Cliente" class="border p-2 rounded" required>
-        <select id="tech" class="border p-2 rounded" required>
-          <option value="">Selecione o Técnico</option>
-        </select>
-        <select id="priority" class="border p-2 rounded" required>
-          <option value="low">Baixa</option>
-          <option value="medium">Média</option>
-          <option value="high">Alta</option>
-          <option value="critical">Crítica</option>
-        </select>
-        <textarea id="description" placeholder="Descrição" class="border p-2 rounded"></textarea>
-        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Abrir</button>
-      </form>
-    </section>
-
-    <!-- Lista de Chamados -->
-    <section class="bg-white rounded-lg shadow p-4">
-      <h2 class="font-semibold mb-2">📑 Chamados</h2>
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm border">
-          <thead>
-            <tr class="bg-gray-200">
-              <th class="px-4 py-2 border">ID</th>
-              <th class="px-4 py-2 border">Assunto</th>
-              <th class="px-4 py-2 border">Cliente</th>
-              <th class="px-4 py-2 border">Técnico</th>
-              <th class="px-4 py-2 border">Prioridade</th>
-              <th class="px-4 py-2 border">Status</th>
-              <th class="px-4 py-2 border">Ações</th>
-            </tr>
-          </thead>
-          <tbody id="ticketsList"></tbody>
-        </table>
-      </div>
-    </section>
-  </main>
-
-  <!-- Modal Configurações -->
-  <div id="modalSettings" class="modal fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-50">
-    <div class="bg-white rounded-lg p-6 w-full max-w-md">
-      <h3 class="text-lg font-bold mb-4">⚙️ Configurações</h3>
-      <form id="operatorForm" class="flex space-x-2 mb-4">
-        <input id="operatorName" type="text" placeholder="Nome do Técnico" class="border p-2 rounded flex-1" required>
-        <button type="submit" class="bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700">Adicionar</button>
-      </form>
-      <ul id="operatorsList" class="space-y-2"></ul>
-      <div class="text-right mt-4">
-        <button id="closeSettings" type="button" class="bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600">Fechar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal Detalhes -->
-  <div id="modalDetails" class="modal fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-50">
-    <div class="bg-white rounded-lg p-6 w-full max-w-md">
-      <h3 class="text-lg font-bold mb-4">📌 Detalhes do Chamado</h3>
-      <div id="detailsContent" class="mb-4"></div>
-      <div class="text-right">
-        <button id="closeDetails" class="bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600">Fechar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal Encerrar -->
-  <div id="modalClose" class="modal fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-50">
-    <div class="bg-white rounded-lg p-6 w-full max-w-md">
-      <h3 class="text-lg font-bold mb-4">✅ Encerrar Chamado</h3>
-      <textarea id="closeNotes" placeholder="Observações do encerramento" class="border p-2 rounded w-full mb-4"></textarea>
-      <div class="text-right space-x-2">
-        <button id="confirmClose" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">Encerrar</button>
-        <button id="cancelClose" class="bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600">Cancelar</button>
-      </div>
+  <!-- Modal -->
+  <div id="modalSettings" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+    <div class="bg-white rounded-lg shadow-lg p-6 w-96 relative">
+      <h2 class="text-lg font-bold mb-4">Configurações</h2>
+      <p class="text-gray-700 mb-4">Este é um modal de teste.</p>
+      <button id="closeModal" class="px-4 py-2 bg-red-600 text-white rounded">Fechar</button>
     </div>
   </div>
 
   <!-- Script -->
   <script>
-    const client = supabase.createClient("https://zjvazjgxytwclwknchwp.supabase.co", "eyJhbGciOiJI...");
+    document.addEventListener("DOMContentLoaded", ()=>{
+      const btn = document.getElementById("btnSettings");
+      const modal = document.getElementById("modalSettings");
+      const close = document.getElementById("closeModal");
 
-    let operators = [];
-    let tickets = [];
-    let closeTicketId = null;
-
-    // ===== Operadores =====
-    async function fetchOperators(){
-      const { data, error } = await client.from('operators').select();
-      if(error) console.error(error);
-      else { operators = data; renderOperators(); }
-    }
-    async function addOperator(name){
-      const { error } = await client.from('operators').insert([{ name }]);
-      if(error) console.error(error); else fetchOperators();
-    }
-    async function removeOperator(id){
-      const { error } = await client.from('operators').delete().eq('id', id);
-      if(error) console.error(error); else fetchOperators();
-    }
-    function renderOperators(){
-      const operatorsListEl = document.getElementById("operatorsList");
-      const techSelect = document.getElementById("tech");
-      operatorsListEl.innerHTML="";
-      techSelect.innerHTML='<option value="">Selecione o Técnico</option>';
-      operators.forEach(op=>{
-        const li = document.createElement("li");
-        li.className="flex justify-between items-center";
-        li.innerHTML=`<span>${op.name}</span>
-          <button type="button" data-id="${op.id}" class="text-red-600 hover:underline">Remover</button>`;
-        operatorsListEl.appendChild(li);
-        const opt = document.createElement("option");
-        opt.value = op.id; opt.textContent = op.name;
-        techSelect.appendChild(opt);
-      });
-    }
-
-    // ===== Tickets =====
-    async function fetchTickets(){
-      const { data, error } = await client.from('tickets').select();
-      if(error) console.error(error);
-      else { tickets = data; renderTickets(); }
-    }
-    async function addTicket(ticket){
-      if(!ticket.status) ticket.status = "open";
-      if(!ticket.date) ticket.date = new Date().toISOString();
-      const { error } = await client.from('tickets').insert([ticket]);
-      if(error) console.error(error); else fetchTickets();
-    }
-    async function closeTicket(id, notes){
-      const { error } = await client.from('tickets').update({status:"resolved", notes}).eq('id',id);
-      if(error) console.error(error); else fetchTickets();
-    }
-    function renderTickets(){
-      const ticketsList = document.getElementById("ticketsList");
-      ticketsList.innerHTML="";
-      tickets.forEach(ticket=>{
-        const tr = document.createElement("tr");
-        tr.classList.add(`priority-${ticket.priority}`);
-        tr.innerHTML=`
-          <td class="border px-4 py-2">${ticket.id}</td>
-          <td class="border px-4 py-2">${ticket.subject}</td>
-          <td class="border px-4 py-2">${ticket.client}</td>
-          <td class="border px-4 py-2">
-            ${operators.find(o=>o.id==ticket.tech)?.name || "—"}
-          </td>
-          <td class="border px-4 py-2 capitalize">${ticket.priority}</td>
-          <td class="border px-4 py-2 capitalize">${ticket.status}</td>
-          <td class="border px-4 py-2 space-x-2">
-            <button onclick="viewDetails(${ticket.id})" class="text-blue-600 hover:underline">Detalhes</button>
-            ${ticket.status!=="resolved"
-              ? `<button onclick="openCloseModal(${ticket.id})" class="text-green-600 hover:underline">Encerrar</button>`
-              : "✅ Encerrado"}
-          </td>`;
-        ticketsList.appendChild(tr);
-        if(ticket.priority==="critical") tr.classList.add("blink");
-      });
-    }
-
-    // ===== Modais =====
-    function viewDetails(id){
-      const ticket = tickets.find(t=>t.id==id);
-      if(ticket){
-        document.getElementById("detailsContent").innerHTML=`
-          <p><b>Assunto:</b> ${ticket.subject}</p>
-          <p><b>Cliente:</b> ${ticket.client}</p>
-          <p><b>Técnico:</b> ${operators.find(o=>o.id==ticket.tech)?.name || "—"}</p>
-          <p><b>Prioridade:</b> ${ticket.priority}</p>
-          <p><b>Status:</b> ${ticket.status}</p>
-          <p><b>Descrição:</b> ${ticket.description||""}</p>
-          <p><b>Notas:</b> ${ticket.notes||""}</p>`;
-        const modal = document.getElementById("modalDetails");
-        modal.classList.remove("hidden"); modal.classList.add("flex");
-      }
-    }
-    function openCloseModal(id){
-      closeTicketId=id;
-      document.getElementById("modalClose").classList.remove("hidden");
-      document.getElementById("modalClose").classList.add("flex");
-    }
-
-    // ===== Eventos =====
-    window.addEventListener("DOMContentLoaded", ()=>{
-      // Configurações
-      document.getElementById("btnSettings").addEventListener("click", ()=>{
-        renderOperators();
-        const modal = document.getElementById("modalSettings");
+      btn.addEventListener("click", ()=>{
         modal.classList.remove("hidden");
         modal.classList.add("flex");
-        console.log("⚙️ Modal Configurações aberto");
-      });
-      document.getElementById("closeSettings").addEventListener("click", ()=>{
-        document.getElementById("modalSettings").classList.add("hidden");
-        document.getElementById("modalSettings").classList.remove("flex");
+        console.log("⚙️ Modal aberto");
       });
 
-      // Form operadores
-      document.getElementById("operatorForm").addEventListener("submit", e=>{
-        e.preventDefault();
-        const name=document.getElementById("operatorName").value.trim();
-        if(name) addOperator(name);
-        e.target.reset();
+      close.addEventListener("click", ()=>{
+        modal.classList.add("hidden");
+        modal.classList.remove("flex");
+        console.log("❌ Modal fechado");
       });
-      document.getElementById("operatorsList").addEventListener("click", e=>{
-        if(e.target.matches("button[data-id]")) removeOperator(e.target.dataset.id);
-      });
-
-      // Form tickets
-      document.getElementById("ticketForm").addEventListener("submit", async (e)=>{
-        e.preventDefault();
-        const ticket = {
-          subject: document.getElementById("subject").value,
-          client: document.getElementById("client").value,
-          tech: document.getElementById("tech").value,
-          priority: document.getElementById("priority").value,
-          description: document.getElementById("description").value
-        };
-        await addTicket(ticket);
-        e.target.reset();
-      });
-
-      // Fechar detalhes
-      document.getElementById("closeDetails").addEventListener("click", ()=>{
-        document.getElementById("modalDetails").classList.add("hidden");
-        document.getElementById("modalDetails").classList.remove("flex");
-      });
-
-      // Encerrar
-      document.getElementById("confirmClose").addEventListener("click", ()=>{
-        const notes=document.getElementById("closeNotes").value;
-        closeTicket(closeTicketId, notes);
-        document.getElementById("modalClose").classList.add("hidden");
-        document.getElementById("modalClose").classList.remove("flex");
-      });
-      document.getElementById("cancelClose").addEventListener("click", ()=>{
-        document.getElementById("modalClose").classList.add("hidden");
-        document.getElementById("modalClose").classList.remove("flex");
-      });
-
-      // Inicializar
-      fetchOperators();
-      fetchTickets();
     });
   </script>
+
 </body>
 </html>
