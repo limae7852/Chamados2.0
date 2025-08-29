@@ -110,35 +110,56 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  const SUPABASE_URL = "https://rrejbfjddrsznhwlmmjj.supabase.co";
-  const SUPABASE_KEY = "SUA_CHAVE_SUPABASE"; // Troque pela sua chave
-  const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-  // ===== Variáveis =====
-  const ticketForm = document.getElementById("ticketForm");
-  const ticketsList = document.getElementById("ticketsList");
+  // ====== 1) MODAL: garantir que o botão funcione SEMPRE ======
   const btnSettings = document.getElementById("btnSettings");
   const modalSettings = document.getElementById("modalSettings");
   const closeSettingsBtn = document.getElementById("closeSettingsBtn");
-  const addOperatorBtn = document.getElementById("addOperatorBtn");
   const operatorsListEl = document.getElementById("operatorsList");
+  const addOperatorBtn = document.getElementById("addOperatorBtn");
   const techSelect = document.getElementById("tech");
 
+  // Abrir/fechar modal (independente do Supabase)
+  const openSettings = () => { modalSettings.classList.remove("hidden"); modalSettings.classList.add("flex"); };
+  const closeSettings = () => { modalSettings.classList.add("hidden"); modalSettings.classList.remove("flex"); };
+
+  btnSettings?.addEventListener("click", openSettings);
+  closeSettingsBtn?.addEventListener("click", closeSettings);
+  modalSettings?.addEventListener("click", (e) => { if (e.target === modalSettings) closeSettings(); });
+
+  // ====== 2) Inicialização do Supabase com guarda ======
+  const SUPABASE_URL = "https://rrejbfjddrsznhwlmmjj.supabase.co";
+  const SUPABASE_KEY = "SUA_CHAVE_SUPABASE"; // substitua pela sua anon key
+  let client = null;
+  try {
+    if (window.supabase && SUPABASE_URL && SUPABASE_KEY) {
+      client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    } else {
+      console.warn("Supabase não disponível ou chave ausente. O app abrirá, mas sem DB.");
+    }
+  } catch (err) {
+    console.error("Falha ao iniciar Supabase:", err);
+  }
+
+  // ====== 3) Estado ======
+  const ticketForm = document.getElementById("ticketForm");
+  const ticketsList = document.getElementById("ticketsList");
   let tickets = [];
   let operators = [];
   let closeTicketId = null;
 
-  // ===== Operadores =====
+  // ====== 4) Operadores (só executa se houver client) ======
   async function fetchOperators(){
+    if (!client) return; // sem DB, não faz nada
     const { data, error } = await client.from('operators').select('*').order('id');
-    operators = error ? [] : data;
+    if (error) { console.error(error); operators = []; }
+    else { operators = data || []; }
     renderOperators();
   }
 
   function renderOperators(){
     operatorsListEl.innerHTML = "";
     techSelect.innerHTML = '<option value="">Selecione o Técnico</option>';
-    operators.forEach(op=>{
+    (operators || []).forEach(op=>{
       const li = document.createElement("li");
       li.className = "flex justify-between items-center";
       li.innerHTML = `<span>${op.name}</span> <button data-id="${op.id}" class="text-red-600 hover:underline">Remover</button>`;
@@ -151,59 +172,45 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function addOperator(name){
+    if (!client) { alert("Banco não configurado."); return; }
     const { error } = await client.from('operators').insert([{ name }]);
-    if(error) alert("Erro: "+error.message);
+    if (error) alert("Erro: " + error.message);
     fetchOperators();
   }
 
   async function removeOperator(id){
+    if (!client) { alert("Banco não configurado."); return; }
     const { error } = await client.from('operators').delete().eq('id', id);
-    if(error) alert("Erro: "+error.message);
+    if (error) alert("Erro: " + error.message);
     fetchOperators();
   }
 
-  // ===== Modal Configurações =====
-  btnSettings.addEventListener("click", ()=>{
-    modalSettings.classList.remove("hidden");
-    modalSettings.classList.add("flex");
-    fetchOperators();
-  });
-
-  closeSettingsBtn.addEventListener("click", ()=>{
-    modalSettings.classList.add("hidden");
-    modalSettings.classList.remove("flex");
-  });
-
-  modalSettings.addEventListener("click",(e)=>{
-    if(e.target === modalSettings){
-      modalSettings.classList.add("hidden");
-      modalSettings.classList.remove("flex");
-    }
-  });
-
-  addOperatorBtn.addEventListener("click", ()=>{
+  addOperatorBtn?.addEventListener("click", ()=>{
     const input = document.getElementById("newOperator");
-    if(input.value.trim()){ addOperator(input.value.trim()); input.value=""; }
+    const name = input.value.trim();
+    if (name) { addOperator(name); input.value = ""; }
   });
 
-  operatorsListEl.addEventListener("click",(e)=>{
+  operatorsListEl?.addEventListener("click",(e)=>{
     const btn = e.target.closest("button[data-id]");
-    if(btn) removeOperator(parseInt(btn.dataset.id));
+    if (btn) removeOperator(parseInt(btn.dataset.id, 10));
   });
 
-  // ===== Tickets =====
+  // ====== 5) Tickets (só executa se houver client) ======
   async function fetchTickets(){
+    if (!client) { tickets = []; renderTickets(); return; }
     const { data, error } = await client.from('tickets').select('*').order('id');
-    tickets = error ? [] : data;
+    if (error) { console.error(error); tickets = []; }
+    else { tickets = data || []; }
     renderTickets();
   }
 
   function renderTickets(){
     ticketsList.innerHTML = "";
-    tickets.forEach(ticket=>{
+    (tickets || []).forEach(ticket=>{
       const tr = document.createElement("tr");
       tr.classList.add(`priority-${ticket.priority}`);
-      tr.innerHTML=`
+      tr.innerHTML = `
         <td class="border px-4 py-2">${ticket.id}</td>
         <td class="border px-4 py-2">${ticket.subject}</td>
         <td class="border px-4 py-2">${ticket.client}</td>
@@ -212,26 +219,30 @@ document.addEventListener("DOMContentLoaded", () => {
         <td class="border px-4 py-2 capitalize">${ticket.status}</td>
         <td class="border px-4 py-2 space-x-2">
           <button onclick="viewDetails(${ticket.id})" class="text-blue-600 hover:underline">Detalhes</button>
-          ${ticket.status!=="resolved"?`<button onclick="openCloseModal(${ticket.id})" class="text-green-600 hover:underline">Encerrar</button>`:"✅ Encerrado"}
+          ${ticket.status!=="resolved"
+            ? `<button onclick="openCloseModal(${ticket.id})" class="text-green-600 hover:underline">Encerrar</button>`
+            : "✅ Encerrado"}
         </td>`;
       ticketsList.appendChild(tr);
-      if(ticket.priority==="critical") tr.classList.add("blink");
+      if (ticket.priority === "critical") tr.classList.add("blink");
     });
   }
 
   async function addTicket(ticket){
+    if (!client) { alert("Banco não configurado."); return; }
     const { error } = await client.from('tickets').insert([ticket]);
-    if(error) alert("Erro: "+error.message);
+    if (error) alert("Erro: " + error.message);
     fetchTickets();
   }
 
   async function closeTicket(id){
+    if (!client) { alert("Banco não configurado."); return; }
     const { error } = await client.from('tickets').update({ status:'resolved' }).eq('id', id);
-    if(error) alert("Erro: "+error.message);
+    if (error) alert("Erro: " + error.message);
     fetchTickets();
   }
 
-  ticketForm.addEventListener("submit", (e)=>{
+  ticketForm?.addEventListener("submit", (e)=>{
     e.preventDefault();
     const ticket = {
       subject: document.getElementById("subject").value,
@@ -246,10 +257,10 @@ document.addEventListener("DOMContentLoaded", () => {
     e.target.reset();
   });
 
-  // ===== Modais Detalhes e Encerrar =====
+  // ====== 6) Modais de ticket (globais) ======
   window.viewDetails = function(id){
-    const t = tickets.find(tt=>tt.id===id);
-    if(t){
+    const t = (tickets || []).find(tt=>tt.id===id);
+    if (t){
       document.getElementById("detailsContent").innerHTML = `
         <p><strong>ID:</strong> ${t.id}</p>
         <p><strong>Assunto:</strong> ${t.subject}</p>
@@ -264,33 +275,33 @@ document.addEventListener("DOMContentLoaded", () => {
       detailsModal.classList.remove("hidden"); detailsModal.classList.add("flex");
     }
   };
-
   window.closeDetailsModal = function(){
-    const m=document.getElementById("detailsModal");
+    const m = document.getElementById("detailsModal");
     m.classList.add("hidden"); m.classList.remove("flex");
   };
-
   window.openCloseModal = function(id){
-    closeTicketId=id;
-    document.getElementById("closeMessage").textContent=`Deseja realmente encerrar o chamado #${id}?`;
-    const m=document.getElementById("closeModal");
+    closeTicketId = id;
+    document.getElementById("closeMessage").textContent = `Deseja realmente encerrar o chamado #${id}?`;
+    const m = document.getElementById("closeModal");
     m.classList.remove("hidden"); m.classList.add("flex");
   };
-
   window.closeCloseModal = function(){
-    const m=document.getElementById("closeModal");
+    const m = document.getElementById("closeModal");
     m.classList.add("hidden"); m.classList.remove("flex");
   };
-
   window.confirmCloseTicket = function(){
-    if(closeTicketId!==null){
-      closeTicket(closeTicketId);
-      closeCloseModal();
-    }
+    if (closeTicketId !== null) { closeTicket(closeTicketId); closeCloseModal(); }
   };
 
-  fetchTickets();
-  fetchOperators();
+  // ====== 7) Carregar dados (só tenta se houver client) ======
+  if (client) {
+    fetchOperators();
+    fetchTickets();
+  } else {
+    // Ainda assim mantemos o modal 100% funcional
+    renderOperators();
+    renderTickets();
+  }
 });
 </script>
 
