@@ -1,74 +1,286 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Sistema de Chamados</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Sistema de Chamados</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
+<style>
+  @keyframes blinkHighlight { 
+    0% { background-color: #fce7f3; } 
+    50% { background-color: #f9a8d4; } 
+    100% { background-color: #fce7f3; } 
+  }
+  .blink { animation: blinkHighlight 1s ease-in-out 3; }
+  .priority-low { background-color: #ecfdf5; }
+  .priority-medium { background-color: #fef9c3; }
+  .priority-high { background-color: #fee2e2; }
+  .priority-critical { background-color: #fce7f3; font-weight: bold; }
+</style>
 </head>
-<body class="bg-gray-100">
+<body class="bg-gray-100 text-gray-900">
 
-  <!-- Topo -->
-  <div class="flex justify-between items-center bg-blue-600 p-4 text-white">
-    <h1 class="text-xl font-bold">Sistema de Chamados</h1>
-    <button id="btnConfig" class="bg-white text-blue-600 px-4 py-2 rounded hover:bg-gray-200">
-      ⚙️ Configurações
-    </button>
+<div class="container mx-auto p-6">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold">📌 Sistema de Chamados</h1>
+    <button id="btnSettings" type="button" class="px-4 py-2 bg-gray-700 text-white rounded">⚙️ Configurações</button>
   </div>
 
-  <div class="p-4">
-    <p class="text-gray-700">Aqui ficará o conteúdo do sistema...</p>
+  <!-- Formulário de Chamados -->
+  <div class="bg-white p-6 rounded shadow mb-6">
+    <h2 class="text-xl font-semibold mb-4">Abrir Novo Chamado</h2>
+    <form id="ticketForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <input type="text" id="subject" placeholder="Assunto" class="border p-2 rounded" required>
+      <input type="text" id="client" placeholder="Cliente" class="border p-2 rounded" required>
+      <select id="tech" class="border p-2 rounded" required>
+        <option value="">Selecione o Técnico</option>
+      </select>
+      <select id="priority" class="border p-2 rounded" required>
+        <option value="">Selecione a Prioridade</option>
+        <option value="low">Baixa</option>
+        <option value="medium">Média</option>
+        <option value="high">Alta</option>
+        <option value="critical">Crítica</option>
+      </select>
+      <textarea id="description" placeholder="Descreva o problema..." class="border p-2 rounded col-span-1 md:col-span-2" required></textarea>
+      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded col-span-1 md:col-span-2">Abrir Chamado</button>
+    </form>
   </div>
 
-  <!-- MODAL CONFIGURAÇÕES -->
-  <div id="configModal" class="fixed inset-0 hidden bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white rounded-lg shadow-lg w-96 p-6">
-      <h2 class="text-xl font-semibold mb-4">Configurações</h2>
+  <!-- Lista de Chamados -->
+  <div class="bg-white p-6 rounded shadow">
+    <h2 class="text-xl font-semibold mb-4">Chamados</h2>
+    <table class="w-full border-collapse">
+      <thead>
+        <tr class="bg-gray-200">
+          <th class="px-4 py-2 border">ID</th>
+          <th class="px-4 py-2 border">Assunto</th>
+          <th class="px-4 py-2 border">Cliente</th>
+          <th class="px-4 py-2 border">Técnico</th>
+          <th class="px-4 py-2 border">Prioridade</th>
+          <th class="px-4 py-2 border">Status</th>
+          <th class="px-4 py-2 border">Ações</th>
+        </tr>
+      </thead>
+      <tbody id="ticketsList"></tbody>
+    </table>
+  </div>
+</div>
 
-      <!-- Exemplo de campo configuração -->
-      <label class="block mb-2 text-gray-700">Nome do Operador</label>
-      <input type="text" id="configName" class="w-full border p-2 rounded mb-4" placeholder="Digite um nome...">
+<!-- Modal Configurações -->
+<div id="modalSettings" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-50">
+  <div class="bg-white rounded-lg shadow-lg w-[28rem] p-6">
+    <h3 class="text-lg font-bold text-gray-800 mb-4">⚙️ Configurações do Sistema</h3>
+    
+    <!-- Operadores -->
+    <h4 class="font-semibold mb-2">👷 Operadores/Técnicos</h4>
+    <div class="flex gap-2 mb-2">
+      <input type="text" id="newOperator" placeholder="Nome do operador" class="border p-2 w-full rounded">
+      <button type="button" id="addOperatorBtn" class="px-4 py-2 bg-green-600 text-white rounded">Adicionar</button>
+    </div>
+    <ul id="operatorsList" class="list-disc list-inside text-gray-800 space-y-1 max-h-40 overflow-auto"></ul>
 
-      <div class="flex justify-end gap-2">
-        <button id="closeConfig" class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Cancelar</button>
-        <button id="saveConfig" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Salvar</button>
-      </div>
+    <div class="flex justify-end space-x-2 mt-4">
+      <button type="button" id="closeSettingsBtn" class="px-4 py-2 rounded bg-gray-400 text-white">Cancelar</button>
+      <button type="button" id="saveSettingsBtn" class="px-4 py-2 rounded bg-blue-600 text-white">Salvar</button>
     </div>
   </div>
+</div>
 
-  <script>
-    // ===== Conexão Supabase =====
-    const SUPABASE_URL = "https://rrejbfjddrsznhwlmmjj.supabase.co";
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyZWpiZmpkZHJzem5od2xtbWpqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjMyNDg4NywiZXhwIjoyMDcxOTAwODg3fQ.bBR_NR6z-iVQgHK_wPMTeoZetEgONt_7dERnmYc665U";
-    const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+<!-- Modal Detalhes -->
+<div id="detailsModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-40">
+  <div class="bg-white rounded-lg shadow-lg w-[28rem] p-6">
+    <h3 class="text-lg font-bold text-blue-600 mb-4">Detalhes do Chamado</h3>
+    <div id="detailsContent" class="space-y-2 text-gray-800"></div>
+    <div class="flex justify-end mt-4">
+      <button onclick="closeDetailsModal()" class="px-4 py-2 rounded bg-blue-600 text-white">Fechar</button>
+    </div>
+  </div>
+</div>
 
-    // ===== Modal Configurações =====
-    const configModal = document.getElementById("configModal");
-    const btnConfig = document.getElementById("btnConfig");
-    const closeConfig = document.getElementById("closeConfig");
-    const saveConfig = document.getElementById("saveConfig");
+<!-- Modal Encerrar -->
+<div id="closeModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-40">
+  <div class="bg-white rounded-lg shadow-lg w-96 p-6">
+    <h3 class="text-lg font-bold text-red-600 mb-4">Encerrar Chamado</h3>
+    <p id="closeMessage" class="mb-4 text-gray-700"></p>
+    <div class="flex justify-end space-x-2">
+      <button onclick="closeCloseModal()" class="px-4 py-2 rounded bg-gray-400 text-white">Cancelar</button>
+      <button onclick="confirmCloseTicket()" class="px-4 py-2 rounded bg-green-600 text-white">Confirmar</button>
+    </div>
+  </div>
+</div>
 
-    btnConfig.addEventListener("click", () => {
-      configModal.classList.remove("hidden");
-    });
+<script>
+// ===== Conexão Supabase =====
+const SUPABASE_URL = "https://rrejbfjddrsznhwlmmjj.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyZWpiZmpkZHJzem5od2xtbWpqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjMyNDg4NywiZXhwIjoyMDcxOTAwODg3fQ.bBR_NR6z-iVQgHK_wPMTeoZetEgONt_7dERnmYc665U";
+const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    closeConfig.addEventListener("click", () => {
-      configModal.classList.add("hidden");
-    });
+// ===== Variáveis =====
+let tickets = [];
+let operators = [];
+let closeTicketId = null;
 
-    saveConfig.addEventListener("click", () => {
-      const name = document.getElementById("configName").value;
-      alert("Nome salvo: " + name);
-      configModal.classList.add("hidden");
-    });
+// ===== Operadores =====
+async function fetchOperators(){
+  const { data, error } = await client.from('operators').select('*').order('id');
+  if(error){ console.error(error); operators=[]; }
+  else operators = data.map(op=>({ id: op.id, name: op.name }));
+  renderOperators();
+}
 
-    // Fecha modal clicando fora
-    window.addEventListener("click", (e) => {
-      if (e.target === configModal) {
-        configModal.classList.add("hidden");
-      }
-    });
-  </script>
+function renderOperators(){
+  const operatorsListEl = document.getElementById("operatorsList");
+  const techSelect = document.getElementById("tech");
+  operatorsListEl.innerHTML="";
+  techSelect.innerHTML='<option value="">Selecione o Técnico</option>';
+  operators.forEach(op=>{
+    const li = document.createElement("li");
+    li.className="flex justify-between items-center";
+    li.innerHTML=`<span>${op.name}</span><button type="button" data-id="${op.id}" class="text-red-600 hover:underline">Remover</button>`;
+    operatorsListEl.appendChild(li);
+    const opt = document.createElement("option");
+    opt.value = op.name; opt.textContent = op.name;
+    techSelect.appendChild(opt);
+  });
+}
+
+async function addOperator(name){
+  const { error } = await client.from('operators').insert([{ name }]);
+  if(error) console.error(error);
+  else fetchOperators();
+}
+
+async function removeOperator(id){
+  const { error } = await client.from('operators').delete().eq('id', id);
+  if(error) console.error(error);
+  else fetchOperators();
+}
+
+// ===== Tickets =====
+async function fetchTickets(){
+  const { data, error } = await client.from('tickets').select('*').order('id');
+  if(error){ console.error(error); tickets=[]; }
+  else tickets = data;
+  renderTickets();
+}
+
+function renderTickets(){
+  const ticketsList = document.getElementById("ticketsList");
+  ticketsList.innerHTML="";
+  tickets.forEach(ticket=>{
+    const tr = document.createElement("tr");
+    tr.classList.add(`priority-${ticket.priority}`);
+    tr.innerHTML=`
+      <td class="border px-4 py-2">${ticket.id}</td>
+      <td class="border px-4 py-2">${ticket.subject}</td>
+      <td class="border px-4 py-2">${ticket.client}</td>
+      <td class="border px-4 py-2">${ticket.tech}</td>
+      <td class="border px-4 py-2 capitalize">${ticket.priority}</td>
+      <td class="border px-4 py-2 capitalize">${ticket.status}</td>
+      <td class="border px-4 py-2 space-x-2">
+        <button onclick="viewDetails(${ticket.id})" class="text-blue-600 hover:underline">Detalhes</button>
+        ${ticket.status!=="resolved"?`<button onclick="openCloseModal(${ticket.id})" class="text-green-600 hover:underline">Encerrar</button>`:"✅ Encerrado"}
+      </td>`;
+    ticketsList.appendChild(tr);
+    if(ticket.priority==="critical") tr.classList.add("blink");
+  });
+}
+
+async function addTicket(ticket){
+  const { error } = await client.from('tickets').insert([ticket]);
+  if(error) console.error(error);
+  else fetchTickets();
+}
+
+async function closeTicket(id){
+  const { error } = await client.from('tickets').update({ status:'resolved' }).eq('id',id);
+  if(error) console.error(error);
+  else fetchTickets();
+}
+
+// ===== DOM =====
+document.addEventListener("DOMContentLoaded", async ()=>{
+  await fetchOperators();
+  await fetchTickets();
+});
+
+// Abrir Chamado
+document.getElementById("ticketForm").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const ticket = {
+    subject: document.getElementById("subject").value,
+    client: document.getElementById("client").value,
+    tech: document.getElementById("tech").value,
+    priority: document.getElementById("priority").value,
+    description: document.getElementById("description").value,
+    status: "open",
+    date: new Date().toISOString()
+  };
+  await addTicket(ticket);
+  e.target.reset();
+});
+
+// Configurações
+document.getElementById("btnSettings").addEventListener("click", ()=>{
+  renderOperators();
+  document.getElementById("modalSettings").classList.remove("hidden");
+  document.getElementById("modalSettings").classList.add("flex");
+});
+
+document.getElementById("closeSettingsBtn").addEventListener("click", ()=>{
+  document.getElementById("modalSettings").classList.add("hidden");
+  document.getElementById("modalSettings").classList.remove("flex");
+});
+
+document.getElementById("modalSettings").addEventListener("click",(e)=>{
+  if(e.target===document.getElementById("modalSettings")){
+    document.getElementById("modalSettings").classList.add("hidden");
+    document.getElementById("modalSettings").classList.remove("flex");
+  }
+});
+
+document.getElementById("addOperatorBtn").addEventListener("click", ()=>{
+  const input = document.getElementById("newOperator");
+  const name = input.value.trim();
+  if(name){ addOperator(name); input.value=""; }
+});
+
+document.getElementById("operatorsList").addEventListener("click",(e)=>{
+  const btn = e.target.closest("button[data-id]");
+  if(btn){ removeOperator(parseInt(btn.dataset.id)); }
+});
+
+// Botão Salvar (fecha modal)
+document.getElementById("saveSettingsBtn").addEventListener("click", ()=>{
+  document.getElementById("modalSettings").classList.add("hidden");
+  document.getElementById("modalSettings").classList.remove("flex");
+  alert("Configurações salvas!");
+});
+
+// ===== Modais Chamados =====
+window.viewDetails = function(id){
+  const t = tickets.find(tt=>tt.id===id);
+  if(t){
+    document.getElementById("detailsContent").innerHTML = `
+      <p><strong>ID:</strong> ${t.id}</p>
+      <p><strong>Assunto:</strong> ${t.subject}</p>
+      <p><strong>Descrição:</strong> ${t.description}</p>
+      <p><strong>Cliente:</strong> ${t.client}</p>
+      <p><strong>Técnico:</strong> ${t.tech}</p>
+      <p><strong>Prioridade:</strong> ${t.priority}</p>
+      <p><strong>Status:</strong> ${t.status}</p>
+      <p><strong>Abertura:</strong> ${new Date(t.date).toLocaleString()}</p>
+    `;
+    document.getElementById("detailsModal").classList.remove("hidden");
+    document.getElementById("detailsModal").classList.add("flex");
+  }
+};
+window.closeDetailsModal = function(){ const m = document.getElementById("detailsModal"); m.classList.add("hidden"); m.classList.remove("flex"); };
+window.openCloseModal = function(id){ closeTicketId=id; document.getElementById("closeMessage").textContent=`Deseja realmente encerrar o chamado #${id}?`; const m = document.getElementById("closeModal"); m.classList.remove("hidden"); m.classList.add("flex"); };
+window.closeCloseModal = function(){ const m = document.getElementById("closeModal"); m.classList.add("hidden"); m.classList.remove("flex"); };
+window.confirmCloseTicket = async function(){ if(closeTicketId!==null){ await closeTicket(closeTicketId); closeCloseModal(); } };
+</script>
 </body>
 </html>
