@@ -6,17 +6,14 @@
 <title>Sistema de Chamados</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-  @keyframes blink {
-    0%, 50%, 100% { background-color: #f87171; }
-    25%, 75% { background-color: #fca5a5; }
-  }
+  @keyframes blink { 0%,50%,100%{background-color:#f87171;} 25%,75%{background-color:#fca5a5;} }
   .blink td { animation: blink 1s infinite; }
-  .btn-edit { background-color: #facc15; color: #000; padding: 0.25rem 0.5rem; border-radius: 0.25rem; }
-  .btn-edit:hover { background-color: #eab308; }
-  .btn-close { background-color: #ef4444; color: #fff; padding: 0.25rem 0.5rem; border-radius: 0.25rem; }
-  .btn-close:hover { background-color: #b91c1c; }
-  .btn-details { background-color: #3b82f6; color: #fff; padding: 0.25rem 0.5rem; border-radius: 0.25rem; }
-  .btn-details:hover { background-color: #1d4ed8; }
+  .btn-edit { background-color: #facc15; color:#000; padding:0.25rem 0.5rem; border-radius:0.25rem; }
+  .btn-edit:hover { background-color:#eab308; }
+  .btn-close { background-color:#ef4444;color:#fff;padding:0.25rem 0.5rem;border-radius:0.25rem; }
+  .btn-close:hover{ background-color:#b91c1c; }
+  .btn-details{background-color:#3b82f6;color:#fff;padding:0.25rem 0.5rem;border-radius:0.25rem;}
+  .btn-details:hover{background-color:#1d4ed8;}
 </style>
 </head>
 <body class="bg-gray-100 text-gray-900">
@@ -38,8 +35,8 @@
   <div class="flex justify-between items-center mb-4">
     <h1 class="text-2xl font-bold">Sistema de Chamados</h1>
     <div class="flex gap-2">
-      <button id="btnOpenUserModal" onclick="openUserModal()" class="px-4 py-2 bg-green-600 text-white rounded hidden">➕ Cadastrar Usuário</button>
-      <button id="logoutBtn" class="px-4 py-2 bg-red-600 text-white rounded">Logout</button>
+      <button id="btnUserRegister" class="px-4 py-2 bg-green-600 text-white rounded hidden">Cadastrar Usuário</button>
+      <button id="logoutBtn" class="px-4 py-2 bg-red-500 text-white rounded">Logout</button>
     </div>
   </div>
 
@@ -128,8 +125,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, updateDoc, doc, orderBy, query } 
-  from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, updateDoc, doc, orderBy, query } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBA16WHE768N9eUcqEoQqUF7uEIB82nNM0",
@@ -143,40 +139,33 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-let tickets = [];
-let operators = [];
-let currentUser = null;
-let editTicketId = null;
+let tickets = [], operators = [], currentUser = null, editTicketId = null;
 
 // ======================= Login ==========================
 async function loginUser(login, password){
-  const snapshot = await getDocs(collection(db, "users"));
+  const snapshot = await getDocs(collection(db,"users"));
   const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  return users.find(u => u.login === login && u.password === password) || null;
+  return users.find(u=>u.login===login && u.password===password) || null;
 }
 
 document.getElementById("loginForm").addEventListener("submit", async (e)=>{
   e.preventDefault();
   const login = document.getElementById("loginUser").value;
   const pass = document.getElementById("loginPass").value;
-
   const user = await loginUser(login, pass);
   if(user){
     currentUser = user;
     document.getElementById("loginScreen").classList.add("hidden");
     document.getElementById("systemScreen").classList.remove("hidden");
 
-    // Mostrar botão de cadastro apenas para admin
-    const btnOpenUserModal = document.getElementById("btnOpenUserModal");
-    if(currentUser.role === "admin"){
-      btnOpenUserModal.classList.remove("hidden");
-    } else {
-      btnOpenUserModal.classList.add("hidden");
+    // Mostra botão cadastro apenas para admin
+    if(currentUser.role==="admin"){
+      document.getElementById("btnUserRegister").classList.remove("hidden");
     }
 
     fetchOperators();
     fetchTickets();
-  } else {
+  }else{
     alert("Usuário ou senha inválidos!");
   }
 });
@@ -184,8 +173,9 @@ document.getElementById("loginForm").addEventListener("submit", async (e)=>{
 // ======================= Logout =========================
 document.getElementById("logoutBtn").addEventListener("click", ()=>{
   currentUser = null;
-  document.getElementById("systemScreen").classList.add("hidden");
   document.getElementById("loginScreen").classList.remove("hidden");
+  document.getElementById("systemScreen").classList.add("hidden");
+  document.getElementById("btnUserRegister").classList.add("hidden");
 });
 
 // ======================= Cadastro de Usuários ==========================
@@ -195,25 +185,26 @@ function closeUserModal(){ userModal.classList.add("hidden"); userModal.classLis
 window.openUserModal = openUserModal;
 window.closeUserModal = closeUserModal;
 
+document.getElementById("btnUserRegister").addEventListener("click", openUserModal);
+
 document.getElementById("userForm").addEventListener("submit", async (e)=>{
   e.preventDefault();
-  if(currentUser.role !== "admin") return alert("Apenas admin pode cadastrar usuários!");
   const newUser = {
     name: document.getElementById("userName").value,
     login: document.getElementById("userLogin").value,
     password: document.getElementById("userPass").value,
     role: document.getElementById("userRole").value
   };
-  await addDoc(collection(db, "users"), newUser);
+  await addDoc(collection(db,"users"), newUser);
   e.target.reset();
   fetchUsers();
 });
 
 async function fetchUsers(){
-  const snapshot = await getDocs(collection(db, "users"));
-  const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  const snapshot = await getDocs(collection(db,"users"));
+  const users = snapshot.docs.map(doc=>({ id: doc.id, ...doc.data() }));
   const ul = document.getElementById("usersList");
-  ul.innerHTML = "";
+  ul.innerHTML="";
   users.forEach(u=>{
     const li = document.createElement("li");
     li.textContent = `${u.name} (${u.login}) - ${u.role}`;
@@ -233,81 +224,74 @@ btnSettings.addEventListener("click", ()=>{ modalSettings.classList.remove("hidd
 closeSettingsBtn.addEventListener("click", ()=>{ modalSettings.classList.add("hidden"); modalSettings.classList.remove("flex"); });
 
 async function fetchOperators(){
-  const q = query(collection(db, "operators"), orderBy("name"));
+  const q = query(collection(db,"operators"), orderBy("name"));
   const snapshot = await getDocs(q);
-  operators = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  operators = snapshot.docs.map(doc=>({ id: doc.id, ...doc.data() }));
   renderOperators();
 }
 
 function renderOperators(){
-  operatorsListEl.innerHTML = "";
-  techSelect.innerHTML = '<option value="">Selecione o Técnico</option>';
+  operatorsListEl.innerHTML="";
+  techSelect.innerHTML='<option value="">Selecione o Técnico</option>';
   operators.forEach(op=>{
     const li = document.createElement("li");
-    li.className = "flex justify-between items-center border p-2 rounded";
-    li.innerHTML = `<span>${op.name}</span> 
-      <button data-id="${op.id}" class="text-red-600 hover:underline">Remover</button>`;
+    li.className="flex justify-between items-center border p-2 rounded";
+    li.innerHTML=`<span>${op.name}</span> <button data-id="${op.id}" class="text-red-600 hover:underline">Remover</button>`;
     operatorsListEl.appendChild(li);
+
     const opt = document.createElement("option");
-    opt.value = op.name; opt.textContent = op.name;
+    opt.value=op.name; opt.textContent=op.name;
     techSelect.appendChild(opt);
   });
 }
 
 addOperatorBtn.addEventListener("click", async ()=>{
-  const input = document.getElementById("newOperator");
-  const name = input.value.trim();
-  if(name){ await addDoc(collection(db, "operators"), { name }); input.value = ""; fetchOperators(); }
+  const name=document.getElementById("newOperator").value.trim();
+  if(name){ await addDoc(collection(db,"operators"), { name }); document.getElementById("newOperator").value=""; fetchOperators(); }
 });
 
 operatorsListEl.addEventListener("click", async (e)=>{
-  const btn = e.target.closest("button[data-id]");
-  if(btn) await deleteDoc(doc(db, "operators", btn.dataset.id)), fetchOperators();
+  const btn=e.target.closest("button[data-id]");
+  if(btn) await deleteDoc(doc(db,"operators", btn.dataset.id)), fetchOperators();
 });
 
 // ======================= Tickets ==========================
 async function fetchTickets(){
-  const q = query(collection(db, "tickets"), orderBy("date"));
+  const q = query(collection(db,"tickets"), orderBy("date"));
   const snapshot = await getDocs(q);
-  tickets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  const allTickets = snapshot.docs.map(doc=>({ id: doc.id, ...doc.data() }));
+
+  if(currentUser.role==="tech"){
+    tickets = allTickets.filter(t=>t.tech===currentUser.name);
+  } else if(currentUser.role==="operator"){
+    tickets = allTickets.filter(t=>t.creator===currentUser.name);
+  } else {
+    tickets = allTickets;
+  }
   renderTickets();
 }
 
-function translatePriority(priority){
-  switch(priority){
-    case "low": return "Baixa";
-    case "medium": return "Média";
-    case "high": return "Alta";
-    case "critical": return "Crítica";
-    default: return priority;
-  }
-}
-function translateStatus(status){
-  switch(status){
-    case "open": return "Aberto";
-    case "resolved": return "Encerrado";
-    default: return status;
-  }
-}
+function translatePriority(p){ return {low:"Baixa",medium:"Média",high:"Alta",critical:"Crítica"}[p]||p; }
+function translateStatus(s){ return {open:"Aberto",resolved:"Encerrado"}[s]||s; }
 
 function renderTickets(){
   const ticketsList = document.getElementById("ticketsList");
-  ticketsList.innerHTML = "";
+  ticketsList.innerHTML="";
   tickets.forEach(ticket=>{
     const tr = document.createElement("tr");
-    tr.dataset.id = ticket.id;
+    tr.dataset.id=ticket.id;
     if(ticket.priority==="critical" && ticket.status!=="resolved") tr.classList.add("blink");
-    let actionsHTML = "";
-    if(ticket.status === "resolved"){
-      actionsHTML = `<button class="details-btn btn-details">Detalhes</button> ✅ Encerrado`;
-    } else {
-      actionsHTML = `
+    let actionsHTML="";
+    if(ticket.status==="resolved"){
+      actionsHTML=`<button class="details-btn btn-details">Detalhes</button> ✅ Encerrado`;
+    }else{
+      actionsHTML=`
         <button class="edit-btn btn-edit">Editar</button>
         <button class="close-btn btn-close">Encerrar</button>
         <button class="details-btn btn-details">Detalhes</button>
       `;
     }
-    tr.innerHTML = `
+    tr.innerHTML=`
       <td class="border px-4 py-2 hidden">${ticket.id}</td>
       <td class="border px-4 py-2">${ticket.subject}</td>
       <td class="border px-4 py-2">${ticket.client}</td>
@@ -320,10 +304,9 @@ function renderTickets(){
   });
 }
 
-// ======================= Eventos de Tickets ==========================
-document.getElementById("ticketsList").addEventListener("click", (e)=>{
-  const tr = e.target.closest("tr");
-  const ticketId = tr?.dataset.id;
+document.getElementById("ticketsList").addEventListener("click",(e)=>{
+  const tr=e.target.closest("tr");
+  const ticketId=tr?.dataset.id;
   if(!ticketId) return;
   if(e.target.classList.contains("edit-btn")) editTicket(ticketId);
   else if(e.target.classList.contains("close-btn")) closeTicket(ticketId);
@@ -332,81 +315,81 @@ document.getElementById("ticketsList").addEventListener("click", (e)=>{
 
 async function addTicket(ticket){
   if(editTicketId){
-    await updateDoc(doc(db, "tickets", editTicketId), ticket);
-    editTicketId = null;
+    await updateDoc(doc(db,"tickets",editTicketId), ticket);
+    editTicketId=null;
     cancelEdit();
-  } else {
-    await addDoc(collection(db, "tickets"), ticket);
+  }else{
+    ticket.creator=currentUser.name;
+    await addDoc(collection(db,"tickets"), ticket);
   }
   fetchTickets();
 }
 
 async function closeTicket(id){
-  const ticket = tickets.find(t=>t.id===id);
+  const ticket=tickets.find(t=>t.id===id);
   if(!ticket) return;
-  await updateDoc(doc(db, "tickets", id), { status:'resolved' });
+  await updateDoc(doc(db,"tickets",id),{ status:'resolved' });
   fetchTickets();
   cancelEdit();
 }
 
 function editTicket(id){
-  const ticket = tickets.find(t => t.id===id);
-  if(!ticket || ticket.status==="resolved") return;
-  editTicketId = id;
-  document.getElementById("subject").value = ticket.subject;
-  document.getElementById("client").value = ticket.client;
-  document.getElementById("tech").value = ticket.tech;
-  document.getElementById("priority").value = ticket.priority;
-  document.getElementById("description").value = ticket.description;
+  const ticket=tickets.find(t=>t.id===id);
+  if(!ticket||ticket.status==="resolved") return;
+  editTicketId=id;
+  document.getElementById("subject").value=ticket.subject;
+  document.getElementById("client").value=ticket.client;
+  document.getElementById("tech").value=ticket.tech;
+  document.getElementById("priority").value=ticket.priority;
+  document.getElementById("description").value=ticket.description;
   document.getElementById("cancelEditBtn").classList.remove("hidden");
 }
 
 function cancelEdit(){
-  editTicketId = null;
+  editTicketId=null;
   ticketForm.reset();
   document.getElementById("cancelEditBtn").classList.add("hidden");
 }
-window.cancelEdit = cancelEdit;
+window.cancelEdit=cancelEdit;
 
 function showDetails(id){
-  const ticket = tickets.find(t => t.id===id);
+  const ticket=tickets.find(t=>t.id===id);
   if(!ticket) return;
-  const content = document.getElementById("detailsContent");
-  content.innerHTML = `
-    <p><strong>ID:</strong> ${ticket.id}</p>
-    <p><strong>Assunto:</strong> ${ticket.subject}</p>
-    <p><strong>Descrição:</strong> ${ticket.description}</p>
-    <p><strong>Cliente:</strong> ${ticket.client}</p>
-    <p><strong>Técnico:</strong> ${ticket.tech}</p>
-    <p><strong>Prioridade:</strong> ${translatePriority(ticket.priority)}</p>
-    <p><strong>Status:</strong> ${translateStatus(ticket.status)}</p>
-    <p><strong>Abertura:</strong> ${new Date(ticket.date).toLocaleString()}</p>
+  const content=document.getElementById("detailsContent");
+  content.innerHTML=`
+    <p><strong>ID:</strong>${ticket.id}</p>
+    <p><strong>Assunto:</strong>${ticket.subject}</p>
+    <p><strong>Descrição:</strong>${ticket.description}</p>
+    <p><strong>Cliente:</strong>${ticket.client}</p>
+    <p><strong>Técnico:</strong>${ticket.tech}</p>
+    <p><strong>Prioridade:</strong>${translatePriority(ticket.priority)}</p>
+    <p><strong>Status:</strong>${translateStatus(ticket.status)}</p>
+    <p><strong>Abertura:</strong>${new Date(ticket.date).toLocaleString()}</p>
   `;
   document.getElementById("detailsModal").classList.remove("hidden");
   document.getElementById("detailsModal").classList.add("flex");
 }
-window.closeDetailsModal = function(){
+window.closeDetailsModal=function(){
   document.getElementById("detailsModal").classList.add("hidden");
   document.getElementById("detailsModal").classList.remove("flex");
 }
 
-// ======================= Form Tickets ==========================
-const ticketForm = document.getElementById("ticketForm");
-ticketForm.addEventListener("submit", (e)=>{
+// Form Tickets
+const ticketForm=document.getElementById("ticketForm");
+ticketForm.addEventListener("submit",(e)=>{
   e.preventDefault();
-  const ticket = {
-    subject: document.getElementById("subject").value,
-    client: document.getElementById("client").value,
-    tech: document.getElementById("tech").value,
-    priority: document.getElementById("priority").value,
-    description: document.getElementById("description").value,
-    status: "open",
-    date: Date.now()
+  const ticket={
+    subject:document.getElementById("subject").value,
+    client:document.getElementById("client").value,
+    tech:document.getElementById("tech").value,
+    priority:document.getElementById("priority").value,
+    description:document.getElementById("description").value,
+    status:"open",
+    date:Date.now()
   };
   addTicket(ticket);
   ticketForm.reset();
 });
-
 </script>
 </body>
 </html>
