@@ -64,13 +64,23 @@
   </div>
 </div>
 
+<!-- Modal Detalhes -->
+<div id="detailsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center">
+  <div class="bg-white rounded-lg shadow-lg w-96 p-6">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-lg font-bold">Detalhes do Chamado</h2>
+      <button onclick="closeDetailsModal()" class="text-red-600 font-bold">X</button>
+    </div>
+    <div id="detailsContent"></div>
+  </div>
+</div>
+
 <!-- 🔹 Script Firebase -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
   import { getFirestore, collection, addDoc, getDocs, deleteDoc, updateDoc, doc, orderBy, query } 
     from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
-  // Configuração Firebase
   const firebaseConfig = {
     apiKey: "AIzaSyBA16WHE768N9eUcqEoQqUF7uEIB82nNM0",
     authDomain: "chamados-37b34.firebaseapp.com",
@@ -87,7 +97,6 @@
   let operators = [];
   let editTicketId = null;
 
-  // ====== MODAL CONFIGURAÇÕES ======
   const btnSettings = document.getElementById("btnSettings");
   const modalSettings = document.getElementById("modalSettings");
   const closeSettingsBtn = document.getElementById("closeSettingsBtn");
@@ -99,7 +108,6 @@
   closeSettingsBtn.addEventListener("click", ()=>{ modalSettings.classList.add("hidden"); modalSettings.classList.remove("flex"); });
   modalSettings.addEventListener("click", (e) => { if(e.target===modalSettings) modalSettings.classList.add("hidden"); });
 
-  // ====== OPERATORS ======
   async function fetchOperators(){
     const q = query(collection(db, "operators"), orderBy("name"));
     const snapshot = await getDocs(q);
@@ -168,8 +176,9 @@
         <td class="border px-4 py-2 space-x-2">
           ${ticket.status !== "resolved" 
             ? `<button class="edit-btn text-yellow-600 hover:underline">Editar</button>
-               <button class="close-btn text-green-600 hover:underline">Encerrar</button>`
-            : "✅ Encerrado"}
+               <button class="close-btn text-green-600 hover:underline">Encerrar</button>
+               <button class="details-btn text-blue-600 hover:underline">Detalhes</button>`
+            : `<button class="details-btn text-blue-600 hover:underline">Detalhes</button> ✅ Encerrado`}
         </td>`;
       ticketsList.appendChild(tr);
     });
@@ -181,6 +190,7 @@
     if(!ticketId) return;
     if(e.target.classList.contains("edit-btn")) editTicket(ticketId);
     else if(e.target.classList.contains("close-btn")) closeTicket(ticketId);
+    else if(e.target.classList.contains("details-btn")) showDetails(ticketId);
   });
 
   async function addTicket(ticket){
@@ -197,10 +207,9 @@
   async function closeTicket(id){
     await updateDoc(doc(db, "tickets", id), { status:'resolved' });
     fetchTickets();
-    cancelEdit(); // remove edição se estiver ativa
+    cancelEdit();
   }
 
-  // ====== EDITAR ======
   function editTicket(id){
     const ticket = tickets.find(t => t.id===id);
     if(!ticket || ticket.status==="resolved") return;
@@ -219,6 +228,30 @@
     document.getElementById("cancelEditBtn").classList.add("hidden");
   }
   window.cancelEdit = cancelEdit;
+
+  // ====== DETALHES ======
+  function showDetails(id){
+    const ticket = tickets.find(t => t.id===id);
+    if(!ticket) return;
+    const content = document.getElementById("detailsContent");
+    content.innerHTML = `
+      <p><strong>ID:</strong> ${ticket.id}</p>
+      <p><strong>Assunto:</strong> ${ticket.subject}</p>
+      <p><strong>Descrição:</strong> ${ticket.description}</p>
+      <p><strong>Cliente:</strong> ${ticket.client}</p>
+      <p><strong>Técnico:</strong> ${ticket.tech}</p>
+      <p><strong>Prioridade:</strong> ${ticket.priority}</p>
+      <p><strong>Status:</strong> ${ticket.status}</p>
+      <p><strong>Abertura:</strong> ${new Date(ticket.date).toLocaleString()}</p>
+    `;
+    document.getElementById("detailsModal").classList.remove("hidden");
+    document.getElementById("detailsModal").classList.add("flex");
+  }
+
+  window.closeDetailsModal = function(){
+    document.getElementById("detailsModal").classList.add("hidden");
+    document.getElementById("detailsModal").classList.remove("flex");
+  }
 
   // ====== FORM ======
   const ticketForm = document.getElementById("ticketForm");
