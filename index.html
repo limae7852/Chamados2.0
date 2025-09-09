@@ -75,204 +75,217 @@
   </div>
 </div>
 
-<!-- 🔹 Script Firebase -->
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, getDocs, deleteDoc, updateDoc, doc, orderBy, query } 
-    from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, updateDoc, doc, orderBy, query } 
+  from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyBA16WHE768N9eUcqEoQqUF7uEIB82nNM0",
-    authDomain: "chamados-37b34.firebaseapp.com",
-    projectId: "chamados-37b34",
-    storageBucket: "chamados-37b34.appspot.com",
-    messagingSenderId: "164935126006",
-    appId: "1:164935126006:web:e49fd19961993d5b62d5d7"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyBA16WHE768N9eUcqEoQqUF7uEIB82nNM0",
+  authDomain: "chamados-37b34.firebaseapp.com",
+  projectId: "chamados-37b34",
+  storageBucket: "chamados-37b34.appspot.com",
+  messagingSenderId: "164935126006",
+  appId: "1:164935126006:web:e49fd19961993d5b62d5d7"
+};
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-  let tickets = [];
-  let operators = [];
-  let editTicketId = null;
+let tickets = [];
+let operators = [];
+let editTicketId = null;
 
-  const btnSettings = document.getElementById("btnSettings");
-  const modalSettings = document.getElementById("modalSettings");
-  const closeSettingsBtn = document.getElementById("closeSettingsBtn");
-  const operatorsListEl = document.getElementById("operatorsList");
-  const addOperatorBtn = document.getElementById("addOperatorBtn");
-  const techSelect = document.getElementById("tech");
+const btnSettings = document.getElementById("btnSettings");
+const modalSettings = document.getElementById("modalSettings");
+const closeSettingsBtn = document.getElementById("closeSettingsBtn");
+const operatorsListEl = document.getElementById("operatorsList");
+const addOperatorBtn = document.getElementById("addOperatorBtn");
+const techSelect = document.getElementById("tech");
 
-  btnSettings.addEventListener("click", ()=>{ modalSettings.classList.remove("hidden"); modalSettings.classList.add("flex"); });
-  closeSettingsBtn.addEventListener("click", ()=>{ modalSettings.classList.add("hidden"); modalSettings.classList.remove("flex"); });
-  modalSettings.addEventListener("click", (e) => { if(e.target===modalSettings) modalSettings.classList.add("hidden"); });
+btnSettings.addEventListener("click", ()=>{ modalSettings.classList.remove("hidden"); modalSettings.classList.add("flex"); });
+closeSettingsBtn.addEventListener("click", ()=>{ modalSettings.classList.add("hidden"); modalSettings.classList.remove("flex"); });
+modalSettings.addEventListener("click", (e) => { if(e.target===modalSettings) modalSettings.classList.add("hidden"); });
 
-  async function fetchOperators(){
-    const q = query(collection(db, "operators"), orderBy("name"));
-    const snapshot = await getDocs(q);
-    operators = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    renderOperators();
-  }
+async function fetchOperators(){
+  const q = query(collection(db, "operators"), orderBy("name"));
+  const snapshot = await getDocs(q);
+  operators = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  renderOperators();
+}
 
-  function renderOperators(){
-    operatorsListEl.innerHTML = "";
-    techSelect.innerHTML = '<option value="">Selecione o Técnico</option>';
-    operators.forEach(op=>{
-      const li = document.createElement("li");
-      li.className = "flex justify-between items-center border p-2 rounded";
-      li.innerHTML = `<span>${op.name}</span> 
-        <button data-id="${op.id}" class="text-red-600 hover:underline">Remover</button>`;
-      operatorsListEl.appendChild(li);
+function renderOperators(){
+  operatorsListEl.innerHTML = "";
+  techSelect.innerHTML = '<option value="">Selecione o Técnico</option>';
+  operators.forEach(op=>{
+    const li = document.createElement("li");
+    li.className = "flex justify-between items-center border p-2 rounded";
+    li.innerHTML = `<span>${op.name}</span> 
+      <button data-id="${op.id}" class="text-red-600 hover:underline">Remover</button>`;
+    operatorsListEl.appendChild(li);
 
-      const opt = document.createElement("option");
-      opt.value = op.name; opt.textContent = op.name;
-      techSelect.appendChild(opt);
-    });
-  }
-
-  async function addOperator(name){
-    await addDoc(collection(db, "operators"), { name });
-    fetchOperators();
-  }
-
-  async function removeOperator(id){
-    await deleteDoc(doc(db, "operators", id));
-    fetchOperators();
-  }
-
-  addOperatorBtn.addEventListener("click", ()=>{
-    const input = document.getElementById("newOperator");
-    const name = input.value.trim();
-    if(name){ addOperator(name); input.value = ""; }
+    const opt = document.createElement("option");
+    opt.value = op.name; opt.textContent = op.name;
+    techSelect.appendChild(opt);
   });
+}
 
-  operatorsListEl.addEventListener("click",(e)=>{
-    const btn = e.target.closest("button[data-id]");
-    if(btn) removeOperator(btn.dataset.id);
-  });
-
-  // ====== TICKETS ======
-  async function fetchTickets(){
-    const q = query(collection(db, "tickets"), orderBy("date"));
-    const snapshot = await getDocs(q);
-    tickets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    renderTickets();
-  }
-
-  function renderTickets(){
-    const ticketsList = document.getElementById("ticketsList");
-    ticketsList.innerHTML = "";
-    tickets.forEach(ticket=>{
-      const tr = document.createElement("tr");
-      tr.dataset.id = ticket.id;
-      tr.innerHTML = `
-        <td class="border px-4 py-2">${ticket.id}</td>
-        <td class="border px-4 py-2">${ticket.subject}</td>
-        <td class="border px-4 py-2">${ticket.client}</td>
-        <td class="border px-4 py-2">${ticket.tech}</td>
-        <td class="border px-4 py-2 capitalize">${ticket.priority}</td>
-        <td class="border px-4 py-2 capitalize">${ticket.status}</td>
-        <td class="border px-4 py-2 space-x-2">
-          ${ticket.status !== "resolved" 
-            ? `<button class="edit-btn text-yellow-600 hover:underline">Editar</button>
-               <button class="close-btn text-green-600 hover:underline">Encerrar</button>
-               <button class="details-btn text-blue-600 hover:underline">Detalhes</button>`
-            : `<button class="details-btn text-blue-600 hover:underline">Detalhes</button> ✅ Encerrado`}
-        </td>`;
-      ticketsList.appendChild(tr);
-    });
-  }
-
-  document.getElementById("ticketsList").addEventListener("click", (e)=>{
-    const tr = e.target.closest("tr");
-    const ticketId = tr?.dataset.id;
-    if(!ticketId) return;
-    if(e.target.classList.contains("edit-btn")) editTicket(ticketId);
-    else if(e.target.classList.contains("close-btn")) closeTicket(ticketId);
-    else if(e.target.classList.contains("details-btn")) showDetails(ticketId);
-  });
-
-  async function addTicket(ticket){
-    if(editTicketId){
-      await updateDoc(doc(db, "tickets", editTicketId), ticket);
-      editTicketId = null;
-      cancelEdit();
-    } else {
-      await addDoc(collection(db, "tickets"), ticket);
-    }
-    fetchTickets();
-  }
-
-  async function closeTicket(id){
-    await updateDoc(doc(db, "tickets", id), { status:'resolved' });
-    fetchTickets();
-    cancelEdit();
-  }
-
-  function editTicket(id){
-    const ticket = tickets.find(t => t.id===id);
-    if(!ticket || ticket.status==="resolved") return;
-    editTicketId = id;
-    document.getElementById("subject").value = ticket.subject;
-    document.getElementById("client").value = ticket.client;
-    document.getElementById("tech").value = ticket.tech;
-    document.getElementById("priority").value = ticket.priority;
-    document.getElementById("description").value = ticket.description;
-    document.getElementById("cancelEditBtn").classList.remove("hidden");
-  }
-
-  function cancelEdit(){
-    editTicketId = null;
-    ticketForm.reset();
-    document.getElementById("cancelEditBtn").classList.add("hidden");
-  }
-  window.cancelEdit = cancelEdit;
-
-  // ====== DETALHES ======
-  function showDetails(id){
-    const ticket = tickets.find(t => t.id===id);
-    if(!ticket) return;
-    const content = document.getElementById("detailsContent");
-    content.innerHTML = `
-      <p><strong>ID:</strong> ${ticket.id}</p>
-      <p><strong>Assunto:</strong> ${ticket.subject}</p>
-      <p><strong>Descrição:</strong> ${ticket.description}</p>
-      <p><strong>Cliente:</strong> ${ticket.client}</p>
-      <p><strong>Técnico:</strong> ${ticket.tech}</p>
-      <p><strong>Prioridade:</strong> ${ticket.priority}</p>
-      <p><strong>Status:</strong> ${ticket.status}</p>
-      <p><strong>Abertura:</strong> ${new Date(ticket.date).toLocaleString()}</p>
-    `;
-    document.getElementById("detailsModal").classList.remove("hidden");
-    document.getElementById("detailsModal").classList.add("flex");
-  }
-
-  window.closeDetailsModal = function(){
-    document.getElementById("detailsModal").classList.add("hidden");
-    document.getElementById("detailsModal").classList.remove("flex");
-  }
-
-  // ====== FORM ======
-  const ticketForm = document.getElementById("ticketForm");
-  ticketForm.addEventListener("submit", (e)=>{
-    e.preventDefault();
-    const ticket = {
-      subject: document.getElementById("subject").value,
-      client: document.getElementById("client").value,
-      tech: document.getElementById("tech").value,
-      priority: document.getElementById("priority").value,
-      description: document.getElementById("description").value,
-      status: "open",
-      date: new Date().toISOString()
-    };
-    addTicket(ticket);
-    ticketForm.reset();
-  });
-
-  // ====== INICIALIZAÇÃO ======
+async function addOperator(name){
+  await addDoc(collection(db, "operators"), { name });
   fetchOperators();
+}
+
+async function removeOperator(id){
+  await deleteDoc(doc(db, "operators", id));
+  fetchOperators();
+}
+
+addOperatorBtn.addEventListener("click", ()=>{
+  const input = document.getElementById("newOperator");
+  const name = input.value.trim();
+  if(name){ addOperator(name); input.value = ""; }
+});
+
+operatorsListEl.addEventListener("click",(e)=>{
+  const btn = e.target.closest("button[data-id]");
+  if(btn) removeOperator(btn.dataset.id);
+});
+
+async function fetchTickets(){
+  const q = query(collection(db, "tickets"), orderBy("date"));
+  const snapshot = await getDocs(q);
+  tickets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  renderTickets();
+}
+
+function translatePriority(priority){
+  switch(priority){
+    case "low": return "Baixa";
+    case "medium": return "Média";
+    case "high": return "Alta";
+    case "critical": return "Crítica";
+    default: return priority;
+  }
+}
+
+function translateStatus(status){
+  switch(status){
+    case "open": return "Aberto";
+    case "resolved": return "Encerrado";
+    default: return status;
+  }
+}
+
+function renderTickets(){
+  const ticketsList = document.getElementById("ticketsList");
+  ticketsList.innerHTML = "";
+  tickets.forEach(ticket=>{
+    const tr = document.createElement("tr");
+    tr.dataset.id = ticket.id;
+    tr.innerHTML = `
+      <td class="border px-4 py-2">${ticket.id}</td>
+      <td class="border px-4 py-2">${ticket.subject}</td>
+      <td class="border px-4 py-2">${ticket.client}</td>
+      <td class="border px-4 py-2">${ticket.tech}</td>
+      <td class="border px-4 py-2 capitalize">${translatePriority(ticket.priority)}</td>
+      <td class="border px-4 py-2 capitalize">${translateStatus(ticket.status)}</td>
+      <td class="border px-4 py-2 space-x-2">
+        ${ticket.status !== "resolved" 
+          ? `<button class="edit-btn text-yellow-600 hover:underline">Editar</button>
+             <button class="close-btn text-green-600 hover:underline">Encerrar</button>
+             <button class="details-btn text-blue-600 hover:underline">Detalhes</button>`
+          : `<button class="details-btn text-blue-600 hover:underline">Detalhes</button> ✅ Encerrado`}
+      </td>`;
+    ticketsList.appendChild(tr);
+  });
+}
+
+document.getElementById("ticketsList").addEventListener("click", (e)=>{
+  const tr = e.target.closest("tr");
+  const ticketId = tr?.dataset.id;
+  if(!ticketId) return;
+  if(e.target.classList.contains("edit-btn")) editTicket(ticketId);
+  else if(e.target.classList.contains("close-btn")) closeTicket(ticketId);
+  else if(e.target.classList.contains("details-btn")) showDetails(ticketId);
+});
+
+async function addTicket(ticket){
+  if(editTicketId){
+    await updateDoc(doc(db, "tickets", editTicketId), ticket);
+    editTicketId = null;
+    cancelEdit();
+  } else {
+    await addDoc(collection(db, "tickets"), ticket);
+  }
   fetchTickets();
+}
+
+async function closeTicket(id){
+  await updateDoc(doc(db, "tickets", id), { status:'resolved' });
+  fetchTickets();
+  cancelEdit();
+}
+
+function editTicket(id){
+  const ticket = tickets.find(t => t.id===id);
+  if(!ticket || ticket.status==="resolved") return;
+  editTicketId = id;
+  document.getElementById("subject").value = ticket.subject;
+  document.getElementById("client").value = ticket.client;
+  document.getElementById("tech").value = ticket.tech;
+  document.getElementById("priority").value = ticket.priority;
+  document.getElementById("description").value = ticket.description;
+  document.getElementById("cancelEditBtn").classList.remove("hidden");
+}
+
+function cancelEdit(){
+  editTicketId = null;
+  ticketForm.reset();
+  document.getElementById("cancelEditBtn").classList.add("hidden");
+}
+window.cancelEdit = cancelEdit;
+
+function showDetails(id){
+  const ticket = tickets.find(t => t.id===id);
+  if(!ticket) return;
+  const content = document.getElementById("detailsContent");
+  content.innerHTML = `
+    <p><strong>ID:</strong> ${ticket.id}</p>
+    <p><strong>Assunto:</strong> ${ticket.subject}</p>
+    <p><strong>Descrição:</strong> ${ticket.description}</p>
+    <p><strong>Cliente:</strong> ${ticket.client}</p>
+    <p><strong>Técnico:</strong> ${ticket.tech}</p>
+    <p><strong>Prioridade:</strong> ${translatePriority(ticket.priority)}</p>
+    <p><strong>Status:</strong> ${translateStatus(ticket.status)}</p>
+    <p><strong>Abertura:</strong> ${new Date(ticket.date).toLocaleString()}</p>
+  `;
+  document.getElementById("detailsModal").classList.remove("hidden");
+  document.getElementById("detailsModal").classList.add("flex");
+}
+
+window.closeDetailsModal = function(){
+  document.getElementById("detailsModal").classList.add("hidden");
+  document.getElementById("detailsModal").classList.remove("flex");
+}
+
+const ticketForm = document.getElementById("ticketForm");
+ticketForm.addEventListener("submit", (e)=>{
+  e.preventDefault();
+  const ticket = {
+    subject: document.getElementById("subject").value,
+    client: document.getElementById("client").value,
+    tech: document.getElementById("tech").value,
+    priority: document.getElementById("priority").value,
+    description: document.getElementById("description").value,
+    status: "open",
+    date: new Date().toISOString()
+  };
+  addTicket(ticket);
+  ticketForm.reset();
+});
+
+fetchOperators();
+fetchTickets();
 </script>
 </body>
 </html>
