@@ -8,12 +8,11 @@
 </head>
 <body class="bg-gray-100 text-gray-900">
 
-  <!-- ✅ Aqui entra todo seu HTML (formulário de ticket, tabela, modais etc.) -->
   <div class="p-6">
     <h1 class="text-2xl font-bold mb-4">Sistema de Chamados</h1>
 
     <!-- Botão Configurações -->
-    <button id="btnSettings" class="px-4 py-2 bg-blue-600 text-white rounded">Configurações</button>
+    <button id="btnSettings" class="px-4 py-2 bg-blue-600 text-white rounded">⚙️ Configurações</button>
 
     <!-- Formulário de Chamados -->
     <form id="ticketForm" class="mt-4 space-y-2">
@@ -47,13 +46,30 @@
     </table>
   </div>
 
+  <!-- 🔹 Modal Configurações -->
+  <div id="modalSettings" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center">
+    <div class="bg-white rounded-lg shadow-lg w-96 p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-bold">Configurações - Técnicos</h2>
+        <button id="closeSettingsBtn" class="text-red-600 font-bold">X</button>
+      </div>
+
+      <div class="flex space-x-2 mb-4">
+        <input id="newOperator" placeholder="Nome do Técnico" class="border p-2 flex-1"/>
+        <button id="addOperatorBtn" class="px-3 py-2 bg-blue-600 text-white rounded">Adicionar</button>
+      </div>
+
+      <ul id="operatorsList" class="space-y-2"></ul>
+    </div>
+  </div>
+
   <!-- 🔹 Script Firebase no FINAL -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
     import { getFirestore, collection, addDoc, getDocs, deleteDoc, updateDoc, doc, orderBy, query } 
       from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
-    // 🔹 Configuração correta do Firebase
+    // 🔹 Configuração Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyBA16WHE768N9eUcqEoQqUF7uEIB82nNM0",
       authDomain: "chamados-37b34.firebaseapp.com",
@@ -69,7 +85,21 @@
 
     let tickets = [];
     let operators = [];
-    let closeTicketId = null;
+
+    // ====== MODAL CONFIGURAÇÕES ======
+    const btnSettings = document.getElementById("btnSettings");
+    const modalSettings = document.getElementById("modalSettings");
+    const closeSettingsBtn = document.getElementById("closeSettingsBtn");
+    const operatorsListEl = document.getElementById("operatorsList");
+    const addOperatorBtn = document.getElementById("addOperatorBtn");
+    const techSelect = document.getElementById("tech");
+
+    const openSettings = () => { modalSettings.classList.remove("hidden"); modalSettings.classList.add("flex"); };
+    const closeSettings = () => { modalSettings.classList.add("hidden"); modalSettings.classList.remove("flex"); };
+
+    btnSettings.addEventListener("click", openSettings);
+    closeSettingsBtn.addEventListener("click", closeSettings);
+    modalSettings.addEventListener("click", (e) => { if (e.target === modalSettings) closeSettings(); });
 
     // ====== OPERATORS ======
     async function fetchOperators(){
@@ -80,14 +110,41 @@
     }
 
     function renderOperators(){
-      const techSelect = document.getElementById("tech");
+      operatorsListEl.innerHTML = "";
       techSelect.innerHTML = '<option value="">Selecione o Técnico</option>';
       operators.forEach(op=>{
+        const li = document.createElement("li");
+        li.className = "flex justify-between items-center border p-2 rounded";
+        li.innerHTML = `<span>${op.name}</span> 
+          <button data-id="${op.id}" class="text-red-600 hover:underline">Remover</button>`;
+        operatorsListEl.appendChild(li);
+
         const opt = document.createElement("option");
         opt.value = op.name; opt.textContent = op.name;
         techSelect.appendChild(opt);
       });
     }
+
+    async function addOperator(name){
+      await addDoc(collection(db, "operators"), { name });
+      fetchOperators();
+    }
+
+    async function removeOperator(id){
+      await deleteDoc(doc(db, "operators", id));
+      fetchOperators();
+    }
+
+    addOperatorBtn.addEventListener("click", ()=>{
+      const input = document.getElementById("newOperator");
+      const name = input.value.trim();
+      if (name) { addOperator(name); input.value = ""; }
+    });
+
+    operatorsListEl.addEventListener("click",(e)=>{
+      const btn = e.target.closest("button[data-id]");
+      if (btn) removeOperator(btn.dataset.id);
+    });
 
     // ====== TICKETS ======
     async function fetchTickets(){
@@ -107,8 +164,8 @@
           <td class="border px-4 py-2">${ticket.subject}</td>
           <td class="border px-4 py-2">${ticket.client}</td>
           <td class="border px-4 py-2">${ticket.tech}</td>
-          <td class="border px-4 py-2">${ticket.priority}</td>
-          <td class="border px-4 py-2">${ticket.status}</td>
+          <td class="border px-4 py-2 capitalize">${ticket.priority}</td>
+          <td class="border px-4 py-2 capitalize">${ticket.status}</td>
           <td class="border px-4 py-2">
             ${ticket.status!=="resolved"
               ? `<button onclick="closeTicket('${ticket.id}')" class="text-green-600 hover:underline">Encerrar</button>`
@@ -127,7 +184,7 @@
       await updateDoc(doc(db, "tickets", id), { status:'resolved' });
       fetchTickets();
     }
-    window.closeTicket = closeTicket; // 🔹 expõe no escopo global
+    window.closeTicket = closeTicket;
 
     // ====== FORM ======
     const ticketForm = document.getElementById("ticketForm");
