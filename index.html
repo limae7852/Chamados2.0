@@ -26,7 +26,7 @@
         <option value="critical">Crítica</option>
       </select>
       <textarea id="description" placeholder="Descrição" class="border p-2 w-full"></textarea>
-      <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded">Abrir Chamado</button>
+      <button id="submitBtn" type="submit" class="px-4 py-2 bg-green-600 text-white rounded">Abrir Chamado</button>
     </form>
 
     <!-- Tabela de Tickets -->
@@ -63,35 +63,13 @@
     </div>
   </div>
 
-  <!-- 🔹 Modal Editar Chamado -->
-  <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center">
-    <div class="bg-white rounded-lg shadow-lg w-96 p-6">
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-lg font-bold">Editar Chamado</h2>
-        <button onclick="closeEditModal()" class="text-red-600 font-bold">X</button>
-      </div>
-      <form id="editTicketForm" class="space-y-2">
-        <input id="editSubject" class="border p-2 w-full" required />
-        <input id="editClient" class="border p-2 w-full" required />
-        <select id="editTech" class="border p-2 w-full"></select>
-        <select id="editPriority" class="border p-2 w-full">
-          <option value="low">Baixa</option>
-          <option value="medium">Média</option>
-          <option value="high">Alta</option>
-          <option value="critical">Crítica</option>
-        </select>
-        <textarea id="editDescription" class="border p-2 w-full"></textarea>
-        <button type="submit" class="px-4 py-2 bg-yellow-600 text-white rounded">Salvar Alterações</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- 🔹 Script Firebase -->
+  <!-- 🔹 Script Firebase no FINAL -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, deleteDoc, updateDoc, doc, orderBy, query } 
+    import { getFirestore, collection, addDoc, getDocs, deleteDoc, updateDoc, doc, orderBy, query, getDoc } 
       from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
+    // 🔹 Configuração Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyBA16WHE768N9eUcqEoQqUF7uEIB82nNM0",
       authDomain: "chamados-37b34.firebaseapp.com",
@@ -106,7 +84,7 @@
 
     let tickets = [];
     let operators = [];
-    let editingTicketId = null;
+    let editingTicketId = null; // 🔹 Para saber se estamos editando
 
     // ====== MODAL CONFIGURAÇÕES ======
     const btnSettings = document.getElementById("btnSettings");
@@ -115,7 +93,6 @@
     const operatorsListEl = document.getElementById("operatorsList");
     const addOperatorBtn = document.getElementById("addOperatorBtn");
     const techSelect = document.getElementById("tech");
-    const editTechSelect = document.getElementById("editTech");
 
     const openSettings = () => { modalSettings.classList.remove("hidden"); modalSettings.classList.add("flex"); };
     const closeSettings = () => { modalSettings.classList.add("hidden"); modalSettings.classList.remove("flex"); };
@@ -135,7 +112,6 @@
     function renderOperators(){
       operatorsListEl.innerHTML = "";
       techSelect.innerHTML = '<option value="">Selecione o Técnico</option>';
-      editTechSelect.innerHTML = '<option value="">Selecione o Técnico</option>';
       operators.forEach(op=>{
         const li = document.createElement("li");
         li.className = "flex justify-between items-center border p-2 rounded";
@@ -146,10 +122,6 @@
         const opt = document.createElement("option");
         opt.value = op.name; opt.textContent = op.name;
         techSelect.appendChild(opt);
-
-        const opt2 = document.createElement("option");
-        opt2.value = op.name; opt2.textContent = op.name;
-        editTechSelect.appendChild(opt2);
       });
     }
 
@@ -195,9 +167,11 @@
           <td class="border px-4 py-2 capitalize">${ticket.priority}</td>
           <td class="border px-4 py-2 capitalize">${ticket.status}</td>
           <td class="border px-4 py-2 space-x-2">
-            <button onclick="openEditModal('${ticket.id}')" class="text-yellow-600 hover:underline">Editar</button>
             ${ticket.status!=="resolved"
-              ? `<button onclick="closeTicket('${ticket.id}')" class="text-green-600 hover:underline">Encerrar</button>`
+              ? `
+                <button onclick="editTicket('${ticket.id}')" class="text-blue-600 hover:underline">Editar</button>
+                <button onclick="closeTicket('${ticket.id}')" class="text-green-600 hover:underline">Encerrar</button>
+              `
               : "✅ Encerrado"}
           </td>`;
         ticketsList.appendChild(tr);
@@ -209,51 +183,38 @@
       fetchTickets();
     }
 
+    async function updateTicket(id, ticket){
+      await updateDoc(doc(db, "tickets", id), ticket);
+      fetchTickets();
+    }
+
     async function closeTicket(id){
       await updateDoc(doc(db, "tickets", id), { status:'resolved' });
       fetchTickets();
     }
     window.closeTicket = closeTicket;
 
-    // ====== EDIÇÃO DE TICKET ======
-    window.openEditModal = function(id){
-      const t = tickets.find(tt => tt.id === id);
-      if (t){
+    // 🔹 Função para editar chamado
+    async function editTicket(id){
+      const ticketRef = doc(db, "tickets", id);
+      const snap = await getDoc(ticketRef);
+      if(snap.exists()){
+        const t = snap.data();
+        document.getElementById("subject").value = t.subject;
+        document.getElementById("client").value = t.client;
+        document.getElementById("tech").value = t.tech;
+        document.getElementById("priority").value = t.priority;
+        document.getElementById("description").value = t.description;
+
         editingTicketId = id;
-        document.getElementById("editSubject").value = t.subject;
-        document.getElementById("editClient").value = t.client;
-        document.getElementById("editTech").value = t.tech;
-        document.getElementById("editPriority").value = t.priority;
-        document.getElementById("editDescription").value = t.description;
-        document.getElementById("editModal").classList.remove("hidden");
-        document.getElementById("editModal").classList.add("flex");
+        document.getElementById("submitBtn").textContent = "Salvar Alterações";
+        document.getElementById("submitBtn").classList.remove("bg-green-600");
+        document.getElementById("submitBtn").classList.add("bg-yellow-600");
       }
     }
+    window.editTicket = editTicket;
 
-    window.closeEditModal = function(){
-      editingTicketId = null;
-      const m = document.getElementById("editModal");
-      m.classList.add("hidden"); m.classList.remove("flex");
-    }
-
-    const editForm = document.getElementById("editTicketForm");
-    editForm.addEventListener("submit", async (e)=>{
-      e.preventDefault();
-      if(editingTicketId){
-        const updated = {
-          subject: document.getElementById("editSubject").value,
-          client: document.getElementById("editClient").value,
-          tech: document.getElementById("editTech").value,
-          priority: document.getElementById("editPriority").value,
-          description: document.getElementById("editDescription").value,
-        };
-        await updateDoc(doc(db, "tickets", editingTicketId), updated);
-        fetchTickets();
-        closeEditModal();
-      }
-    });
-
-    // ====== FORM ABRIR CHAMADO ======
+    // ====== FORM ======
     const ticketForm = document.getElementById("ticketForm");
     ticketForm.addEventListener("submit", (e)=>{
       e.preventDefault();
@@ -266,7 +227,17 @@
         status: "open",
         date: new Date().toISOString()
       };
-      addTicket(ticket);
+
+      if(editingTicketId){
+        updateTicket(editingTicketId, ticket);
+        editingTicketId = null;
+        document.getElementById("submitBtn").textContent = "Abrir Chamado";
+        document.getElementById("submitBtn").classList.remove("bg-yellow-600");
+        document.getElementById("submitBtn").classList.add("bg-green-600");
+      } else {
+        addTicket(ticket);
+      }
+
       e.target.reset();
     });
 
