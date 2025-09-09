@@ -5,16 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Sistema de Chamados</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<style>
+  /* Chamados críticos piscando */
+  @keyframes blink {
+    0%, 50%, 100% { background-color: #f87171; } /* vermelho claro */
+    25%, 75% { background-color: #fca5a5; } /* vermelho mais claro */
+  }
+  .blink td {
+    animation: blink 1s infinite;
+  }
+</style>
 </head>
 <body class="bg-gray-100 text-gray-900">
 
 <div class="p-6">
   <h1 class="text-2xl font-bold mb-4">Sistema de Chamados</h1>
 
-  <!-- Botão Configurações -->
   <button id="btnSettings" class="px-4 py-2 bg-blue-600 text-white rounded">⚙️ Configurações</button>
 
-  <!-- Formulário de Chamados -->
   <form id="ticketForm" class="mt-4 space-y-2">
     <input id="subject" placeholder="Assunto" class="border p-2 w-full" required />
     <input id="client" placeholder="Cliente" class="border p-2 w-full" required />
@@ -32,11 +40,10 @@
     </div>
   </form>
 
-  <!-- Tabela de Tickets -->
   <table class="mt-6 w-full border">
     <thead>
       <tr class="bg-gray-200">
-        <th class="border px-4 py-2 hidden">ID</th> <!-- Oculto -->
+        <th class="border px-4 py-2 hidden">ID</th>
         <th class="border px-4 py-2">Assunto</th>
         <th class="border px-4 py-2">Cliente</th>
         <th class="border px-4 py-2">Técnico</th>
@@ -182,6 +189,7 @@ function renderTickets(){
   tickets.forEach(ticket=>{
     const tr = document.createElement("tr");
     tr.dataset.id = ticket.id;
+    if(ticket.priority==="critical") tr.classList.add("blink");
     tr.innerHTML = `
       <td class="border px-4 py-2 hidden">${ticket.id}</td>
       <td class="border px-4 py-2">${ticket.subject}</td>
