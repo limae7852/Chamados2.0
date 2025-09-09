@@ -8,12 +8,18 @@
 <style>
   /* Chamados críticos piscando */
   @keyframes blink {
-    0%, 50%, 100% { background-color: #f87171; } /* vermelho claro */
-    25%, 75% { background-color: #fca5a5; } /* vermelho mais claro */
+    0%, 50%, 100% { background-color: #f87171; }
+    25%, 75% { background-color: #fca5a5; }
   }
   .blink td {
     animation: blink 1s infinite;
   }
+  .btn-edit { background-color: #facc15; color: #000; padding: 0.25rem 0.5rem; border-radius: 0.25rem; }
+  .btn-edit:hover { background-color: #eab308; }
+  .btn-close { background-color: #ef4444; color: #fff; padding: 0.25rem 0.5rem; border-radius: 0.25rem; }
+  .btn-close:hover { background-color: #b91c1c; }
+  .btn-details { background-color: #3b82f6; color: #fff; padding: 0.25rem 0.5rem; border-radius: 0.25rem; }
+  .btn-details:hover { background-color: #1d4ed8; }
 </style>
 </head>
 <body class="bg-gray-100 text-gray-900">
@@ -189,7 +195,7 @@ function renderTickets(){
   tickets.forEach(ticket=>{
     const tr = document.createElement("tr");
     tr.dataset.id = ticket.id;
-    if(ticket.priority==="critical") tr.classList.add("blink");
+    if(ticket.priority==="critical" && ticket.status!=="resolved") tr.classList.add("blink");
     tr.innerHTML = `
       <td class="border px-4 py-2 hidden">${ticket.id}</td>
       <td class="border px-4 py-2">${ticket.subject}</td>
@@ -199,10 +205,10 @@ function renderTickets(){
       <td class="border px-4 py-2 capitalize">${translateStatus(ticket.status)}</td>
       <td class="border px-4 py-2 space-x-2">
         ${ticket.status !== "resolved" 
-          ? `<button class="edit-btn text-yellow-600 hover:underline">Editar</button>
-             <button class="close-btn text-green-600 hover:underline">Encerrar</button>
-             <button class="details-btn text-blue-600 hover:underline">Detalhes</button>`
-          : `<button class="details-btn text-blue-600 hover:underline">Detalhes</button> ✅ Encerrado`}
+          ? `<button class="edit-btn btn-edit">Editar</button>
+             <button class="close-btn btn-close">Encerrar</button>
+             <button class="details-btn btn-details">Detalhes</button>`
+          : `<button class="details-btn btn-details">Detalhes</button> ✅ Encerrado`}
       </td>`;
     ticketsList.appendChild(tr);
   });
@@ -229,6 +235,8 @@ async function addTicket(ticket){
 }
 
 async function closeTicket(id){
+  const ticket = tickets.find(t=>t.id===id);
+  if(!ticket) return;
   await updateDoc(doc(db, "tickets", id), { status:'resolved' });
   fetchTickets();
   cancelEdit();
