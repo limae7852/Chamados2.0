@@ -26,9 +26,9 @@
         <option value="critical">Crítica</option>
       </select>
       <textarea id="description" placeholder="Descrição" class="border p-2 w-full"></textarea>
-      <div class="flex space-x-2">
-        <button id="submitBtn" type="submit" class="px-4 py-2 bg-green-600 text-white rounded">Abrir Chamado</button>
-        <button id="cancelEditBtn" type="button" class="px-4 py-2 bg-gray-400 text-white rounded hidden">Cancelar Edição</button>
+      <div class="flex gap-2">
+        <button type="submit" id="submitTicketBtn" class="px-4 py-2 bg-green-600 text-white rounded">Abrir Chamado</button>
+        <button id="cancelEditBtn" type="button" class="px-4 py-2 bg-red-600 text-white rounded hidden">Cancelar Edição</button>
       </div>
     </form>
 
@@ -66,11 +66,13 @@
     </div>
   </div>
 
+  <!-- 🔹 Script Firebase no FINAL -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, deleteDoc, updateDoc, doc, orderBy, query, getDoc } 
+    import { getFirestore, collection, addDoc, getDocs, deleteDoc, updateDoc, doc, orderBy, query } 
       from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
+    // 🔹 Configuração Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyBA16WHE768N9eUcqEoQqUF7uEIB82nNM0",
       authDomain: "chamados-37b34.firebaseapp.com",
@@ -80,12 +82,13 @@
       appId: "1:164935126006:web:e49fd19961993d5b62d5d7"
     };
 
+    // 🔹 Inicializar Firebase
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
     let tickets = [];
     let operators = [];
-    let editingTicketId = null;
+    let editTicketId = null;
 
     // ====== MODAL CONFIGURAÇÕES ======
     const btnSettings = document.getElementById("btnSettings");
@@ -169,10 +172,8 @@
           <td class="border px-4 py-2 capitalize">${ticket.status}</td>
           <td class="border px-4 py-2 space-x-2">
             ${ticket.status!=="resolved"
-              ? `
-                <button onclick="editTicket('${ticket.id}')" class="text-blue-600 hover:underline">Editar</button>
-                <button onclick="closeTicket('${ticket.id}')" class="text-green-600 hover:underline">Encerrar</button>
-              `
+              ? `<button onclick="editTicket('${ticket.id}')" class="text-yellow-600 hover:underline">Editar</button>
+                 <button onclick="closeTicket('${ticket.id}')" class="text-green-600 hover:underline">Encerrar</button>`
               : "✅ Encerrado"}
           </td>`;
         ticketsList.appendChild(tr);
@@ -191,47 +192,18 @@
 
     async function closeTicket(id){
       await updateDoc(doc(db, "tickets", id), { status:'resolved' });
+      if(editTicketId === id) cancelEdit();
       fetchTickets();
     }
     window.closeTicket = closeTicket;
 
-    // 🔹 Editar e Cancelar
-    const submitBtn = document.getElementById("submitBtn");
-    const cancelEditBtn = document.getElementById("cancelEditBtn");
-
-    async function editTicket(id){
-      const snap = await getDoc(doc(db, "tickets", id));
-      if(snap.exists()){
-        const t = snap.data();
-        document.getElementById("subject").value = t.subject;
-        document.getElementById("client").value = t.client;
-        document.getElementById("tech").value = t.tech;
-        document.getElementById("priority").value = t.priority;
-        document.getElementById("description").value = t.description;
-
-        editingTicketId = id;
-        submitBtn.textContent = "Salvar Alterações";
-        submitBtn.classList.remove("bg-green-600");
-        submitBtn.classList.add("bg-yellow-600");
-        cancelEditBtn.classList.remove("hidden");
-      }
-    }
-    window.editTicket = editTicket;
-
-    cancelEditBtn.addEventListener("click", ()=>{
-      editingTicketId = null;
-      ticketForm.reset();
-      submitBtn.textContent = "Abrir Chamado";
-      submitBtn.classList.remove("bg-yellow-600");
-      submitBtn.classList.add("bg-green-600");
-      cancelEditBtn.classList.add("hidden");
-    });
-
     // ====== FORM ======
     const ticketForm = document.getElementById("ticketForm");
-    ticketForm.addEventListener("submit", (e)=>{
+    const cancelEditBtn = document.getElementById("cancelEditBtn");
+
+    ticketForm.addEventListener("submit", async (e)=>{
       e.preventDefault();
-      const ticket = {
+      const ticketData = {
         subject: document.getElementById("subject").value,
         client: document.getElementById("client").value,
         tech: document.getElementById("tech").value,
@@ -240,20 +212,34 @@
         status: "open",
         date: new Date().toISOString()
       };
-
-      if(editingTicketId){
-        updateTicket(editingTicketId, ticket);
-        editingTicketId = null;
-        submitBtn.textContent = "Abrir Chamado";
-        submitBtn.classList.remove("bg-yellow-600");
-        submitBtn.classList.add("bg-green-600");
-        cancelEditBtn.classList.add("hidden");
+      if(editTicketId){
+        await updateTicket(editTicketId, ticketData);
+        cancelEdit();
       } else {
-        addTicket(ticket);
+        await addTicket(ticketData);
       }
-
       ticketForm.reset();
     });
+
+    cancelEditBtn.addEventListener("click", cancelEdit);
+
+    function editTicket(id){
+      const ticket = tickets.find(t => t.id === id);
+      if(!ticket || ticket.status === "resolved") return;
+      editTicketId = id;
+      document.getElementById("subject").value = ticket.subject;
+      document.getElementById("client").value = ticket.client;
+      document.getElementById("tech").value = ticket.tech;
+      document.getElementById("priority").value = ticket.priority;
+      document.getElementById("description").value = ticket.description;
+      cancelEditBtn.classList.remove("hidden");
+    }
+
+    function cancelEdit(){
+      editTicketId = null;
+      ticketForm.reset();
+      cancelEditBtn.classList.add("hidden");
+    }
 
     // ====== INICIALIZAÇÃO ======
     fetchOperators();
