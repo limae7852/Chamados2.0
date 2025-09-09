@@ -192,10 +192,26 @@ function translateStatus(status){
 function renderTickets(){
   const ticketsList = document.getElementById("ticketsList");
   ticketsList.innerHTML = "";
+
   tickets.forEach(ticket=>{
     const tr = document.createElement("tr");
     tr.dataset.id = ticket.id;
     if(ticket.priority==="critical" && ticket.status!=="resolved") tr.classList.add("blink");
+
+    let actionsHTML = "";
+    if(ticket.status === "resolved"){
+      actionsHTML = `
+        <button class="details-btn btn-details">Detalhes</button>
+        <span class="text-green-600 font-bold ml-2">✅ Encerrado</span>
+      `;
+    } else {
+      actionsHTML = `
+        <button class="edit-btn btn-edit">Editar</button>
+        <button class="close-btn btn-close">Encerrar</button>
+        <button class="details-btn btn-details">Detalhes</button>
+      `;
+    }
+
     tr.innerHTML = `
       <td class="border px-4 py-2 hidden">${ticket.id}</td>
       <td class="border px-4 py-2">${ticket.subject}</td>
@@ -203,13 +219,8 @@ function renderTickets(){
       <td class="border px-4 py-2">${ticket.tech}</td>
       <td class="border px-4 py-2 capitalize">${translatePriority(ticket.priority)}</td>
       <td class="border px-4 py-2 capitalize">${translateStatus(ticket.status)}</td>
-      <td class="border px-4 py-2 space-x-2">
-        ${ticket.status !== "resolved" 
-          ? `<button class="edit-btn btn-edit">Editar</button>
-             <button class="close-btn btn-close">Encerrar</button>
-             <button class="details-btn btn-details">Detalhes</button>`
-          : `<button class="details-btn btn-details">Detalhes</button> ✅ Encerrado`}
-      </td>`;
+      <td class="border px-4 py-2 space-x-2">${actionsHTML}</td>
+    `;
     ticketsList.appendChild(tr);
   });
 }
@@ -244,7 +255,7 @@ async function closeTicket(id){
 
 function editTicket(id){
   const ticket = tickets.find(t => t.id===id);
-  if(!ticket || ticket.status==="resolved") return;
+  if(!ticket || ticket.status==="resolved") return; // bloqueia edição de encerrados
   editTicketId = id;
   document.getElementById("subject").value = ticket.subject;
   document.getElementById("client").value = ticket.client;
