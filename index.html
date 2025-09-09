@@ -36,7 +36,7 @@
   <table class="mt-6 w-full border">
     <thead>
       <tr class="bg-gray-200">
-        <th class="border px-4 py-2">ID</th>
+        <th class="border px-4 py-2 hidden">ID</th> <!-- Oculto -->
         <th class="border px-4 py-2">Assunto</th>
         <th class="border px-4 py-2">Cliente</th>
         <th class="border px-4 py-2">Técnico</th>
@@ -183,7 +183,7 @@ function renderTickets(){
     const tr = document.createElement("tr");
     tr.dataset.id = ticket.id;
     tr.innerHTML = `
-      <td class="border px-4 py-2">${ticket.id}</td>
+      <td class="border px-4 py-2 hidden">${ticket.id}</td>
       <td class="border px-4 py-2">${ticket.subject}</td>
       <td class="border px-4 py-2">${ticket.client}</td>
       <td class="border px-4 py-2">${ticket.tech}</td>
