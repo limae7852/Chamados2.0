@@ -5,15 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Sistema de Chamados</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
-  @keyframes blink { 0%,50%,100%{background-color:#f87171;} 25%,75%{background-color:#fca5a5;} }
+  @keyframes blink {
+    0%, 50%, 100% { background-color: #f87171; }
+    25%, 75% { background-color: #fca5a5; }
+  }
   .blink td { animation: blink 1s infinite; }
-  .btn-edit { background-color: #facc15; color:#000; padding:0.25rem 0.5rem; border-radius:0.25rem; }
-  .btn-edit:hover { background-color:#eab308; }
-  .btn-close { background-color:#ef4444;color:#fff;padding:0.25rem 0.5rem;border-radius:0.25rem; }
-  .btn-close:hover{ background-color:#b91c1c; }
-  .btn-details{background-color:#3b82f6;color:#fff;padding:0.25rem 0.5rem;border-radius:0.25rem;}
-  .btn-details:hover{background-color:#1d4ed8;}
+  .btn-edit { background-color: #facc15; color: #000; padding: 0.25rem 0.5rem; border-radius: 0.25rem; }
+  .btn-edit:hover { background-color: #eab308; }
+  .btn-close { background-color: #ef4444; color: #fff; padding: 0.25rem 0.5rem; border-radius: 0.25rem; }
+  .btn-close:hover { background-color: #b91c1c; }
+  .btn-details { background-color: #3b82f6; color: #fff; padding: 0.25rem 0.5rem; border-radius: 0.25rem; }
+  .btn-details:hover { background-color: #1d4ed8; }
 </style>
 </head>
 <body class="bg-gray-100 text-gray-900">
@@ -34,18 +39,21 @@
 <div id="systemScreen" class="p-6 hidden">
   <div class="flex justify-between items-center mb-4">
     <h1 class="text-2xl font-bold">Sistema de Chamados</h1>
-    <div class="flex gap-2">
+    <div>
       <button id="btnUserRegister" class="px-4 py-2 bg-green-600 text-white rounded hidden">Cadastrar Usuário</button>
-      <button id="logoutBtn" class="px-4 py-2 bg-red-500 text-white rounded">Logout</button>
+      <button id="btnLogout" class="px-4 py-2 bg-red-600 text-white rounded ml-2">Logout</button>
     </div>
   </div>
 
-  <button id="btnSettings" class="px-4 py-2 bg-blue-600 text-white rounded">⚙️ Configurações</button>
+  <div class="flex gap-2 mb-4">
+    <button id="btnSettings" class="px-4 py-2 bg-blue-600 text-white rounded">⚙️ Configurações</button>
+    <button id="btnReport" class="px-4 py-2 bg-purple-600 text-white rounded">📄 Relatório</button>
+  </div>
 
   <form id="ticketForm" class="mt-4 space-y-2">
     <input id="subject" placeholder="Assunto" class="border p-2 w-full" required />
     <input id="client" placeholder="Cliente" class="border p-2 w-full" required />
-    <select id="tech" class="border p-2 w-full"></select>
+    <select id="tech" class="border p-2 w-full" required></select>
     <select id="priority" class="border p-2 w-full">
       <option value="low">Baixa</option>
       <option value="medium">Média</option>
@@ -62,7 +70,6 @@
   <table class="mt-6 w-full border">
     <thead>
       <tr class="bg-gray-200">
-        <th class="border px-4 py-2 hidden">ID</th>
         <th class="border px-4 py-2">Assunto</th>
         <th class="border px-4 py-2">Cliente</th>
         <th class="border px-4 py-2">Técnico</th>
@@ -123,9 +130,24 @@
   </div>
 </div>
 
+<!-- Modal Relatório -->
+<div id="reportModal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center">
+  <div class="bg-white rounded-lg shadow-lg w-11/12 max-w-4xl p-6 overflow-y-auto max-h-[80vh]">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-lg font-bold">Relatório de Chamados</h2>
+      <button id="closeReportBtn" class="text-red-600 font-bold px-2 py-1 rounded border border-red-600 hover:bg-red-100">X</button>
+    </div>
+    <div class="flex gap-2 mb-4">
+      <button onclick="downloadPDF()" class="px-4 py-2 bg-red-600 text-white rounded">📄 PDF</button>
+      <button onclick="downloadExcel()" class="px-4 py-2 bg-green-600 text-white rounded">📊 Excel</button>
+    </div>
+    <div id="reportContent"></div>
+  </div>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, updateDoc, doc, orderBy, query } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBA16WHE768N9eUcqEoQqUF7uEIB82nNM0",
@@ -135,164 +157,141 @@ const firebaseConfig = {
   messagingSenderId: "164935126006",
   appId: "1:164935126006:web:e49fd19961993d5b62d5d7"
 };
-
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-let tickets = [], operators = [], currentUser = null, editTicketId = null;
+let tickets = [];
+let operators = [];
+let currentUser = null;
+let editTicketId = null;
 
-// ======================= Login ==========================
+/* --- Login --- */
 async function loginUser(login, password){
   const snapshot = await getDocs(collection(db,"users"));
-  const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  const users = snapshot.docs.map(d=>({id:d.id,...d.data()}));
   return users.find(u=>u.login===login && u.password===password) || null;
 }
-
-document.getElementById("loginForm").addEventListener("submit", async (e)=>{
+document.getElementById("loginForm").addEventListener("submit", async e=>{
   e.preventDefault();
-  const login = document.getElementById("loginUser").value;
-  const pass = document.getElementById("loginPass").value;
+  const login=document.getElementById("loginUser").value;
+  const pass=document.getElementById("loginPass").value;
   const user = await loginUser(login, pass);
   if(user){
-    currentUser = user;
+    currentUser=user;
     document.getElementById("loginScreen").classList.add("hidden");
     document.getElementById("systemScreen").classList.remove("hidden");
-
-    // Mostra botão cadastro apenas para admin
-    if(currentUser.role==="admin"){
-      document.getElementById("btnUserRegister").classList.remove("hidden");
-    }
-
-    fetchOperators();
-    fetchTickets();
-  }else{
-    alert("Usuário ou senha inválidos!");
-  }
+    if(user.role==="admin") document.getElementById("btnUserRegister").classList.remove("hidden");
+    fetchOperators(); fetchTickets();
+  } else alert("Usuário ou senha inválidos!");
 });
 
-// ======================= Logout =========================
-document.getElementById("logoutBtn").addEventListener("click", ()=>{
-  currentUser = null;
+/* --- Logout --- */
+document.getElementById("btnLogout").addEventListener("click", ()=>{
+  currentUser=null;
   document.getElementById("loginScreen").classList.remove("hidden");
   document.getElementById("systemScreen").classList.add("hidden");
-  document.getElementById("btnUserRegister").classList.add("hidden");
 });
 
-// ======================= Cadastro de Usuários ==========================
-const userModal = document.getElementById("userModal");
+/* --- Cadastro Usuário --- */
+const userModal=document.getElementById("userModal");
 function openUserModal(){ userModal.classList.remove("hidden"); userModal.classList.add("flex"); }
 function closeUserModal(){ userModal.classList.add("hidden"); userModal.classList.remove("flex"); }
-window.openUserModal = openUserModal;
-window.closeUserModal = closeUserModal;
-
+window.openUserModal=openUserModal; window.closeUserModal=closeUserModal;
 document.getElementById("btnUserRegister").addEventListener("click", openUserModal);
-
-document.getElementById("userForm").addEventListener("submit", async (e)=>{
+document.getElementById("userForm").addEventListener("submit", async e=>{
   e.preventDefault();
-  const newUser = {
-    name: document.getElementById("userName").value,
-    login: document.getElementById("userLogin").value,
-    password: document.getElementById("userPass").value,
-    role: document.getElementById("userRole").value
+  const newUser={
+    name:document.getElementById("userName").value,
+    login:document.getElementById("userLogin").value,
+    password:document.getElementById("userPass").value,
+    role:document.getElementById("userRole").value
   };
   await addDoc(collection(db,"users"), newUser);
   e.target.reset();
   fetchUsers();
 });
-
 async function fetchUsers(){
-  const snapshot = await getDocs(collection(db,"users"));
-  const users = snapshot.docs.map(doc=>({ id: doc.id, ...doc.data() }));
-  const ul = document.getElementById("usersList");
-  ul.innerHTML="";
-  users.forEach(u=>{
-    const li = document.createElement("li");
-    li.textContent = `${u.name} (${u.login}) - ${u.role}`;
-    ul.appendChild(li);
-  });
+  const snapshot=await getDocs(collection(db,"users"));
+  const users=snapshot.docs.map(d=>({id:d.id,...d.data()}));
+  const ul=document.getElementById("usersList"); ul.innerHTML="";
+  users.forEach(u=>{ const li=document.createElement("li"); li.textContent=`${u.name} (${u.login}) - ${u.role}`; ul.appendChild(li); });
 }
 
-// ======================= Operadores ==========================
-const btnSettings = document.getElementById("btnSettings");
-const modalSettings = document.getElementById("modalSettings");
-const closeSettingsBtn = document.getElementById("closeSettingsBtn");
-const operatorsListEl = document.getElementById("operatorsList");
-const addOperatorBtn = document.getElementById("addOperatorBtn");
-const techSelect = document.getElementById("tech");
+/* --- Operadores --- */
+const btnSettings=document.getElementById("btnSettings");
+const modalSettings=document.getElementById("modalSettings");
+const closeSettingsBtn=document.getElementById("closeSettingsBtn");
+const operatorsListEl=document.getElementById("operatorsList");
+const addOperatorBtn=document.getElementById("addOperatorBtn");
+const techSelect=document.getElementById("tech");
 
 btnSettings.addEventListener("click", ()=>{ modalSettings.classList.remove("hidden"); modalSettings.classList.add("flex"); });
 closeSettingsBtn.addEventListener("click", ()=>{ modalSettings.classList.add("hidden"); modalSettings.classList.remove("flex"); });
 
 async function fetchOperators(){
-  const q = query(collection(db,"operators"), orderBy("name"));
-  const snapshot = await getDocs(q);
-  operators = snapshot.docs.map(doc=>({ id: doc.id, ...doc.data() }));
+  const q=query(collection(db,"operators"),orderBy("name"));
+  const snapshot=await getDocs(q);
+  operators=snapshot.docs.map(d=>({id:d.id,...d.data()}));
   renderOperators();
 }
-
 function renderOperators(){
   operatorsListEl.innerHTML="";
   techSelect.innerHTML='<option value="">Selecione o Técnico</option>';
   operators.forEach(op=>{
-    const li = document.createElement("li");
+    const li=document.createElement("li");
     li.className="flex justify-between items-center border p-2 rounded";
-    li.innerHTML=`<span>${op.name}</span> <button data-id="${op.id}" class="text-red-600 hover:underline">Remover</button>`;
+    li.innerHTML=`<span>${op.name}</span><button data-id="${op.id}" class="text-red-600 hover:underline">Remover</button>`;
     operatorsListEl.appendChild(li);
-
-    const opt = document.createElement("option");
-    opt.value=op.name; opt.textContent=op.name;
-    techSelect.appendChild(opt);
+    const opt=document.createElement("option"); opt.value=op.name; opt.textContent=op.name; techSelect.appendChild(opt);
   });
 }
-
 addOperatorBtn.addEventListener("click", async ()=>{
-  const name=document.getElementById("newOperator").value.trim();
-  if(name){ await addDoc(collection(db,"operators"), { name }); document.getElementById("newOperator").value=""; fetchOperators(); }
+  const input=document.getElementById("newOperator");
+  const name=input.value.trim();
+  if(name){ await addDoc(collection(db,"operators"), {name}); input.value=""; fetchOperators(); }
 });
-
-operatorsListEl.addEventListener("click", async (e)=>{
+operatorsListEl.addEventListener("click", async e=>{
   const btn=e.target.closest("button[data-id]");
-  if(btn) await deleteDoc(doc(db,"operators", btn.dataset.id)), fetchOperators();
+  if(btn){ await deleteDoc(doc(db,"operators",btn.dataset.id)); fetchOperators(); }
 });
 
-// ======================= Tickets ==========================
-async function fetchTickets(){
-  const q = query(collection(db,"tickets"), orderBy("date"));
-  const snapshot = await getDocs(q);
-  const allTickets = snapshot.docs.map(doc=>({ id: doc.id, ...doc.data() }));
+/* --- Tickets --- */
+const ticketForm=document.getElementById("ticketForm");
+ticketForm.addEventListener("submit", async e=>{
+  e.preventDefault();
+  const subject=document.getElementById("subject").value.trim();
+  const client=document.getElementById("client").value.trim();
+  const tech=document.getElementById("tech").value;
+  const priority=document.getElementById("priority").value;
+  const description=document.getElementById("description").value.trim();
+  if(!subject || !client || !tech){ alert("Preencha todos os campos obrigatórios!"); return; }
 
-  if(currentUser.role==="tech"){
-    tickets = allTickets.filter(t=>t.tech===currentUser.name);
-  } else if(currentUser.role==="operator"){
-    tickets = allTickets.filter(t=>t.creator===currentUser.name);
-  } else {
-    tickets = allTickets;
-  }
+  const ticketData={subject,client,tech,priority,description,status:"open",date:Date.now()};
+
+  try{
+    if(editTicketId){ await updateDoc(doc(db,"tickets",editTicketId),ticketData); editTicketId=null; cancelEdit(); }
+    else await addDoc(collection(db,"tickets"),ticketData);
+    ticketForm.reset(); fetchTickets();
+  }catch(err){ console.error("Erro ao salvar chamado:", err); alert("Não foi possível salvar o chamado."); }
+});
+
+async function fetchTickets(){
+  const q=query(collection(db,"tickets"),orderBy("date"));
+  const snapshot=await getDocs(q);
+  tickets=snapshot.docs.map(d=>({id:d.id,...d.data()}));
   renderTickets();
 }
-
 function translatePriority(p){ return {low:"Baixa",medium:"Média",high:"Alta",critical:"Crítica"}[p]||p; }
 function translateStatus(s){ return {open:"Aberto",resolved:"Encerrado"}[s]||s; }
-
 function renderTickets(){
-  const ticketsList = document.getElementById("ticketsList");
-  ticketsList.innerHTML="";
+  const ticketsList=document.getElementById("ticketsList"); ticketsList.innerHTML="";
   tickets.forEach(ticket=>{
-    const tr = document.createElement("tr");
-    tr.dataset.id=ticket.id;
+    const tr=document.createElement("tr"); tr.dataset.id=ticket.id;
     if(ticket.priority==="critical" && ticket.status!=="resolved") tr.classList.add("blink");
-    let actionsHTML="";
-    if(ticket.status==="resolved"){
-      actionsHTML=`<button class="details-btn btn-details">Detalhes</button> ✅ Encerrado`;
-    }else{
-      actionsHTML=`
-        <button class="edit-btn btn-edit">Editar</button>
-        <button class="close-btn btn-close">Encerrar</button>
-        <button class="details-btn btn-details">Detalhes</button>
-      `;
-    }
+    const actionsHTML=ticket.status==="resolved"
+      ? `<button class="details-btn btn-details">Detalhes</button> ✅ Encerrado`
+      : `<button class="edit-btn btn-edit">Editar</button><button class="close-btn btn-close">Encerrar</button><button class="details-btn btn-details">Detalhes</button>`;
     tr.innerHTML=`
-      <td class="border px-4 py-2 hidden">${ticket.id}</td>
       <td class="border px-4 py-2">${ticket.subject}</td>
       <td class="border px-4 py-2">${ticket.client}</td>
       <td class="border px-4 py-2">${ticket.tech}</td>
@@ -304,38 +303,17 @@ function renderTickets(){
   });
 }
 
-document.getElementById("ticketsList").addEventListener("click",(e)=>{
-  const tr=e.target.closest("tr");
-  const ticketId=tr?.dataset.id;
-  if(!ticketId) return;
-  if(e.target.classList.contains("edit-btn")) editTicket(ticketId);
-  else if(e.target.classList.contains("close-btn")) closeTicket(ticketId);
-  else if(e.target.classList.contains("details-btn")) showDetails(ticketId);
+document.getElementById("ticketsList").addEventListener("click", e=>{
+  const tr=e.target.closest("tr"); const id=tr?.dataset.id; if(!id) return;
+  if(e.target.classList.contains("edit-btn")) editTicket(id);
+  else if(e.target.classList.contains("close-btn")) closeTicket(id);
+  else if(e.target.classList.contains("details-btn")) showDetails(id);
 });
 
-async function addTicket(ticket){
-  if(editTicketId){
-    await updateDoc(doc(db,"tickets",editTicketId), ticket);
-    editTicketId=null;
-    cancelEdit();
-  }else{
-    ticket.creator=currentUser.name;
-    await addDoc(collection(db,"tickets"), ticket);
-  }
-  fetchTickets();
-}
-
-async function closeTicket(id){
-  const ticket=tickets.find(t=>t.id===id);
-  if(!ticket) return;
-  await updateDoc(doc(db,"tickets",id),{ status:'resolved' });
-  fetchTickets();
-  cancelEdit();
-}
+async function closeTicket(id){ await updateDoc(doc(db,"tickets",id),{status:"resolved"}); fetchTickets(); cancelEdit(); }
 
 function editTicket(id){
-  const ticket=tickets.find(t=>t.id===id);
-  if(!ticket||ticket.status==="resolved") return;
+  const ticket=tickets.find(t=>t.id===id); if(!ticket || ticket.status==="resolved") return;
   editTicketId=id;
   document.getElementById("subject").value=ticket.subject;
   document.getElementById("client").value=ticket.client;
@@ -344,52 +322,91 @@ function editTicket(id){
   document.getElementById("description").value=ticket.description;
   document.getElementById("cancelEditBtn").classList.remove("hidden");
 }
-
-function cancelEdit(){
-  editTicketId=null;
-  ticketForm.reset();
-  document.getElementById("cancelEditBtn").classList.add("hidden");
-}
+function cancelEdit(){ editTicketId=null; ticketForm.reset(); document.getElementById("cancelEditBtn").classList.add("hidden"); }
 window.cancelEdit=cancelEdit;
 
 function showDetails(id){
-  const ticket=tickets.find(t=>t.id===id);
-  if(!ticket) return;
+  const ticket=tickets.find(t=>t.id===id); if(!ticket) return;
   const content=document.getElementById("detailsContent");
   content.innerHTML=`
-    <p><strong>ID:</strong>${ticket.id}</p>
-    <p><strong>Assunto:</strong>${ticket.subject}</p>
-    <p><strong>Descrição:</strong>${ticket.description}</p>
-    <p><strong>Cliente:</strong>${ticket.client}</p>
-    <p><strong>Técnico:</strong>${ticket.tech}</p>
-    <p><strong>Prioridade:</strong>${translatePriority(ticket.priority)}</p>
-    <p><strong>Status:</strong>${translateStatus(ticket.status)}</p>
-    <p><strong>Abertura:</strong>${new Date(ticket.date).toLocaleString()}</p>
+    <p><strong>ID:</strong> ${ticket.id}</p>
+    <p><strong>Assunto:</strong> ${ticket.subject}</p>
+    <p><strong>Descrição:</strong> ${ticket.description}</p>
+    <p><strong>Cliente:</strong> ${ticket.client}</p>
+    <p><strong>Técnico:</strong> ${ticket.tech}</p>
+    <p><strong>Prioridade:</strong> ${translatePriority(ticket.priority)}</p>
+    <p><strong>Status:</strong> ${translateStatus(ticket.status)}</p>
+    <p><strong>Abertura:</strong> ${new Date(ticket.date).toLocaleString()}</p>
   `;
-  document.getElementById("detailsModal").classList.remove("hidden");
-  document.getElementById("detailsModal").classList.add("flex");
+  document.getElementById("detailsModal").classList.remove("hidden"); document.getElementById("detailsModal").classList.add("flex");
 }
-window.closeDetailsModal=function(){
-  document.getElementById("detailsModal").classList.add("hidden");
-  document.getElementById("detailsModal").classList.remove("flex");
+window.closeDetailsModal=function(){ document.getElementById("detailsModal").classList.add("hidden"); document.getElementById("detailsModal").classList.remove("flex"); }
+
+/* --- Relatório --- */
+const reportModal = document.getElementById("reportModal");
+const reportContent = document.getElementById("reportContent");
+document.getElementById("btnReport").addEventListener("click", ()=>{
+  if(tickets.length === 0){
+    reportContent.innerHTML = "<p>Nenhum chamado registrado.</p>";
+  } else {
+    let html = `<table class="w-full border text-left"><thead><tr class="bg-gray-200">
+      <th class="border px-2 py-1">Assunto</th>
+      <th class="border px-2 py-1">Cliente</th>
+      <th class="border px-2 py-1">Técnico</th>
+      <th class="border px-2 py-1">Prioridade</th>
+      <th class="border px-2 py-1">Status</th>
+      <th class="border px-2 py-1">Abertura</th>
+    </tr></thead><tbody>`;
+    tickets.forEach(t=>{
+      html+=`<tr>
+        <td class="border px-2 py-1">${t.subject}</td>
+        <td class="border px-2 py-1">${t.client}</td>
+        <td class="border px-2 py-1">${t.tech}</td>
+        <td class="border px-2 py-1">${translatePriority(t.priority)}</td>
+        <td class="border px-2 py-1">${translateStatus(t.status)}</td>
+        <td class="border px-2 py-1">${new Date(t.date).toLocaleString()}</td>
+      </tr>`;
+    });
+    html += `</tbody></table>`;
+    reportContent.innerHTML = html;
+  }
+  reportModal.classList.remove("hidden"); 
+  reportModal.classList.add("flex");
+});
+
+document.getElementById("closeReportBtn").addEventListener("click", ()=>{
+  reportModal.classList.add("hidden"); 
+  reportModal.classList.remove("flex");
+});
+
+// Funções PDF/Excel
+function downloadPDF(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.text("Relatório de Chamados", 10, 10);
+  let y = 20;
+  tickets.forEach(t=>{
+    doc.text(`Assunto: ${t.subject}`, 10, y); y+=6;
+    doc.text(`Cliente: ${t.client}`, 10, y); y+=6;
+    doc.text(`Técnico: ${t.tech}`, 10, y); y+=6;
+    doc.text(`Prioridade: ${translatePriority(t.priority)}`, 10, y); y+=6;
+    doc.text(`Status: ${translateStatus(t.status)}`, 10, y); y+=6;
+    doc.text(`Abertura: ${new Date(t.date).toLocaleString()}`, 10, y); y+=10;
+  });
+  doc.save("relatorio_chamados.pdf");
 }
 
-// Form Tickets
-const ticketForm=document.getElementById("ticketForm");
-ticketForm.addEventListener("submit",(e)=>{
-  e.preventDefault();
-  const ticket={
-    subject:document.getElementById("subject").value,
-    client:document.getElementById("client").value,
-    tech:document.getElementById("tech").value,
-    priority:document.getElementById("priority").value,
-    description:document.getElementById("description").value,
-    status:"open",
-    date:Date.now()
-  };
-  addTicket(ticket);
-  ticketForm.reset();
-});
+function downloadExcel(){
+  const wb = XLSX.utils.book_new();
+  const ws_data=[["Assunto","Cliente","Técnico","Prioridade","Status","Abertura"]];
+  tickets.forEach(t=>{
+    ws_data.push([t.subject,t.client,t.tech,translatePriority(t.priority),translateStatus(t.status),new Date(t.date).toLocaleString()]);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(ws_data);
+  XLSX.utils.book_append_sheet(wb,ws,"Chamados");
+  XLSX.writeFile(wb,"relatorio_chamados.xlsx");
+}
+
 </script>
 </body>
 </html>
