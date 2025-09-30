@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Sistema de Chamados</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   @keyframes blink {
     0%, 50%, 100% { background-color: #f87171; }
@@ -22,6 +20,58 @@
 </style>
 </head>
 <body class="bg-gray-100 text-gray-900">
+
+<script>
+/* --- Licença de uso 30 dias --- */
+function checkLicense(){
+  let savedDate = localStorage.getItem("activationDate");
+
+  if(!savedDate){
+    // Primeira vez que acessa → salva a data de hoje
+    const today = new Date();
+    localStorage.setItem("activationDate", today.toISOString());
+    savedDate = today.toISOString();
+  }
+
+  const activationDate = new Date(savedDate);
+  const today = new Date();
+  const diffTime = today - activationDate;
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+  const remainingDays = 30 - diffDays;
+
+  if(remainingDays <= 0){
+    // Expirou a licença → bloqueia sistema
+    document.body.innerHTML = `
+      <div class="flex items-center justify-center h-screen bg-gray-900 text-white">
+        <div class="bg-red-600 p-6 rounded-lg shadow-lg text-center">
+          <h1 class="text-2xl font-bold mb-4">Licença Expirada</h1>
+          <p>O período de uso de 30 dias terminou.</p>
+          <p class="mt-2 text-sm">Entre em contato com o administrador para renovar sua licença.</p>
+        </div>
+      </div>
+    `;
+    return false;
+  }
+
+  // Exibir contador na tela
+  let color = "bg-green-600";
+  if(remainingDays <= 15) color = "bg-yellow-500";
+  if(remainingDays <= 5) color = "bg-red-600";
+
+  const licenseBanner = document.createElement("div");
+  licenseBanner.className = `${color} text-white text-center py-2 font-bold`;
+  licenseBanner.innerText = `⚠️ Sua licença expira em ${remainingDays} dia${remainingDays > 1 ? "s" : ""}`;
+  document.body.prepend(licenseBanner);
+
+  return true;
+}
+
+// Executa a verificação antes de carregar o sistema
+if(!checkLicense()){
+  throw new Error("Licença expirada. Sistema bloqueado.");
+}
+</script>
 
 <!-- Tela de Login -->
 <div id="loginScreen" class="flex justify-center items-center min-h-screen">
@@ -45,10 +95,8 @@
     </div>
   </div>
 
-  <div class="flex gap-2 mb-4">
-    <button id="btnSettings" class="px-4 py-2 bg-blue-600 text-white rounded">⚙️ Configurações</button>
-    <button id="btnReport" class="px-4 py-2 bg-purple-600 text-white rounded">📄 Relatório</button>
-  </div>
+  <button id="btnSettings" class="px-4 py-2 bg-blue-600 text-white rounded mb-4">⚙️ Configurações</button>
+  <button id="btnReport" class="px-4 py-2 bg-purple-600 text-white rounded mb-4">📊 Relatório</button>
 
   <form id="ticketForm" class="mt-4 space-y-2">
     <input id="subject" placeholder="Assunto" class="border p-2 w-full" required />
@@ -82,66 +130,28 @@
   </table>
 </div>
 
-<!-- Modal Configurações -->
-<div id="modalSettings" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center">
-  <div class="bg-white rounded-lg shadow-lg w-96 p-6">
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-lg font-bold">Configurações - Técnicos</h2>
-      <button id="closeSettingsBtn" class="text-red-600 font-bold">X</button>
-    </div>
-    <div class="flex space-x-2 mb-4">
-      <input id="newOperator" placeholder="Nome do Técnico" class="border p-2 flex-1"/>
-      <button id="addOperatorBtn" class="px-3 py-2 bg-blue-600 text-white rounded">Adicionar</button>
-    </div>
-    <ul id="operatorsList" class="space-y-2"></ul>
-  </div>
-</div>
-
-<!-- Modal Detalhes -->
-<div id="detailsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center">
-  <div class="bg-white rounded-lg shadow-lg w-96 p-6">
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-lg font-bold">Detalhes do Chamado</h2>
-      <button onclick="closeDetailsModal()" class="text-red-600 font-bold">X</button>
-    </div>
-    <div id="detailsContent"></div>
-  </div>
-</div>
-
-<!-- Modal Cadastro de Usuário -->
-<div id="userModal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center">
-  <div class="bg-white rounded-lg shadow-lg w-96 p-6">
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-lg font-bold">Cadastrar Usuário</h2>
-      <button onclick="closeUserModal()" class="text-red-600 font-bold">X</button>
-    </div>
-    <form id="userForm" class="space-y-2">
-      <input id="userName" placeholder="Nome" class="border p-2 w-full" required />
-      <input id="userLogin" placeholder="Login" class="border p-2 w-full" required />
-      <input id="userPass" type="password" placeholder="Senha" class="border p-2 w-full" required />
-      <select id="userRole" class="border p-2 w-full" required>
-        <option value="admin">Admin</option>
-        <option value="tech">Técnico</option>
-        <option value="operator">Operador</option>
-      </select>
-      <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded">Salvar</button>
-    </form>
-    <ul id="usersList" class="mt-4 space-y-1"></ul>
-  </div>
-</div>
-
 <!-- Modal Relatório -->
 <div id="reportModal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center">
-  <div class="bg-white rounded-lg shadow-lg w-11/12 max-w-4xl p-6 overflow-y-auto max-h-[80vh]">
+  <div class="bg-white rounded-lg shadow-lg w-3/4 p-6">
     <div class="flex justify-between items-center mb-4">
       <h2 class="text-lg font-bold">Relatório de Chamados</h2>
-      <button id="closeReportBtn" class="text-red-600 font-bold px-2 py-1 rounded border border-red-600 hover:bg-red-100">X</button>
+      <button onclick="closeReport()" class="text-red-600 font-bold">X</button>
     </div>
-    <div class="flex gap-2 mb-4">
-      <button onclick="downloadPDF()" class="px-4 py-2 bg-red-600 text-white rounded">📄 PDF</button>
-      <button onclick="downloadExcel()" class="px-4 py-2 bg-green-600 text-white rounded">📊 Excel</button>
+    <div class="overflow-auto max-h-[70vh]">
+      <table class="w-full border">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="border px-4 py-2">Assunto</th>
+            <th class="border px-4 py-2">Cliente</th>
+            <th class="border px-4 py-2">Técnico</th>
+            <th class="border px-4 py-2">Prioridade</th>
+            <th class="border px-4 py-2">Status</th>
+            <th class="border px-4 py-2">Abertura</th>
+          </tr>
+        </thead>
+        <tbody id="reportList"></tbody>
+      </table>
     </div>
-    <div id="reportContent"></div>
   </div>
 </div>
 
