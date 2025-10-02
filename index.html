@@ -1,442 +1,303 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Sistema de Chamados</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<style>
-  @keyframes blink {0%,50%,100%{background-color:#f87171;}25%,75%{background-color:#fca5a5;}}
-  .blink td{animation:blink 1s infinite;}
-  .btn-edit{background-color:#facc15;color:#000;padding:0.25rem 0.5rem;border-radius:0.25rem;}
-  .btn-edit:hover{background-color:#eab308;}
-  .btn-close{background-color:#ef4444;color:#fff;padding:0.25rem 0.5rem;border-radius:0.25rem;}
-  .btn-close:hover{background-color:#b91c1c;}
-  .btn-details{background-color:#3b82f6;color:#fff;padding:0.25rem 0.5rem;border-radius:0.25rem;}
-  .btn-details:hover{background-color:#1d4ed8;}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Chamados</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    @keyframes blink { 0%,50%,100%{background-color:#f87171;} 25%,75%{background-color:#fff;} }
+    .blink { animation: blink 1s infinite; }
+  </style>
 </head>
-<body class="bg-gray-100 text-gray-900">
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
 
-<!-- Tela de Login -->
-<div id="loginScreen" class="flex justify-center items-center min-h-screen">
-  <div class="bg-white shadow-lg rounded-lg p-8 w-96">
-    <h1 class="text-2xl font-bold mb-4">Login</h1>
-    <form id="loginForm" class="space-y-2">
-      <input id="loginUser" placeholder="Usuário" class="border p-2 w-full" required />
-      <input id="loginPass" type="password" placeholder="Senha" class="border p-2 w-full" required />
-      <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded w-full">Entrar</button>
-    </form>
-  </div>
-</div>
-
-<!-- Tela do Sistema -->
-<div id="systemScreen" class="p-6 hidden">
-  <div class="flex justify-between items-center mb-4">
-    <h1 class="text-2xl font-bold">Sistema de Chamados</h1>
-    <div>
-      <button id="btnUserRegister" class="px-4 py-2 bg-green-600 text-white rounded hidden">Cadastrar Usuário</button>
-      <button id="btnLogout" class="px-4 py-2 bg-red-600 text-white rounded ml-2">Logout</button>
-    </div>
-  </div>
-
-  <div class="flex gap-2 mb-4">
-    <button id="btnSettings" class="px-4 py-2 bg-blue-600 text-white rounded">⚙️ Configurações</button>
-    <button id="btnReport" class="px-4 py-2 bg-purple-600 text-white rounded">📄 Relatório</button>
-  </div>
-
-  <form id="ticketForm" class="mt-4 space-y-2">
-    <input id="subject" placeholder="Assunto" class="border p-2 w-full" required />
-    <input id="client" placeholder="Cliente" class="border p-2 w-full" required />
-    <select id="tech" class="border p-2 w-full" required></select>
-    <select id="priority" class="border p-2 w-full">
-      <option value="low">Baixa</option>
-      <option value="medium">Média</option>
-      <option value="high">Alta</option>
-      <option value="critical">Crítica</option>
-    </select>
-    <textarea id="description" placeholder="Descrição" class="border p-2 w-full"></textarea>
-    <div class="flex gap-2">
-      <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded">Abrir Chamado</button>
-      <button type="button" id="cancelEditBtn" class="px-4 py-2 bg-red-500 text-white rounded hidden" onclick="cancelEdit()">Cancelar</button>
-    </div>
+<!-- Login -->
+<div id="loginScreen" class="w-full max-w-sm bg-white shadow-md rounded-lg p-6">
+  <h1 class="text-2xl font-bold mb-4 text-center">Login</h1>
+  <form id="loginForm" class="space-y-4">
+    <input id="loginUser" type="text" placeholder="Usuário" class="w-full p-2 border rounded"/>
+    <input id="loginPass" type="password" placeholder="Senha" class="w-full p-2 border rounded"/>
+    <button class="w-full bg-blue-600 text-white py-2 rounded">Entrar</button>
   </form>
-
-  <table class="mt-6 w-full border">
-    <thead>
-      <tr class="bg-gray-200">
-        <th class="border px-4 py-2">Assunto</th>
-        <th class="border px-4 py-2">Cliente</th>
-        <th class="border px-4 py-2">Técnico</th>
-        <th class="border px-4 py-2">Prioridade</th>
-        <th class="border px-4 py-2">Status</th>
-        <th class="border px-4 py-2">Ações</th>
-      </tr>
-    </thead>
-    <tbody id="ticketsList"></tbody>
-  </table>
 </div>
 
-<!-- Modal Configurações -->
-<div id="modalSettings" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center">
-  <div class="bg-white rounded-lg shadow-lg w-96 p-6">
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-lg font-bold">Configurações - Técnicos</h2>
-      <button id="closeSettingsBtn" class="text-red-600 font-bold">X</button>
+<!-- Sistema -->
+<div id="systemScreen" class="hidden w-full p-4 space-y-4">
+  <!-- Banner da Licença -->
+  <div id="licenseBanner" class="text-center p-2 font-bold"></div>
+
+  <!-- Barra superior -->
+  <div class="flex justify-between items-center bg-white p-4 rounded shadow">
+    <h2 class="text-xl font-bold">Sistema de Chamados</h2>
+    <div class="space-x-2">
+      <button id="btnUserRegister" class="hidden px-3 py-1 bg-green-600 text-white rounded">Usuários</button>
+      <button id="btnSettings" class="px-3 py-1 bg-gray-600 text-white rounded">Configurações</button>
+      <button id="btnReport" class="px-3 py-1 bg-indigo-600 text-white rounded">Relatórios</button>
+      <button id="btnLogout" class="px-3 py-1 bg-red-600 text-white rounded">Sair</button>
     </div>
-    <div class="flex space-x-2 mb-4">
-      <input id="newOperator" placeholder="Nome do Técnico" class="border p-2 flex-1"/>
-      <button id="addOperatorBtn" class="px-3 py-2 bg-blue-600 text-white rounded">Adicionar</button>
-    </div>
-    <ul id="operatorsList" class="space-y-2"></ul>
   </div>
-</div>
 
-<!-- Modal Detalhes -->
-<div id="detailsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center">
-  <div class="bg-white rounded-lg shadow-lg w-96 p-6">
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-lg font-bold">Detalhes do Chamado</h2>
-      <button onclick="closeDetailsModal()" class="text-red-600 font-bold">X</button>
-    </div>
-    <div id="detailsContent"></div>
-  </div>
-</div>
-
-<!-- Modal Cadastro de Usuário -->
-<div id="userModal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center">
-  <div class="bg-white rounded-lg shadow-lg w-96 p-6">
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-lg font-bold">Cadastrar Usuário</h2>
-      <button onclick="closeUserModal()" class="text-red-600 font-bold">X</button>
-    </div>
-    <form id="userForm" class="space-y-2">
-      <input id="userName" placeholder="Nome" class="border p-2 w-full" required />
-      <input id="userLogin" placeholder="Login" class="border p-2 w-full" required />
-      <input id="userPass" type="password" placeholder="Senha" class="border p-2 w-full" required />
-      <select id="userRole" class="border p-2 w-full" required>
-        <option value="admin">Admin</option>
-        <option value="tech">Técnico</option>
-        <option value="operator">Operador</option>
+  <!-- Formulário Chamados -->
+  <div class="bg-white p-4 rounded shadow">
+    <h3 class="text-lg font-bold mb-2">Abrir Chamado</h3>
+    <form id="ticketForm" class="space-y-2">
+      <input id="subject" type="text" placeholder="Assunto" class="w-full border p-2 rounded"/>
+      <input id="client" type="text" placeholder="Cliente" class="w-full border p-2 rounded"/>
+      <select id="tech" class="w-full border p-2 rounded"></select>
+      <select id="priority" class="w-full border p-2 rounded">
+        <option value="low">Baixa</option>
+        <option value="medium">Média</option>
+        <option value="high">Alta</option>
+        <option value="critical">Crítica</option>
       </select>
-      <div class="flex gap-2">
-        <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded">Salvar</button>
-        <button type="button" onclick="closeUserModal()" class="px-4 py-2 bg-red-500 text-white rounded">Cancelar</button>
+      <textarea id="description" placeholder="Descrição" class="w-full border p-2 rounded"></textarea>
+      <div class="space-x-2">
+        <button class="bg-blue-600 text-white px-3 py-1 rounded">Salvar</button>
+        <button type="button" id="cancelEditBtn" onclick="cancelEdit()" class="hidden bg-gray-500 text-white px-3 py-1 rounded">Cancelar Edição</button>
       </div>
     </form>
-    <ul id="usersList" class="mt-4 space-y-1"></ul>
+  </div>
+
+  <!-- Lista de Chamados -->
+  <div class="bg-white p-4 rounded shadow">
+    <h3 class="text-lg font-bold mb-2">Chamados</h3>
+    <table class="w-full border">
+      <thead class="bg-gray-200">
+        <tr>
+          <th class="border px-2">Assunto</th>
+          <th class="border px-2">Cliente</th>
+          <th class="border px-2">Técnico</th>
+          <th class="border px-2">Prioridade</th>
+          <th class="border px-2">Status</th>
+          <th class="border px-2">Ações</th>
+        </tr>
+      </thead>
+      <tbody id="ticketsList"></tbody>
+    </table>
   </div>
 </div>
 
-<!-- Modal Relatório -->
-<div id="reportModal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center">
-  <div class="bg-white rounded-lg shadow-lg w-11/12 max-w-4xl p-6 overflow-y-auto max-h-[80vh]">
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-lg font-bold">Relatório de Chamados</h2>
-      <button id="closeReportBtn" class="text-red-600 font-bold px-2 py-1 rounded border border-red-600 hover:bg-red-100">X</button>
-    </div>
-    <div class="flex gap-2 mb-4">
-      <button onclick="downloadPDF()" class="px-4 py-2 bg-red-600 text-white rounded">📄 PDF</button>
-      <button onclick="downloadExcel()" class="px-4 py-2 bg-green-600 text-white rounded">📊 Excel</button>
-    </div>
-    <div id="reportContent"></div>
-  </div>
-</div>
-
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyBA16WHE768N9eUcqEoQqUF7uEIB82nNM0",
-  authDomain: "chamados-37b34.firebaseapp.com",
-  projectId: "chamados-37b34",
-  storageBucket: "chamados-37b34.appspot.com",
-  messagingSenderId: "164935126006",
-  appId: "1:164935126006:web:e49fd19961993d5b62d5d7"
-};
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-let tickets = [];
-let operators = [];
-let currentUser = null;
-let editTicketId = null;
-
-/* --- Expiração --- */
-const SYSTEM_EXPIRATION_DAYS = 30;
-const installDateKey = "installDate";
-if(!localStorage.getItem(installDateKey)){ localStorage.setItem(installDateKey, Date.now()); }
-
-function isSystemExpired(){ 
-  const installDate = parseInt(localStorage.getItem(installDateKey),10);
-  const diffDays = (Date.now()-installDate)/(1000*60*60*24);
-  return diffDays>SYSTEM_EXPIRATION_DAYS;
-}
-
-// Bloqueia acesso antes do login
-function checkSystemExpiredBeforeLogin() {
-  if(isSystemExpired()){
-    const loginScreen = document.getElementById("loginScreen");
-    loginScreen.innerHTML = `
-      <div class="bg-white shadow-lg rounded-lg p-8 w-96 text-center">
-        <h1 class="text-2xl font-bold mb-4 text-red-600">Sistema Expirado</h1>
-        <p>O sistema atingiu o prazo de uso de 30 dias e não pode ser utilizado.</p>
+<!-- Modais (Usuários, Configurações, Detalhes, Relatório) -->
+<div id="userModal" class="hidden fixed inset-0 bg-black bg-opacity-50 items-center justify-center">
+  <div class="bg-white p-6 rounded shadow w-96">
+    <h2 class="text-lg font-bold mb-2">Cadastrar Usuário</h2>
+    <form id="userForm" class="space-y-2">
+      <input id="userName" type="text" placeholder="Nome" class="w-full border p-2 rounded"/>
+      <input id="userLogin" type="text" placeholder="Login" class="w-full border p-2 rounded"/>
+      <input id="userPass" type="password" placeholder="Senha" class="w-full border p-2 rounded"/>
+      <select id="userRole" class="w-full border p-2 rounded">
+        <option value="admin">Administrador</option>
+        <option value="user">Usuário</option>
+      </select>
+      <div class="flex justify-between">
+        <button class="bg-green-600 text-white px-3 py-1 rounded">Salvar</button>
+        <button type="button" onclick="closeUserModal()" class="bg-gray-500 text-white px-3 py-1 rounded">Cancelar</button>
       </div>
-    `;
-    return true;
-  }
-  return false;
-}
-checkSystemExpiredBeforeLogin();
+    </form>
+    <h3 class="font-bold mt-4">Usuários Cadastrados</h3>
+    <ul id="usersList" class="list-disc pl-5"></ul>
+  </div>
+</div>
 
-// Bloqueia criação/edição de tickets caso expirado
+<div id="modalSettings" class="hidden fixed inset-0 bg-black bg-opacity-50 items-center justify-center">
+  <div class="bg-white p-6 rounded shadow w-96">
+    <h2 class="text-lg font-bold mb-2">Configurações (Técnicos)</h2>
+    <input id="newOperator" type="text" placeholder="Nome do Técnico" class="w-full border p-2 rounded mb-2"/>
+    <button id="addOperatorBtn" class="bg-blue-600 text-white px-3 py-1 rounded w-full">Adicionar</button>
+    <h3 class="font-bold mt-4">Técnicos Cadastrados</h3>
+    <ul id="operatorsList" class="list-disc pl-5"></ul>
+    <button id="closeSettingsBtn" class="mt-4 bg-gray-500 text-white px-3 py-1 rounded w-full">Fechar</button>
+  </div>
+</div>
+
+<div id="detailsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 items-center justify-center">
+  <div class="bg-white p-6 rounded shadow w-96">
+    <h2 class="text-lg font-bold mb-2">Detalhes do Chamado</h2>
+    <div id="detailsContent"></div>
+    <button onclick="closeDetailsModal()" class="mt-4 bg-gray-500 text-white px-3 py-1 rounded w-full">Fechar</button>
+  </div>
+</div>
+
+<div id="reportModal" class="hidden fixed inset-0 bg-black bg-opacity-50 items-center justify-center">
+  <div class="bg-white p-6 rounded shadow w-3/4 max-h-[80vh] overflow-y-auto">
+    <h2 class="text-lg font-bold mb-2">Relatório de Chamados</h2>
+    <div id="reportContent" class="mb-4"></div>
+    <div class="flex justify-end space-x-2">
+      <button onclick="downloadPDF()" class="bg-red-600 text-white px-3 py-1 rounded">PDF</button>
+      <button onclick="downloadExcel()" class="bg-green-600 text-white px-3 py-1 rounded">Excel</button>
+      <button id="closeReportBtn" class="bg-gray-500 text-white px-3 py-1 rounded">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* --- Firebase (configure seu projeto aqui) --- */
+const firebaseConfig = { /* sua config */ };
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+let currentUser=null, editTicketId=null, tickets=[], operators=[];
+
+/* --- Licença --- */
+const SYSTEM_EXPIRATION_DAYS=30;
+const installDateKey="installDate";
+if(!localStorage.getItem(installDateKey)){
+  localStorage.setItem(installDateKey, Date.now());
+}
+function isSystemExpired(){
+  const installDate=parseInt(localStorage.getItem(installDateKey),10);
+  const diffDays=(Date.now()-installDate)/(1000*60*60*24);
+  return diffDays > SYSTEM_EXPIRATION_DAYS;
+}
+function getDaysRemaining(){
+  const installDate=parseInt(localStorage.getItem(installDateKey),10);
+  const diffDays=Math.floor((Date.now()-installDate)/(1000*60*60*24));
+  return SYSTEM_EXPIRATION_DAYS - diffDays;
+}
+function updateLicenseBanner(){
+  const banner=document.getElementById("licenseBanner");
+  const daysLeft=getDaysRemaining();
+  if(daysLeft>0){
+    banner.textContent=`Licença válida – Restam ${daysLeft} dia(s).`;
+    banner.className="text-green-600 bg-green-100 p-2 font-bold";
+  } else {
+    banner.textContent="⚠ Sistema expirado! Entre em contato para renovar.";
+    banner.className="text-red-600 bg-red-100 p-2 font-bold";
+  }
+}
 function checkSystemStatus(){
   if(isSystemExpired()){
     alert("O sistema expirou! Nenhuma ação é permitida.");
     throw new Error("Sistema expirado");
   }
 }
+updateLicenseBanner();
 
 /* --- Login --- */
-async function loginUser(login, password){
-  const snapshot = await getDocs(collection(db,"users"));
-  const users = snapshot.docs.map(d=>({id:d.id,...d.data()}));
-  return users.find(u=>u.login===login && u.password===password) || null;
+async function loginUser(login,password){
+  const snapshot=await db.collection("users").get();
+  const users=snapshot.docs.map(d=>({id:d.id,...d.data()}));
+  return users.find(u=>u.login===login && u.password===password)||null;
 }
-document.getElementById("loginForm")?.addEventListener("submit", async e=>{
+document.getElementById("loginForm")?.addEventListener("submit",async e=>{
   e.preventDefault();
   if(isSystemExpired()){ alert("Sistema expirado!"); return; }
   const login=document.getElementById("loginUser").value;
   const pass=document.getElementById("loginPass").value;
-  const user = await loginUser(login, pass);
+  const user=await loginUser(login,pass);
   if(user){
     currentUser=user;
     document.getElementById("loginScreen").classList.add("hidden");
     document.getElementById("systemScreen").classList.remove("hidden");
     if(user.role==="admin") document.getElementById("btnUserRegister").classList.remove("hidden");
     fetchOperators(); fetchTickets(); fetchUsers();
+    updateLicenseBanner();
   } else alert("Usuário ou senha inválidos!");
 });
+document.getElementById("btnLogout").addEventListener("click",()=>{
+  currentUser=null;
+  document.getElementById("loginScreen").classList.remove("hidden");
+  document.getElementById("systemScreen").classList.add("hidden");
+});
 
-/* --- Logout --- */
-document.getElementById("btnLogout").addEventListener("click", ()=>{ currentUser=null; document.getElementById("loginScreen").classList.remove("hidden"); document.getElementById("systemScreen").classList.add("hidden"); });
-
-/* --- Cadastro Usuário --- */
+/* --- Usuários --- */
 const userModal=document.getElementById("userModal");
 function openUserModal(){ userModal.classList.remove("hidden"); userModal.classList.add("flex"); }
 function closeUserModal(){ userModal.classList.add("hidden"); userModal.classList.remove("flex"); }
-window.openUserModal=openUserModal; window.closeUserModal=closeUserModal;
-document.getElementById("btnUserRegister").addEventListener("click", openUserModal);
-document.getElementById("userForm").addEventListener("submit", async e=>{
-  e.preventDefault();
-  checkSystemStatus();
-  const newUser={
-    name:document.getElementById("userName").value,
-    login:document.getElementById("userLogin").value,
-    password:document.getElementById("userPass").value,
-    role:document.getElementById("userRole").value
-  };
-  await addDoc(collection(db,"users"), newUser);
-  e.target.reset();
-  fetchUsers();
+window.closeUserModal=closeUserModal;
+document.getElementById("btnUserRegister").addEventListener("click",openUserModal);
+document.getElementById("userForm").addEventListener("submit",async e=>{
+  e.preventDefault(); checkSystemStatus();
+  const newUser={name:document.getElementById("userName").value,login:document.getElementById("userLogin").value,password:document.getElementById("userPass").value,role:document.getElementById("userRole").value};
+  await db.collection("users").add(newUser);
+  e.target.reset(); fetchUsers(); closeUserModal();
 });
 async function fetchUsers(){
-  const snapshot=await getDocs(collection(db,"users"));
+  const snapshot=await db.collection("users").get();
   const users=snapshot.docs.map(d=>({id:d.id,...d.data()}));
   const ul=document.getElementById("usersList"); ul.innerHTML="";
-  users.forEach(u=>{ const li=document.createElement("li"); li.textContent=`${u.name} (${u.login}) - ${u.role}`; ul.appendChild(li); });
+  users.forEach(u=>{const li=document.createElement("li"); li.textContent=`${u.name} (${u.login}) - ${u.role}`; ul.appendChild(li);});
 }
 
 /* --- Operadores --- */
-const btnSettings=document.getElementById("btnSettings");
 const modalSettings=document.getElementById("modalSettings");
-const closeSettingsBtn=document.getElementById("closeSettingsBtn");
-const operatorsListEl=document.getElementById("operatorsList");
-const addOperatorBtn=document.getElementById("addOperatorBtn");
-const techSelect=document.getElementById("tech");
-
-btnSettings.addEventListener("click", ()=>{ modalSettings.classList.remove("hidden"); modalSettings.classList.add("flex"); });
-closeSettingsBtn.addEventListener("click", ()=>{ modalSettings.classList.add("hidden"); modalSettings.classList.remove("flex"); });
-
+document.getElementById("btnSettings").addEventListener("click",()=>{modalSettings.classList.remove("hidden");modalSettings.classList.add("flex");});
+document.getElementById("closeSettingsBtn").addEventListener("click",()=>{modalSettings.classList.add("hidden");modalSettings.classList.remove("flex");});
 async function fetchOperators(){
-  const q=query(collection(db,"operators"),orderBy("name"));
-  const snapshot=await getDocs(q);
-  operators=snapshot.docs.map(d=>({id:d.id,...d.data()}));
-  renderOperators();
+  const snapshot=await db.collection("operators").get();
+  operators=snapshot.docs.map(d=>({id:d.id,...d.data()})); renderOperators();
 }
 function renderOperators(){
-  operatorsListEl.innerHTML="";
-  techSelect.innerHTML='<option value="">Selecione o Técnico</option>';
+  const list=document.getElementById("operatorsList"); list.innerHTML="";
+  const tech=document.getElementById("tech"); tech.innerHTML='<option value="">Selecione o Técnico</option>';
   operators.forEach(op=>{
     const li=document.createElement("li");
-    li.className="flex justify-between items-center border p-2 rounded";
-    li.innerHTML=`<span>${op.name}</span><button data-id="${op.id}" class="text-red-600 hover:underline">Remover</button>`;
-    operatorsListEl.appendChild(li);
-    const opt=document.createElement("option"); opt.value=op.name; opt.textContent=op.name; techSelect.appendChild(opt);
+    li.className="flex justify-between items-center border p-1 rounded";
+    li.innerHTML=`<span>${op.name}</span><button onclick="removeOperator('${op.id}')" class="text-red-600">Remover</button>`;
+    list.appendChild(li);
+    const opt=document.createElement("option"); opt.value=op.name; opt.textContent=op.name; tech.appendChild(opt);
   });
 }
-addOperatorBtn.addEventListener("click", async ()=>{
+document.getElementById("addOperatorBtn").addEventListener("click",async ()=>{
   checkSystemStatus();
-  const input=document.getElementById("newOperator");
-  const name=input.value.trim();
-  if(name){ await addDoc(collection(db,"operators"), {name}); input.value=""; fetchOperators(); }
+  const name=document.getElementById("newOperator").value.trim();
+  if(name){await db.collection("operators").add({name}); document.getElementById("newOperator").value=""; fetchOperators();}
 });
-operatorsListEl.addEventListener("click", async e=>{
-  const btn=e.target.closest("button[data-id]");
-  if(btn){ checkSystemStatus(); await deleteDoc(doc(db,"operators",btn.dataset.id)); fetchOperators(); }
-});
+async function removeOperator(id){ checkSystemStatus(); await db.collection("operators").doc(id).delete(); fetchOperators(); }
 
 /* --- Tickets --- */
-const ticketForm=document.getElementById("ticketForm");
-ticketForm.addEventListener("submit", async e=>{
-  e.preventDefault();
-  checkSystemStatus();
-  const subject=document.getElementById("subject").value.trim();
-  const client=document.getElementById("client").value.trim();
-  const tech=document.getElementById("tech").value;
-  const priority=document.getElementById("priority").value;
-  const description=document.getElementById("description").value.trim();
-  if(!subject || !client || !tech){ alert("Preencha todos os campos obrigatórios!"); return; }
-
-  const ticketData={subject,client,tech,priority,description,status:"open",date:Date.now()};
-
-  try{
-    if(editTicketId){ await updateDoc(doc(db,"tickets",editTicketId),ticketData); editTicketId=null; cancelEdit(); }
-    else await addDoc(collection(db,"tickets"),ticketData);
-    ticketForm.reset(); fetchTickets();
-  }catch(err){ console.error("Erro ao salvar chamado:", err); alert("Não foi possível salvar o chamado."); }
-});
-
 async function fetchTickets(){
-  const q=query(collection(db,"tickets"),orderBy("date"));
-  const snapshot=await getDocs(q);
-  tickets=snapshot.docs.map(d=>({id:d.id,...d.data()}));
-  renderTickets();
+  const snapshot=await db.collection("tickets").get();
+  tickets=snapshot.docs.map(d=>({id:d.id,...d.data()})); renderTickets();
 }
-function translatePriority(p){ return {low:"Baixa",medium:"Média",high:"Alta",critical:"Crítica"}[p]||p; }
-function translateStatus(s){ return {open:"Aberto",resolved:"Encerrado"}[s]||s; }
 function renderTickets(){
-  const ticketsList=document.getElementById("ticketsList"); ticketsList.innerHTML="";
-  tickets.forEach(ticket=>{
-    const tr=document.createElement("tr"); tr.dataset.id=ticket.id;
-    if(ticket.priority==="critical" && ticket.status!=="resolved") tr.classList.add("blink");
-    const actionsHTML=ticket.status==="resolved"
-      ? `<button class="details-btn btn-details">Detalhes</button> ✅ Encerrado`
-      : `<button class="edit-btn btn-edit">Editar</button><button class="close-btn btn-close">Encerrar</button><button class="details-btn btn-details">Detalhes</button>`;
-    tr.innerHTML=`
-      <td class="border px-4 py-2">${ticket.subject}</td>
-      <td class="border px-4 py-2">${ticket.client}</td>
-      <td class="border px-4 py-2">${ticket.tech}</td>
-      <td class="border px-4 py-2 capitalize">${translatePriority(ticket.priority)}</td>
-      <td class="border px-4 py-2 capitalize">${translateStatus(ticket.status)}</td>
-      <td class="border px-4 py-2 space-x-2">${actionsHTML}</td>
-    `;
-    ticketsList.appendChild(tr);
+  const list=document.getElementById("ticketsList"); list.innerHTML="";
+  tickets.forEach(t=>{
+    const tr=document.createElement("tr"); tr.dataset.id=t.id;
+    if(t.priority==="critical"&&t.status!=="resolved") tr.classList.add("blink");
+    tr.innerHTML=`<td class="border px-2">${t.subject}</td><td class="border px-2">${t.client}</td><td class="border px-2">${t.tech}</td><td class="border px-2">${t.priority}</td><td class="border px-2">${t.status}</td>
+    <td class="border px-2">
+      ${t.status==="resolved"?"✅ Encerrado":`<button onclick="editTicket('${t.id}')" class="text-blue-600">Editar</button>
+      <button onclick="closeTicket('${t.id}')" class="text-green-600">Encerrar</button>`}
+      <button onclick="showDetails('${t.id}')" class="text-gray-600">Detalhes</button>
+    </td>`;
+    list.appendChild(tr);
   });
 }
-
-document.getElementById("ticketsList").addEventListener("click", e=>{
-  const tr=e.target.closest("tr"); const id=tr?.dataset.id; if(!id) return;
-  if(e.target.classList.contains("edit-btn")) editTicket(id);
-  else if(e.target.classList.contains("close-btn")) closeTicket(id);
-  else if(e.target.classList.contains("details-btn")) showDetails(id);
+document.getElementById("ticketForm").addEventListener("submit",async e=>{
+  e.preventDefault(); checkSystemStatus();
+  const data={subject:subject.value,client:client.value,tech:tech.value,priority:priority.value,description:description.value,status:"open",date:Date.now()};
+  if(editTicketId){ await db.collection("tickets").doc(editTicketId).set(data); editTicketId=null; cancelEdit(); }
+  else await db.collection("tickets").add(data);
+  e.target.reset(); fetchTickets();
 });
-
-async function closeTicket(id){ checkSystemStatus(); await updateDoc(doc(db,"tickets",id),{status:"resolved"}); fetchTickets(); cancelEdit(); }
-
-function editTicket(id){
-  const ticket=tickets.find(t=>t.id===id); if(!ticket || ticket.status==="resolved") return;
-  editTicketId=id;
-  document.getElementById("subject").value=ticket.subject;
-  document.getElementById("client").value=ticket.client;
-  document.getElementById("tech").value=ticket.tech;
-  document.getElementById("priority").value=ticket.priority;
-  document.getElementById("description").value=ticket.description;
-  document.getElementById("cancelEditBtn").classList.remove("hidden");
-}
-function cancelEdit(){ editTicketId=null; ticketForm.reset(); document.getElementById("cancelEditBtn").classList.add("hidden"); }
+async function closeTicket(id){ checkSystemStatus(); await db.collection("tickets").doc(id).update({status:"resolved"}); fetchTickets(); }
+function editTicket(id){ const t=tickets.find(x=>x.id===id); if(!t) return; editTicketId=id; subject.value=t.subject; client.value=t.client; tech.value=t.tech; priority.value=t.priority; description.value=t.description; cancelEditBtn.classList.remove("hidden"); }
+function cancelEdit(){ editTicketId=null; ticketForm.reset(); cancelEditBtn.classList.add("hidden"); }
 window.cancelEdit=cancelEdit;
+function showDetails(id){ const t=tickets.find(x=>x.id===id); if(!t)return; const c=document.getElementById("detailsContent"); c.innerHTML=`<p><b>ID:</b> ${t.id}</p><p><b>Assunto:</b> ${t.subject}</p><p><b>Cliente:</b> ${t.client}</p>`; document.getElementById("detailsModal").classList.remove("hidden");document.getElementById("detailsModal").classList.add("flex");}
+window.closeDetailsModal=()=>{document.getElementById("detailsModal").classList.add("hidden");document.getElementById("detailsModal").classList.remove("flex");};
 
-function showDetails(id){
-  const ticket=tickets.find(t=>t.id===id); if(!ticket) return;
-  const content=document.getElementById("detailsContent");
-  content.innerHTML=`
-    <p><strong>ID:</strong> ${ticket.id}</p>
-    <p><strong>Assunto:</strong> ${ticket.subject}</p>
-    <p><strong>Descrição:</strong> ${ticket.description}</p>
-    <p><strong>Cliente:</strong> ${ticket.client}</p>
-    <p><strong>Técnico:</strong> ${ticket.tech}</p>
-    <p><strong>Prioridade:</strong> ${translatePriority(ticket.priority)}</p>
-    <p><strong>Status:</strong> ${translateStatus(ticket.status)}</p>
-    <p><strong>Abertura:</strong> ${new Date(ticket.date).toLocaleString()}</p>
-  `;
-  document.getElementById("detailsModal").classList.remove("hidden"); document.getElementById("detailsModal").classList.add("flex");
-}
-window.closeDetailsModal=function(){ document.getElementById("detailsModal").classList.add("hidden"); document.getElementById("detailsModal").classList.remove("flex"); }
-
-/* --- Relatório --- */
-const reportModal = document.getElementById("reportModal");
-const reportContent = document.getElementById("reportContent");
-document.getElementById("btnReport").addEventListener("click", ()=>{
-  if(tickets.length === 0){
-    reportContent.innerHTML = "<p>Nenhum chamado registrado.</p>";
-  } else {
-    let html = `<table class="w-full border text-left"><thead><tr class="bg-gray-200">
-      <th class="border px-2 py-1">Assunto</th>
-      <th class="border px-2 py-1">Cliente</th>
-      <th class="border px-2 py-1">Técnico</th>
-      <th class="border px-2 py-1">Prioridade</th>
-      <th class="border px-2 py-1">Status</th>
-      <th class="border px-2 py-1">Abertura</th>
-    </tr></thead><tbody>`;
-    tickets.forEach(t=>{
-      html+=`<tr>
-        <td class="border px-2 py-1">${t.subject}</td>
-        <td class="border px-2 py-1">${t.client}</td>
-        <td class="border px-2 py-1">${t.tech}</td>
-        <td class="border px-2 py-1">${translatePriority(t.priority)}</td>
-        <td class="border px-2 py-1">${translateStatus(t.status)}</td>
-        <td class="border px-2 py-1">${new Date(t.date).toLocaleString()}</td>
-      </tr>`;
-    });
-    html += `</tbody></table>`;
-    reportContent.innerHTML = html;
+/* --- Relatórios --- */
+document.getElementById("btnReport").addEventListener("click",()=>{
+  const report=document.getElementById("reportContent");
+  if(tickets.length===0){report.innerHTML="<p>Nenhum chamado registrado.</p>";}
+  else{
+    let html="<table class='w-full border'><tr><th>Assunto</th><th>Cliente</th><th>Técnico</th><th>Prioridade</th><th>Status</th></tr>";
+    tickets.forEach(t=>{html+=`<tr><td>${t.subject}</td><td>${t.client}</td><td>${t.tech}</td><td>${t.priority}</td><td>${t.status}</td></tr>`;});
+    html+="</table>"; report.innerHTML=html;
   }
-  reportModal.classList.remove("hidden"); reportModal.classList.add("flex");
+  document.getElementById("reportModal").classList.remove("hidden");document.getElementById("reportModal").classList.add("flex");
 });
-
-document.getElementById("closeReportBtn").addEventListener("click", ()=>{ reportModal.classList.add("hidden"); reportModal.classList.remove("flex"); });
-
-// PDF/Excel
-function downloadPDF(){
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  doc.text("Relatório de Chamados", 10, 10);
-  let y = 20;
-  tickets.forEach(t=>{
-    doc.text(`Assunto: ${t.subject}`, 10, y); y+=6;
-    doc.text(`Cliente: ${t.client}`, 10, y); y+=6;
-    doc.text(`Técnico: ${t.tech}`, 10, y); y+=6;
-    doc.text(`Prioridade: ${translatePriority(t.priority)}`, 10, y); y+=6;
-    doc.text(`Status: ${translateStatus(t.status)}`, 10, y); y+=6;
-    doc.text(`Abertura: ${new Date(t.date).toLocaleString()}`, 10, y); y+=10;
-  });
-  doc.save("relatorio_chamados.pdf");
-}
-
-function downloadExcel(){
-  const wb = XLSX.utils.book_new();
-  const ws_data=[["Assunto","Cliente","Técnico","Prioridade","Status","Abertura"]];
-  tickets.forEach(t=>{
-    ws_data.push([t.subject,t.client,t.tech,translatePriority(t.priority),translateStatus(t.status),new Date(t.date).toLocaleString()]);
-  });
-  const ws = XLSX.utils.aoa_to_sheet(ws_data);
-  XLSX.utils.book_append_sheet(wb,ws,"Chamados");
-  XLSX.writeFile(wb,"relatorio_chamados.xlsx");
-}
+document.getElementById("closeReportBtn").addEventListener("click",()=>{document.getElementById("reportModal").classList.add("hidden");document.getElementById("reportModal").classList.remove("flex");});
+function downloadPDF(){const{jsPDF}=window.jspdf;const doc=new jsPDF();doc.text("Relatório de Chamados",10,10);let y=20;tickets.forEach(t=>{doc.text(`${t.subject} - ${t.client} - ${t.tech} - ${t.priority} - ${t.status}`,10,y);y+=10;});doc.save("relatorio.pdf");}
+function downloadExcel(){const ws=XLSX.utils.json_to_sheet(tickets);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Relatório");XLSX.writeFile(wb,"relatorio.xlsx");}
 </script>
+
 </body>
 </html>
