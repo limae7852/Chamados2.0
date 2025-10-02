@@ -8,17 +8,14 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
-  @keyframes blink {
-    0%, 50%, 100% { background-color: #f87171; }
-    25%, 75% { background-color: #fca5a5; }
-  }
-  .blink td { animation: blink 1s infinite; }
-  .btn-edit { background-color: #facc15; color: #000; padding: 0.25rem 0.5rem; border-radius: 0.25rem; }
-  .btn-edit:hover { background-color: #eab308; }
-  .btn-close { background-color: #ef4444; color: #fff; padding: 0.25rem 0.5rem; border-radius: 0.25rem; }
-  .btn-close:hover { background-color: #b91c1c; }
-  .btn-details { background-color: #3b82f6; color: #fff; padding: 0.25rem 0.5rem; border-radius: 0.25rem; }
-  .btn-details:hover { background-color: #1d4ed8; }
+  @keyframes blink {0%,50%,100%{background-color:#f87171;}25%,75%{background-color:#fca5a5;}}
+  .blink td{animation:blink 1s infinite;}
+  .btn-edit{background-color:#facc15;color:#000;padding:0.25rem 0.5rem;border-radius:0.25rem;}
+  .btn-edit:hover{background-color:#eab308;}
+  .btn-close{background-color:#ef4444;color:#fff;padding:0.25rem 0.5rem;border-radius:0.25rem;}
+  .btn-close:hover{background-color:#b91c1c;}
+  .btn-details{background-color:#3b82f6;color:#fff;padding:0.25rem 0.5rem;border-radius:0.25rem;}
+  .btn-details:hover{background-color:#1d4ed8;}
 </style>
 </head>
 <body class="bg-gray-100 text-gray-900">
@@ -44,9 +41,6 @@
       <button id="btnLogout" class="px-4 py-2 bg-red-600 text-white rounded ml-2">Logout</button>
     </div>
   </div>
-
-  <!-- Aviso de expiração -->
-  <div id="expirationNotice" class="mb-4 p-3 bg-yellow-100 text-yellow-800 rounded shadow hidden"></div>
 
   <div class="flex gap-2 mb-4">
     <button id="btnSettings" class="px-4 py-2 bg-blue-600 text-white rounded">⚙️ Configurações</button>
@@ -90,16 +84,13 @@
   <div class="bg-white rounded-lg shadow-lg w-96 p-6">
     <div class="flex justify-between items-center mb-4">
       <h2 class="text-lg font-bold">Configurações - Técnicos</h2>
-      <button type="button" onclick="closeSettingsModal()" class="text-red-600 font-bold">X</button>
+      <button id="closeSettingsBtn" class="text-red-600 font-bold">X</button>
     </div>
     <div class="flex space-x-2 mb-4">
       <input id="newOperator" placeholder="Nome do Técnico" class="border p-2 flex-1"/>
       <button id="addOperatorBtn" class="px-3 py-2 bg-blue-600 text-white rounded">Adicionar</button>
     </div>
     <ul id="operatorsList" class="space-y-2"></ul>
-    <div class="mt-4 text-right">
-      <button type="button" onclick="closeSettingsModal()" class="px-4 py-2 bg-gray-400 text-white rounded">Fechar</button>
-    </div>
   </div>
 </div>
 
@@ -130,9 +121,9 @@
         <option value="tech">Técnico</option>
         <option value="operator">Operador</option>
       </select>
-      <div class="flex justify-between gap-2">
+      <div class="flex gap-2">
         <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded">Salvar</button>
-        <button type="button" onclick="closeUserModal()" class="px-4 py-2 bg-gray-400 text-white rounded">Cancelar</button>
+        <button type="button" onclick="closeUserModal()" class="px-4 py-2 bg-red-500 text-white rounded">Cancelar</button>
       </div>
     </form>
     <ul id="usersList" class="mt-4 space-y-1"></ul>
@@ -174,28 +165,38 @@ let operators = [];
 let currentUser = null;
 let editTicketId = null;
 
-/* --- Expiração do Sistema --- */
-const EXPIRATION_DAYS = 30;
-const startKey = "systemStartDate";
-if (!localStorage.getItem(startKey)) {
-  localStorage.setItem(startKey, Date.now());
+/* --- Expiração --- */
+const SYSTEM_EXPIRATION_DAYS = 30;
+const installDateKey = "installDate";
+if(!localStorage.getItem(installDateKey)){ localStorage.setItem(installDateKey, Date.now()); }
+
+function isSystemExpired(){ 
+  const installDate = parseInt(localStorage.getItem(installDateKey),10);
+  const diffDays = (Date.now()-installDate)/(1000*60*60*24);
+  return diffDays>SYSTEM_EXPIRATION_DAYS;
 }
-function getRemainingDays() {
-  const startDate = parseInt(localStorage.getItem(startKey), 10);
-  const now = Date.now();
-  const diffDays = Math.floor((now - startDate) / (1000 * 60 * 60 * 24));
-  return EXPIRATION_DAYS - diffDays;
+
+// Bloqueia acesso antes do login
+function checkSystemExpiredBeforeLogin() {
+  if(isSystemExpired()){
+    const loginScreen = document.getElementById("loginScreen");
+    loginScreen.innerHTML = `
+      <div class="bg-white shadow-lg rounded-lg p-8 w-96 text-center">
+        <h1 class="text-2xl font-bold mb-4 text-red-600">Sistema Expirado</h1>
+        <p>O sistema atingiu o prazo de uso de 30 dias e não pode ser utilizado.</p>
+      </div>
+    `;
+    return true;
+  }
+  return false;
 }
-function isExpired() { return getRemainingDays() <= 0; }
-function showExpirationNotice() {
-  const notice = document.getElementById("expirationNotice");
-  const remaining = getRemainingDays();
-  if (remaining > 0) {
-    notice.textContent = `⏳ Este sistema expira em ${remaining} dia(s).`;
-    notice.classList.remove("hidden");
-  } else {
-    notice.textContent = "⚠️ O sistema expirou! Entre em contato com o administrador.";
-    notice.classList.remove("hidden");
+checkSystemExpiredBeforeLogin();
+
+// Bloqueia criação/edição de tickets caso expirado
+function checkSystemStatus(){
+  if(isSystemExpired()){
+    alert("O sistema expirou! Nenhuma ação é permitida.");
+    throw new Error("Sistema expirado");
   }
 }
 
@@ -205,12 +206,9 @@ async function loginUser(login, password){
   const users = snapshot.docs.map(d=>({id:d.id,...d.data()}));
   return users.find(u=>u.login===login && u.password===password) || null;
 }
-document.getElementById("loginForm").addEventListener("submit", async e=>{
+document.getElementById("loginForm")?.addEventListener("submit", async e=>{
   e.preventDefault();
-  if (isExpired()) {
-    alert("⚠️ O sistema expirou! Entre em contato com o administrador.");
-    return;
-  }
+  if(isSystemExpired()){ alert("Sistema expirado!"); return; }
   const login=document.getElementById("loginUser").value;
   const pass=document.getElementById("loginPass").value;
   const user = await loginUser(login, pass);
@@ -219,26 +217,22 @@ document.getElementById("loginForm").addEventListener("submit", async e=>{
     document.getElementById("loginScreen").classList.add("hidden");
     document.getElementById("systemScreen").classList.remove("hidden");
     if(user.role==="admin") document.getElementById("btnUserRegister").classList.remove("hidden");
-    fetchOperators(); fetchTickets(); showExpirationNotice();
+    fetchOperators(); fetchTickets(); fetchUsers();
   } else alert("Usuário ou senha inválidos!");
 });
 
 /* --- Logout --- */
-document.getElementById("btnLogout").addEventListener("click", ()=>{
-  currentUser=null;
-  document.getElementById("loginScreen").classList.remove("hidden");
-  document.getElementById("systemScreen").classList.add("hidden");
-});
+document.getElementById("btnLogout").addEventListener("click", ()=>{ currentUser=null; document.getElementById("loginScreen").classList.remove("hidden"); document.getElementById("systemScreen").classList.add("hidden"); });
 
-/* --- Usuários --- */
-window.closeUserModal = function(){
-  document.getElementById("userModal").classList.add("hidden");
-};
-document.getElementById("btnUserRegister").addEventListener("click", ()=>{
-  document.getElementById("userModal").classList.remove("hidden");
-});
+/* --- Cadastro Usuário --- */
+const userModal=document.getElementById("userModal");
+function openUserModal(){ userModal.classList.remove("hidden"); userModal.classList.add("flex"); }
+function closeUserModal(){ userModal.classList.add("hidden"); userModal.classList.remove("flex"); }
+window.openUserModal=openUserModal; window.closeUserModal=closeUserModal;
+document.getElementById("btnUserRegister").addEventListener("click", openUserModal);
 document.getElementById("userForm").addEventListener("submit", async e=>{
   e.preventDefault();
+  checkSystemStatus();
   const newUser={
     name:document.getElementById("userName").value,
     login:document.getElementById("userLogin").value,
@@ -248,7 +242,6 @@ document.getElementById("userForm").addEventListener("submit", async e=>{
   await addDoc(collection(db,"users"), newUser);
   e.target.reset();
   fetchUsers();
-  closeUserModal();
 });
 async function fetchUsers(){
   const snapshot=await getDocs(collection(db,"users"));
@@ -258,15 +251,15 @@ async function fetchUsers(){
 }
 
 /* --- Operadores --- */
-window.closeSettingsModal = function(){
-  document.getElementById("modalSettings").classList.add("hidden");
-};
-document.getElementById("btnSettings").addEventListener("click", ()=>{
-  document.getElementById("modalSettings").classList.remove("hidden");
-});
+const btnSettings=document.getElementById("btnSettings");
+const modalSettings=document.getElementById("modalSettings");
+const closeSettingsBtn=document.getElementById("closeSettingsBtn");
 const operatorsListEl=document.getElementById("operatorsList");
 const addOperatorBtn=document.getElementById("addOperatorBtn");
 const techSelect=document.getElementById("tech");
+
+btnSettings.addEventListener("click", ()=>{ modalSettings.classList.remove("hidden"); modalSettings.classList.add("flex"); });
+closeSettingsBtn.addEventListener("click", ()=>{ modalSettings.classList.add("hidden"); modalSettings.classList.remove("flex"); });
 
 async function fetchOperators(){
   const q=query(collection(db,"operators"),orderBy("name"));
@@ -286,32 +279,37 @@ function renderOperators(){
   });
 }
 addOperatorBtn.addEventListener("click", async ()=>{
+  checkSystemStatus();
   const input=document.getElementById("newOperator");
   const name=input.value.trim();
   if(name){ await addDoc(collection(db,"operators"), {name}); input.value=""; fetchOperators(); }
 });
 operatorsListEl.addEventListener("click", async e=>{
   const btn=e.target.closest("button[data-id]");
-  if(btn){ await deleteDoc(doc(db,"operators",btn.dataset.id)); fetchOperators(); }
+  if(btn){ checkSystemStatus(); await deleteDoc(doc(db,"operators",btn.dataset.id)); fetchOperators(); }
 });
 
 /* --- Tickets --- */
 const ticketForm=document.getElementById("ticketForm");
 ticketForm.addEventListener("submit", async e=>{
   e.preventDefault();
+  checkSystemStatus();
   const subject=document.getElementById("subject").value.trim();
   const client=document.getElementById("client").value.trim();
   const tech=document.getElementById("tech").value;
   const priority=document.getElementById("priority").value;
   const description=document.getElementById("description").value.trim();
   if(!subject || !client || !tech){ alert("Preencha todos os campos obrigatórios!"); return; }
+
   const ticketData={subject,client,tech,priority,description,status:"open",date:Date.now()};
+
   try{
     if(editTicketId){ await updateDoc(doc(db,"tickets",editTicketId),ticketData); editTicketId=null; cancelEdit(); }
     else await addDoc(collection(db,"tickets"),ticketData);
     ticketForm.reset(); fetchTickets();
   }catch(err){ console.error("Erro ao salvar chamado:", err); alert("Não foi possível salvar o chamado."); }
 });
+
 async function fetchTickets(){
   const q=query(collection(db,"tickets"),orderBy("date"));
   const snapshot=await getDocs(q);
@@ -327,10 +325,7 @@ function renderTickets(){
     if(ticket.priority==="critical" && ticket.status!=="resolved") tr.classList.add("blink");
     const actionsHTML=ticket.status==="resolved"
       ? `<button class="details-btn btn-details">Detalhes</button> ✅ Encerrado`
-      : `<button class="
-edit-btn btn-edit">Editar</button>
-         <button class="close-btn btn-close">Encerrar</button>
-         <button class="details-btn btn-details">Detalhes</button>`;
+      : `<button class="edit-btn btn-edit">Editar</button><button class="close-btn btn-close">Encerrar</button><button class="details-btn btn-details">Detalhes</button>`;
     tr.innerHTML=`
       <td class="border px-4 py-2">${ticket.subject}</td>
       <td class="border px-4 py-2">${ticket.client}</td>
@@ -344,23 +339,16 @@ edit-btn btn-edit">Editar</button>
 }
 
 document.getElementById("ticketsList").addEventListener("click", e=>{
-  const tr=e.target.closest("tr"); 
-  const id=tr?.dataset.id; 
-  if(!id) return;
+  const tr=e.target.closest("tr"); const id=tr?.dataset.id; if(!id) return;
   if(e.target.classList.contains("edit-btn")) editTicket(id);
   else if(e.target.classList.contains("close-btn")) closeTicket(id);
   else if(e.target.classList.contains("details-btn")) showDetails(id);
 });
 
-async function closeTicket(id){
-  await updateDoc(doc(db,"tickets",id),{status:"resolved"});
-  fetchTickets();
-  cancelEdit();
-}
+async function closeTicket(id){ checkSystemStatus(); await updateDoc(doc(db,"tickets",id),{status:"resolved"}); fetchTickets(); cancelEdit(); }
 
 function editTicket(id){
-  const ticket=tickets.find(t=>t.id===id);
-  if(!ticket || ticket.status==="resolved") return;
+  const ticket=tickets.find(t=>t.id===id); if(!ticket || ticket.status==="resolved") return;
   editTicketId=id;
   document.getElementById("subject").value=ticket.subject;
   document.getElementById("client").value=ticket.client;
@@ -369,17 +357,11 @@ function editTicket(id){
   document.getElementById("description").value=ticket.description;
   document.getElementById("cancelEditBtn").classList.remove("hidden");
 }
-
-function cancelEdit(){
-  editTicketId=null;
-  ticketForm.reset();
-  document.getElementById("cancelEditBtn").classList.add("hidden");
-}
+function cancelEdit(){ editTicketId=null; ticketForm.reset(); document.getElementById("cancelEditBtn").classList.add("hidden"); }
 window.cancelEdit=cancelEdit;
 
 function showDetails(id){
-  const ticket=tickets.find(t=>t.id===id);
-  if(!ticket) return;
+  const ticket=tickets.find(t=>t.id===id); if(!ticket) return;
   const content=document.getElementById("detailsContent");
   content.innerHTML=`
     <p><strong>ID:</strong> ${ticket.id}</p>
@@ -391,13 +373,9 @@ function showDetails(id){
     <p><strong>Status:</strong> ${translateStatus(ticket.status)}</p>
     <p><strong>Abertura:</strong> ${new Date(ticket.date).toLocaleString()}</p>
   `;
-  document.getElementById("detailsModal").classList.remove("hidden");
-  document.getElementById("detailsModal").classList.add("flex");
+  document.getElementById("detailsModal").classList.remove("hidden"); document.getElementById("detailsModal").classList.add("flex");
 }
-window.closeDetailsModal=function(){
-  document.getElementById("detailsModal").classList.add("hidden");
-  document.getElementById("detailsModal").classList.remove("flex");
-}
+window.closeDetailsModal=function(){ document.getElementById("detailsModal").classList.add("hidden"); document.getElementById("detailsModal").classList.remove("flex"); }
 
 /* --- Relatório --- */
 const reportModal = document.getElementById("reportModal");
@@ -427,15 +405,12 @@ document.getElementById("btnReport").addEventListener("click", ()=>{
     html += `</tbody></table>`;
     reportContent.innerHTML = html;
   }
-  reportModal.classList.remove("hidden"); 
-  reportModal.classList.add("flex");
-});
-document.getElementById("closeReportBtn").addEventListener("click", ()=>{
-  reportModal.classList.add("hidden"); 
-  reportModal.classList.remove("flex");
+  reportModal.classList.remove("hidden"); reportModal.classList.add("flex");
 });
 
-// Funções PDF/Excel
+document.getElementById("closeReportBtn").addEventListener("click", ()=>{ reportModal.classList.add("hidden"); reportModal.classList.remove("flex"); });
+
+// PDF/Excel
 function downloadPDF(){
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
@@ -462,7 +437,6 @@ function downloadExcel(){
   XLSX.utils.book_append_sheet(wb,ws,"Chamados");
   XLSX.writeFile(wb,"relatorio_chamados.xlsx");
 }
-
 </script>
 </body>
 </html>
