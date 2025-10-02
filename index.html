@@ -416,12 +416,28 @@ if (!localStorage.getItem(startKey)) {
   localStorage.setItem(startKey, Date.now());
 }
 
-// Função para verificar expiração
-function isExpired() {
+function getRemainingDays() {
   const startDate = parseInt(localStorage.getItem(startKey), 10);
   const now = Date.now();
   const diffDays = Math.floor((now - startDate) / (1000 * 60 * 60 * 24));
-  return diffDays >= EXPIRATION_DAYS;
+  return EXPIRATION_DAYS - diffDays;
+}
+
+function isExpired() {
+  return getRemainingDays() <= 0;
+}
+
+// Mostrar aviso dentro do sistema
+function showExpirationNotice() {
+  const notice = document.getElementById("expirationNotice");
+  const remaining = getRemainingDays();
+  if (remaining > 0) {
+    notice.textContent = `⏳ Este sistema expira em ${remaining} dia(s).`;
+    notice.classList.remove("hidden");
+  } else {
+    notice.textContent = "⚠️ O sistema expirou! Entre em contato com o administrador.";
+    notice.classList.remove("hidden");
+  }
 }
 
 // Interceptar login e verificar expiração
@@ -443,6 +459,7 @@ document.getElementById("loginForm").addEventListener("submit", async e => {
     if (user.role === "admin") document.getElementById("btnUserRegister").classList.remove("hidden");
     fetchOperators(); 
     fetchTickets();
+    showExpirationNotice(); // mostra aviso ao entrar no sistema
   } else {
     alert("Usuário ou senha inválidos!");
   }
