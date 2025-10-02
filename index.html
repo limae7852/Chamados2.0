@@ -83,12 +83,64 @@
   </table>
 </div>
 
-<!-- Modais (Configurações, Detalhes, Usuários, Relatório) -->
-<!-- ... (mesmo conteúdo das versões anteriores, mantive para não ficar repetitivo) ... -->
+<!-- Modal Configurações -->
+<div id="modalSettings" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center">
+  <div class="bg-white rounded-lg shadow-lg w-96 p-6">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-lg font-bold">Configurações - Técnicos</h2>
+      <button id="closeSettingsBtn" class="text-red-600 font-bold">X</button>
+    </div>
+    <div class="flex space-x-2 mb-4">
+      <input id="newOperator" placeholder="Nome do Técnico" class="border p-2 flex-1"/>
+      <button id="addOperatorBtn" class="px-3 py-2 bg-blue-600 text-white rounded">Adicionar</button>
+    </div>
+    <ul id="operatorsList" class="space-y-2"></ul>
+  </div>
+</div>
+
+<!-- Modal Cadastro de Usuário -->
+<div id="userModal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center">
+  <div class="bg-white rounded-lg shadow-lg w-96 p-6">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-lg font-bold">Cadastrar Usuário</h2>
+      <button onclick="closeUserModal()" class="text-red-600 font-bold">X</button>
+    </div>
+    <form id="userForm" class="space-y-2">
+      <input id="userName" placeholder="Nome" class="border p-2 w-full" required />
+      <input id="userLogin" placeholder="Login" class="border p-2 w-full" required />
+      <input id="userPass" type="password" placeholder="Senha" class="border p-2 w-full" required />
+      <select id="userRole" class="border p-2 w-full" required>
+        <option value="admin">Admin</option>
+        <option value="tech">Técnico</option>
+        <option value="operator">Operador</option>
+      </select>
+      <div class="flex gap-2">
+        <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded">Salvar</button>
+        <button type="button" onclick="closeUserModal()" class="px-4 py-2 bg-red-500 text-white rounded">Cancelar</button>
+      </div>
+    </form>
+    <ul id="usersList" class="mt-4 space-y-1"></ul>
+  </div>
+</div>
+
+<!-- Modal Relatório -->
+<div id="reportModal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center">
+  <div class="bg-white rounded-lg shadow-lg w-11/12 max-w-4xl p-6 overflow-y-auto max-h-[80vh]">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-lg font-bold">Relatório de Chamados</h2>
+      <button id="closeReportBtn" class="text-red-600 font-bold px-2 py-1 rounded border border-red-600 hover:bg-red-100">X</button>
+    </div>
+    <div class="flex gap-2 mb-4">
+      <button onclick="downloadPDF()" class="px-4 py-2 bg-red-600 text-white rounded">📄 PDF</button>
+      <button onclick="downloadExcel()" class="px-4 py-2 bg-green-600 text-white rounded">📊 Excel</button>
+    </div>
+    <div id="reportContent"></div>
+  </div>
+</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, setDoc, doc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBA16WHE768N9eUcqEoQqUF7uEIB82nNM0",
@@ -130,6 +182,23 @@ function updateLicenseBanner(){
   }
 }
 
+/* --- Criar usuário admin padrão --- */
+async function ensureAdminUser(){
+  const snap=await getDocs(collection(db,"users"));
+  let exists=false;
+  snap.forEach(d=>{if(d.data().login==="admin"){exists=true;}});
+  if(!exists){
+    await setDoc(doc(db,"users","admin_default"),{
+      name:"Administrador",
+      login:"admin",
+      pass:"1234",
+      role:"admin"
+    });
+    console.log("Usuário admin criado (admin/1234)");
+  }
+}
+ensureAdminUser();
+
 /* --- Login --- */
 document.getElementById("loginForm").addEventListener("submit", async (e)=>{
   e.preventDefault();
@@ -155,7 +224,6 @@ document.getElementById("loginForm").addEventListener("submit", async (e)=>{
     document.getElementById("systemScreen").classList.remove("hidden");
     if(user.role==="admin") document.getElementById("btnUserRegister").classList.remove("hidden");
     updateLicenseBanner();
-    // carregar dados do sistema...
   } else {
     alert("Usuário ou senha inválidos");
   }
