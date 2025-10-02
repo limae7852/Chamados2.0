@@ -407,6 +407,47 @@ function downloadExcel(){
   XLSX.writeFile(wb,"relatorio_chamados.xlsx");
 }
 
+// --- Expiração do Sistema ---
+const EXPIRATION_DAYS = 30; // tempo de uso permitido
+const startKey = "systemStartDate";
+
+// Salva a data inicial se não existir
+if (!localStorage.getItem(startKey)) {
+  localStorage.setItem(startKey, Date.now());
+}
+
+// Função para verificar expiração
+function isExpired() {
+  const startDate = parseInt(localStorage.getItem(startKey), 10);
+  const now = Date.now();
+  const diffDays = Math.floor((now - startDate) / (1000 * 60 * 60 * 24));
+  return diffDays >= EXPIRATION_DAYS;
+}
+
+// Interceptar login e verificar expiração
+document.getElementById("loginForm").addEventListener("submit", async e => {
+  e.preventDefault();
+
+  if (isExpired()) {
+    alert("⚠️ O sistema expirou! Entre em contato com o administrador.");
+    return;
+  }
+
+  const login = document.getElementById("loginUser").value;
+  const pass = document.getElementById("loginPass").value;
+  const user = await loginUser(login, pass);
+  if (user) {
+    currentUser = user;
+    document.getElementById("loginScreen").classList.add("hidden");
+    document.getElementById("systemScreen").classList.remove("hidden");
+    if (user.role === "admin") document.getElementById("btnUserRegister").classList.remove("hidden");
+    fetchOperators(); 
+    fetchTickets();
+  } else {
+    alert("Usuário ou senha inválidos!");
+  }
+});
+
 </script>
 </body>
 </html>
