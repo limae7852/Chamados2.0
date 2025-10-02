@@ -85,9 +85,41 @@
   </table>
 </div>
 
-<!-- (demais modais iguais ao seu código anterior, sem alterações) -->
+<!-- Modal: Cadastro Usuário -->
+<div id="userModal" class="fixed inset-0 hidden bg-black bg-opacity-50 flex items-center justify-center">
+  <div class="bg-white p-6 rounded-lg shadow-lg w-96">
+    <h2 class="text-xl font-bold mb-4">Cadastrar Usuário</h2>
+    <form id="userForm" class="space-y-2">
+      <input id="newLogin" placeholder="Usuário" class="border p-2 w-full" required />
+      <input id="newPass" type="password" placeholder="Senha" class="border p-2 w-full" required />
+      <select id="newRole" class="border p-2 w-full">
+        <option value="admin">Administrador</option>
+        <option value="user">Usuário</option>
+      </select>
+      <div class="flex gap-2">
+        <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded">Salvar</button>
+        <button type="button" onclick="closeUserModal()" class="px-4 py-2 bg-gray-400 text-white rounded">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Configurações -->
+<div id="settingsModal" class="fixed inset-0 hidden bg-black bg-opacity-50 flex items-center justify-center">
+  <div class="bg-white p-6 rounded-lg shadow-lg w-96">
+    <h2 class="text-xl font-bold mb-4">Configurações</h2>
+    <form id="settingsForm" class="space-y-2">
+      <input id="newOperator" placeholder="Novo Técnico" class="border p-2 w-full" />
+      <div class="flex gap-2">
+        <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded">Adicionar</button>
+        <button type="button" onclick="closeSettingsModal()" class="px-4 py-2 bg-gray-400 text-white rounded">Fechar</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <script type="module">
+/* --- Firebase --- */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
@@ -108,25 +140,18 @@ let currentUser = null;
 let editTicketId = null;
 
 /* --- Expiração do Sistema --- */
-const EXPIRATION_DAYS = 30; // dias de uso permitidos
+const EXPIRATION_DAYS = 30;
 const startKey = "systemStartDate";
-
-// Salva a data inicial se não existir
 if (!localStorage.getItem(startKey)) {
   localStorage.setItem(startKey, Date.now());
 }
-
 function getRemainingDays() {
   const startDate = parseInt(localStorage.getItem(startKey), 10);
   const now = Date.now();
   const diffDays = Math.floor((now - startDate) / (1000 * 60 * 60 * 24));
   return EXPIRATION_DAYS - diffDays;
 }
-
-function isExpired() {
-  return getRemainingDays() <= 0;
-}
-
+function isExpired() { return getRemainingDays() <= 0; }
 function showExpirationNotice() {
   const notice = document.getElementById("expirationNotice");
   const remaining = getRemainingDays();
@@ -147,12 +172,10 @@ async function loginUser(login, password){
 }
 document.getElementById("loginForm").addEventListener("submit", async e=>{
   e.preventDefault();
-
   if (isExpired()) {
     alert("⚠️ O sistema expirou! Entre em contato com o administrador.");
     return;
   }
-
   const login=document.getElementById("loginUser").value;
   const pass=document.getElementById("loginPass").value;
   const user = await loginUser(login, pass);
@@ -163,7 +186,7 @@ document.getElementById("loginForm").addEventListener("submit", async e=>{
     if(user.role==="admin") document.getElementById("btnUserRegister").classList.remove("hidden");
     fetchOperators(); 
     fetchTickets();
-    showExpirationNotice(); // Mostra aviso dentro do sistema
+    showExpirationNotice();
   } else alert("Usuário ou senha inválidos!");
 });
 
@@ -174,221 +197,114 @@ document.getElementById("btnLogout").addEventListener("click", ()=>{
   document.getElementById("systemScreen").classList.add("hidden");
 });
 
-/* --- Cadastro Usuário --- */
-const userModal=document.getElementById("userModal");
-function openUserModal(){ userModal.classList.remove("hidden"); userModal.classList.add("flex"); }
-function closeUserModal(){ userModal.classList.add("hidden"); userModal.classList.remove("flex"); }
-window.openUserModal=openUserModal; window.closeUserModal=closeUserModal;
-document.getElementById("btnUserRegister").addEventListener("click", openUserModal);
+/* --- Usuários --- */
+document.getElementById("btnUserRegister").addEventListener("click", ()=>{ document.getElementById("userModal").classList.remove("hidden"); });
+function closeUserModal(){ document.getElementById("userModal").classList.add("hidden"); }
 document.getElementById("userForm").addEventListener("submit", async e=>{
   e.preventDefault();
-  const newUser={
-    name:document.getElementById("userName").value,
-    login:document.getElementById("userLogin").value,
-    password:document.getElementById("userPass").value,
-    role:document.getElementById("userRole").value
-  };
-  await addDoc(collection(db,"users"), newUser);
-  e.target.reset();
-  fetchUsers();
+  const login=document.getElementById("newLogin").value;
+  const pass=document.getElementById("newPass").value;
+  const role=document.getElementById("newRole").value;
+  await addDoc(collection(db,"users"),{login,password:pass,role});
+  alert("Usuário cadastrado!");
+  closeUserModal();
 });
-async function fetchUsers(){
-  const snapshot=await getDocs(collection(db,"users"));
-  const users=snapshot.docs.map(d=>({id:d.id,...d.data()}));
-  const ul=document.getElementById("usersList"); ul.innerHTML="";
-  users.forEach(u=>{ const li=document.createElement("li"); li.textContent=`${u.name} (${u.login}) - ${u.role}`; ul.appendChild(li); });
-}
 
-/* --- Operadores --- */
-const btnSettings=document.getElementById("btnSettings");
-const modalSettings=document.getElementById("modalSettings");
-const closeSettingsBtn=document.getElementById("closeSettingsBtn");
-const operatorsListEl=document.getElementById("operatorsList");
-const addOperatorBtn=document.getElementById("addOperatorBtn");
-const techSelect=document.getElementById("tech");
-
-btnSettings.addEventListener("click", ()=>{ modalSettings.classList.remove("hidden"); modalSettings.classList.add("flex"); });
-closeSettingsBtn.addEventListener("click", ()=>{ modalSettings.classList.add("hidden"); modalSettings.classList.remove("flex"); });
-
-async function fetchOperators(){
-  const q=query(collection(db,"operators"),orderBy("name"));
-  const snapshot=await getDocs(q);
-  operators=snapshot.docs.map(d=>({id:d.id,...d.data()}));
-  renderOperators();
-}
-function renderOperators(){
-  operatorsListEl.innerHTML="";
-  techSelect.innerHTML='<option value="">Selecione o Técnico</option>';
-  operators.forEach(op=>{
-    const li=document.createElement("li");
-    li.className="flex justify-between items-center border p-2 rounded";
-    li.innerHTML=`<span>${op.name}</span><button data-id="${op.id}" class="text-red-600 hover:underline">Remover</button>`;
-    operatorsListEl.appendChild(li);
-    const opt=document.createElement("option"); opt.value=op.name; opt.textContent=op.name; techSelect.appendChild(opt);
-  });
-}
-addOperatorBtn.addEventListener("click", async ()=>{
-  const input=document.getElementById("newOperator");
-  const name=input.value.trim();
-  if(name){ await addDoc(collection(db,"operators"), {name}); input.value=""; fetchOperators(); }
-});
-operatorsListEl.addEventListener("click", async e=>{
-  const btn=e.target.closest("button[data-id]");
-  if(btn){ await deleteDoc(doc(db,"operators",btn.dataset.id)); fetchOperators(); }
+/* --- Configurações (Técnicos) --- */
+document.getElementById("btnSettings").addEventListener("click", ()=>{ document.getElementById("settingsModal").classList.remove("hidden"); });
+function closeSettingsModal(){ document.getElementById("settingsModal").classList.add("hidden"); }
+document.getElementById("settingsForm").addEventListener("submit", async e=>{
+  e.preventDefault();
+  const name=document.getElementById("newOperator").value;
+  if(name){
+    await addDoc(collection(db,"operators"),{name});
+    alert("Técnico adicionado!");
+    fetchOperators();
+    closeSettingsModal();
+  }
 });
 
 /* --- Tickets --- */
-const ticketForm=document.getElementById("ticketForm");
-ticketForm.addEventListener("submit", async e=>{
-  e.preventDefault();
-  const subject=document.getElementById("subject").value.trim();
-  const client=document.getElementById("client").value.trim();
-  const tech=document.getElementById("tech").value;
-  const priority=document.getElementById("priority").value;
-  const description=document.getElementById("description").value.trim();
-  if(!subject || !client || !tech){ alert("Preencha todos os campos obrigatórios!"); return; }
-
-  const ticketData={subject,client,tech,priority,description,status:"open",date:Date.now()};
-
-  try{
-    if(editTicketId){ await updateDoc(doc(db,"tickets",editTicketId),ticketData); editTicketId=null; cancelEdit(); }
-    else await addDoc(collection(db,"tickets"),ticketData);
-    ticketForm.reset(); fetchTickets();
-  }catch(err){ console.error("Erro ao salvar chamado:", err); alert("Não foi possível salvar o chamado."); }
-});
-
+async function fetchOperators(){
+  const snapshot=await getDocs(collection(db,"operators"));
+  operators=snapshot.docs.map(d=>({id:d.id,...d.data()}));
+  const select=document.getElementById("tech");
+  select.innerHTML="";
+  operators.forEach(o=>{
+    const opt=document.createElement("option");
+    opt.value=o.name; opt.textContent=o.name;
+    select.appendChild(opt);
+  });
+}
 async function fetchTickets(){
-  const q=query(collection(db,"tickets"),orderBy("date"));
+  const q=query(collection(db,"tickets"),orderBy("created","desc"));
   const snapshot=await getDocs(q);
   tickets=snapshot.docs.map(d=>({id:d.id,...d.data()}));
   renderTickets();
 }
-function translatePriority(p){ return {low:"Baixa",medium:"Média",high:"Alta",critical:"Crítica"}[p]||p; }
-function translateStatus(s){ return {open:"Aberto",resolved:"Encerrado"}[s]||s; }
 function renderTickets(){
-  const ticketsList=document.getElementById("ticketsList"); ticketsList.innerHTML="";
-  tickets.forEach(ticket=>{
-    const tr=document.createElement("tr"); tr.dataset.id=ticket.id;
-    if(ticket.priority==="critical" && ticket.status!=="resolved") tr.classList.add("blink");
-    const actionsHTML=ticket.status==="resolved"
-      ? `<button class="details-btn btn-details">Detalhes</button> ✅ Encerrado`
-      : `<button class="edit-btn btn-edit">Editar</button><button class="close-btn btn-close">Encerrar</button><button class="details-btn btn-details">Detalhes</button>`;
+  const list=document.getElementById("ticketsList");
+  list.innerHTML="";
+  tickets.forEach(t=>{
+    const tr=document.createElement("tr");
+    if(t.priority==="critical" && t.status!=="Fechado") tr.classList.add("blink");
     tr.innerHTML=`
-      <td class="border px-4 py-2">${ticket.subject}</td>
-      <td class="border px-4 py-2">${ticket.client}</td>
-      <td class="border px-4 py-2">${ticket.tech}</td>
-      <td class="border px-4 py-2 capitalize">${translatePriority(ticket.priority)}</td>
-      <td class="border px-4 py-2 capitalize">${translateStatus(ticket.status)}</td>
-      <td class="border px-4 py-2 space-x-2">${actionsHTML}</td>
-    `;
-    ticketsList.appendChild(tr);
+      <td class="border px-4 py-2">${t.subject}</td>
+      <td class="border px-4 py-2">${t.client}</td>
+      <td class="border px-4 py-2">${t.tech}</td>
+      <td class="border px-4 py-2">${t.priority}</td>
+      <td class="border px-4 py-2">${t.status||"Aberto"}</td>
+      <td class="border px-4 py-2">
+        <button class="btn-edit" onclick="editTicket('${t.id}')">Editar</button>
+        <button class="btn-close" onclick="closeTicket('${t.id}')">Fechar</button>
+        <button class="btn-details" onclick="alert('Descrição: ${t.description||""}')">Detalhes</button>
+      </td>`;
+    list.appendChild(tr);
   });
 }
-
-document.getElementById("ticketsList").addEventListener("click", e=>{
-  const tr=e.target.closest("tr"); const id=tr?.dataset.id; if(!id) return;
-  if(e.target.classList.contains("edit-btn")) editTicket(id);
-  else if(e.target.classList.contains("close-btn")) closeTicket(id);
-  else if(e.target.classList.contains("details-btn")) showDetails(id);
-});
-
-async function closeTicket(id){ await updateDoc(doc(db,"tickets",id),{status:"resolved"}); fetchTickets(); cancelEdit(); }
-
-function editTicket(id){
-  const ticket=tickets.find(t=>t.id===id); if(!ticket || ticket.status==="resolved") return;
-  editTicketId=id;
-  document.getElementById("subject").value=ticket.subject;
-  document.getElementById("client").value=ticket.client;
-  document.getElementById("tech").value=ticket.tech;
-  document.getElementById("priority").value=ticket.priority;
-  document.getElementById("description").value=ticket.description;
-  document.getElementById("cancelEditBtn").classList.remove("hidden");
-}
-function cancelEdit(){ editTicketId=null; ticketForm.reset(); document.getElementById("cancelEditBtn").classList.add("hidden"); }
-window.cancelEdit=cancelEdit;
-
-function showDetails(id){
-  const ticket=tickets.find(t=>t.id===id); if(!ticket) return;
-  const content=document.getElementById("detailsContent");
-  content.innerHTML=`
-    <p><strong>ID:</strong> ${ticket.id}</p>
-    <p><strong>Assunto:</strong> ${ticket.subject}</p>
-    <p><strong>Descrição:</strong> ${ticket.description}</p>
-    <p><strong>Cliente:</strong> ${ticket.client}</p>
-    <p><strong>Técnico:</strong> ${ticket.tech}</p>
-    <p><strong>Prioridade:</strong> ${translatePriority(ticket.priority)}</p>
-    <p><strong>Status:</strong> ${translateStatus(ticket.status)}</p>
-    <p><strong>Abertura:</strong> ${new Date(ticket.date).toLocaleString()}</p>
-  `;
-  document.getElementById("detailsModal").classList.remove("hidden"); document.getElementById("detailsModal").classList.add("flex");
-}
-window.closeDetailsModal=function(){ document.getElementById("detailsModal").classList.add("hidden"); document.getElementById("detailsModal").classList.remove("flex"); }
-
-/* --- Relatório --- */
-const reportModal = document.getElementById("reportModal");
-const reportContent = document.getElementById("reportContent");
-document.getElementById("btnReport").addEventListener("click", ()=>{
-  if(tickets.length === 0){
-    reportContent.innerHTML = "<p>Nenhum chamado registrado.</p>";
+document.getElementById("ticketForm").addEventListener("submit", async e=>{
+  e.preventDefault();
+  const subject=document.getElementById("subject").value;
+  const client=document.getElementById("client").value;
+  const tech=document.getElementById("tech").value;
+  const priority=document.getElementById("priority").value;
+  const description=document.getElementById("description").value;
+  if(editTicketId){
+    const ref=doc(db,"tickets",editTicketId);
+    await updateDoc(ref,{subject,client,tech,priority,description});
+    alert("Chamado atualizado!");
+    editTicketId=null;
+    document.getElementById("cancelEditBtn").classList.add("hidden");
   } else {
-    let html = `<table class="w-full border text-left"><thead><tr class="bg-gray-200">
-      <th class="border px-2 py-1">Assunto</th>
-      <th class="border px-2 py-1">Cliente</th>
-      <th class="border px-2 py-1">Técnico</th>
-      <th class="border px-2 py-1">Prioridade</th>
-      <th class="border px-2 py-1">Status</th>
-      <th class="border px-2 py-1">Abertura</th>
-    </tr></thead><tbody>`;
-    tickets.forEach(t=>{
-      html+=`<tr>
-        <td class="border px-2 py-1">${t.subject}</td>
-        <td class="border px-2 py-1">${t.client}</td>
-        <td class="border px-2 py-1">${t.tech}</td>
-        <td class="border px-2 py-1">${translatePriority(t.priority)}</td>
-        <td class="border px-2 py-1">${translateStatus(t.status)}</td>
-        <td class="border px-2 py-1">${new Date(t.date).toLocaleString()}</td>
-      </tr>`;
-    });
-    html += `</tbody></table>`;
-    reportContent.innerHTML = html;
+    await addDoc(collection(db,"tickets"),{subject,client,tech,priority,description,status:"Aberto",created:Date.now()});
+    alert("Chamado aberto!");
   }
-  reportModal.classList.remove("hidden"); 
-  reportModal.classList.add("flex");
+  e.target.reset();
+  fetchTickets();
 });
-
-document.getElementById("closeReportBtn").addEventListener("click", ()=>{
-  reportModal.classList.add("hidden"); 
-  reportModal.classList.remove("flex");
-});
-
-// Funções PDF/Excel
-function downloadPDF(){
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  doc.text("Relatório de Chamados", 10, 10);
-  let y = 20;
-  tickets.forEach(t=>{
-    doc.text(`Assunto: ${t.subject}`, 10, y); y+=6;
-    doc.text(`Cliente: ${t.client}`, 10, y); y+=6;
-    doc.text(`Técnico: ${t.tech}`, 10, y); y+=6;
-    doc.text(`Prioridade: ${translatePriority(t.priority)}`, 10, y); y+=6;
-    doc.text(`Status: ${translateStatus(t.status)}`, 10, y); y+=6;
-    doc.text(`Abertura: ${new Date(t.date).toLocaleString()}`, 10, y); y+=10;
-  });
-  doc.save("relatorio_chamados.pdf");
-}
-
-function downloadExcel(){
-  const wb = XLSX.utils.book_new();
-  const ws_data=[["Assunto","Cliente","Técnico","Prioridade","Status","Abertura"]];
-  tickets.forEach(t=>{
-    ws_data.push([t.subject,t.client,t.tech,translatePriority(t.priority),translateStatus(t.status),new Date(t.date).toLocaleString()]);
-  });
-  const ws = XLSX.utils.aoa_to_sheet(ws_data);
-  XLSX.utils.book_append_sheet(wb,ws,"Chamados");
-  XLSX.writeFile(wb,"relatorio_chamados.xlsx");
-}
-
+window.editTicket=async function(id){
+  const t=tickets.find(x=>x.id===id);
+  if(t){
+    document.getElementById("subject").value=t.subject;
+    document.getElementById("client").value=t.client;
+    document.getElementById("tech").value=t.tech;
+    document.getElementById("priority").value=t.priority;
+    document.getElementById("description").value=t.description||"";
+    editTicketId=id;
+    document.getElementById("cancelEditBtn").classList.remove("hidden");
+  }
+};
+window.cancelEdit=function(){
+  editTicketId=null;
+  document.getElementById("ticketForm").reset();
+  document.getElementById("cancelEditBtn").classList.add("hidden");
+};
+window.closeTicket=async function(id){
+  const ref=doc(db,"tickets",id);
+  await updateDoc(ref,{status:"Fechado"});
+  alert("Chamado fechado!");
+  fetchTickets();
+};
 </script>
 </body>
 </html>
