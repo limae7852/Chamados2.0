@@ -8,17 +8,24 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   body { background-color:#121212; color:#f5f5f5; }
   .card{background-color:#1e1e1e; border:1px solid #333;}
   .navbar{background-color:#212121 !important;}
   .table-dark tbody tr td{vertical-align:middle;}
   .modal-content{background-color:#1e1e1e; color:#f5f5f5;}
+  .btn-edit{background-color:#facc15;color:#000;padding:0.25rem 0.5rem;border-radius:0.25rem;}
+  .btn-edit:hover{background-color:#eab308;}
+  .btn-close{background-color:#ef4444;color:#fff;padding:0.25rem 0.5rem;border-radius:0.25rem;}
+  .btn-close:hover{background-color:#b91c1c;}
+  .btn-details{background-color:#3b82f6;color:#fff;padding:0.25rem 0.5rem;border-radius:0.25rem;}
+  .btn-details:hover{background-color:#1d4ed8;}
 </style>
 </head>
 <body>
 
-<!-- Navbar -->
 <nav class="navbar navbar-dark mb-4">
   <div class="container-fluid">
     <span class="navbar-brand mb-0 h1">Painel de Chamados</span>
@@ -48,7 +55,7 @@
     <button id="btnUserRegister" class="btn btn-success btn-sm d-none">Cadastrar Usuário</button>
   </div>
 
-  <div class="table-responsive mb-4">
+  <div class="table-responsive mb-3">
     <table class="table table-dark table-striped align-middle">
       <thead>
         <tr>
@@ -59,13 +66,17 @@
           <th>Prioridade</th>
           <th>Status</th>
           <th>Data</th>
+          <th>Ações</th>
         </tr>
       </thead>
       <tbody id="ticketTableBody"></tbody>
     </table>
   </div>
 
-  <button id="btnOperators" class="btn btn-info btn-sm mb-4">Gerenciar Operadores</button>
+  <div class="mb-4">
+    <button id="btnOperators" class="btn btn-info btn-sm">Gerenciar Operadores</button>
+    <button id="btnReport" class="btn btn-warning btn-sm">Relatório PDF/Excel</button>
+  </div>
 
 </div>
 
@@ -112,47 +123,66 @@
   </div>
 </div>
 
+<!-- Modal Relatório -->
+<div class="modal fade" id="reportModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content p-3">
+      <div class="d-flex justify-content-between mb-2">
+        <h5 class="modal-title">Relatório de Chamados</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="mb-2">
+        <button onclick="downloadPDF()" class="btn btn-danger btn-sm">PDF</button>
+        <button onclick="downloadExcel()" class="btn btn-success btn-sm">Excel</button>
+      </div>
+      <div id="reportContent"></div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-  // Firebase
-const firebaseConfig = {
+  // === FIREBASE ===
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
   apiKey: "AIzaSyBA16WHE768N9eUcqEoQqUF7uEIB82nNM0",
   authDomain: "chamados-37b34.firebaseapp.com",
   projectId: "chamados-37b34",
   storageBucket: "chamados-37b34.firebasestorage.app",
   messagingSenderId: "164935126006",
   appId: "1:164935126006:web:e49fd19961993d5b62d5d7"
-};
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
 
   const loginBtn = document.getElementById("loginBtn");
   const logoutBtn = document.getElementById("logoutBtn");
   const loginContainer = document.getElementById("loginContainer");
   const mainContainer = document.getElementById("mainContainer");
   const ticketTableBody = document.getElementById("ticketTableBody");
-
   const btnUserRegister = document.getElementById("btnUserRegister");
+
   const userModal = new bootstrap.Modal(document.getElementById("userModal"));
   const operatorsModal = new bootstrap.Modal(document.getElementById("operatorsModal"));
+  const reportModal = new bootstrap.Modal(document.getElementById("reportModal"));
 
   let currentUser = null;
+  let tickets = [];
 
   // LOGIN
   loginBtn.addEventListener("click", async () => {
     const user = document.getElementById("loginUser").value.trim();
     const pass = document.getElementById("loginPass").value.trim();
-    if(!user||!pass){alert("Preencha todos os campos!");return;}
-    try{
-      const snapshot = await db.collection("users").where("login","==",user).where("password","==",pass).get();
-      if(snapshot.empty){alert("Usuário ou senha incorretos!"); return;}
-      currentUser = snapshot.docs[0].data();
-      loginContainer.classList.add("d-none");
-      mainContainer.classList.remove("d-none");
-      logoutBtn.classList.remove("d-none");
-      if(currentUser.role=="admin") btnUserRegister.classList.remove("d-none");
-      carregarChamados();
-    }catch(err){console.error(err);alert("Erro no login");}
+    if(!user||!pass){alert("Preencha todos os campos!"); return;}
+    const snapshot = await db.collection("users").where("login","==",user).where("password","==",pass).get();
+    if(snapshot.empty){alert("Usuário ou senha incorretos!"); return;}
+    currentUser = snapshot.docs[0].data();
+    loginContainer.classList.add("d-none");
+    mainContainer.classList.remove("d-none");
+    logoutBtn.classList.remove("d-none");
+    if(currentUser.role=="admin") btnUserRegister.classList.remove("d-none");
+    carregarChamados();
   });
 
   // LOGOUT
@@ -165,33 +195,97 @@ const firebaseConfig = {
 
   // CARREGAR CHAMADOS
   async function carregarChamados(){
-    ticketTableBody.innerHTML="<tr><td colspan='7' class='text-center'>Carregando...</td></tr>";
-    try{
-      const snapshot = await db.collection("tickets").orderBy("date","asc").get();
-      if(snapshot.empty){ticketTableBody.innerHTML="<tr><td colspan='7' class='text-center text-muted'>Nenhum chamado.</td></tr>"; return;}
-      ticketTableBody.innerHTML="";
-      snapshot.forEach(doc=>{
-        const t = doc.data();
-        const data = new Date(t.date).toLocaleString("pt-BR");
-        const row = `<tr>
-          <td>${t.subject||"-"}</td>
-          <td>${t.client||"-"}</td>
-          <td>${t.description||"-"}</td>
-          <td>${t.tech||"-"}</td>
-          <td>${t.priority||"-"}</td>
-          <td>${t.status||"-"}</td>
-          <td>${data}</td>
-        </tr>`;
-        ticketTableBody.innerHTML+=row;
-      });
-    }catch(err){console.error(err);ticketTableBody.innerHTML="<tr><td colspan='7'>Erro ao carregar chamados</td></tr>";}
+    ticketTableBody.innerHTML="<tr><td colspan='8' class='text-center'>Carregando...</td></tr>";
+    const snapshot = await db.collection("tickets").orderBy("date","asc").get();
+    tickets = snapshot.docs.map(d=>({id:d.id,...d.data()}));
+    renderTickets();
+  }
+
+  function renderTickets(){
+    if(tickets.length==0){ticketTableBody.innerHTML="<tr><td colspan='8'>Nenhum chamado.</td></tr>"; return;}
+    ticketTableBody.innerHTML="";
+    tickets.forEach(t=>{
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${t.subject||"-"}</td>
+        <td>${t.client||"-"}</td>
+        <td>${t.description||"-"}</td>
+        <td>${t.tech||"-"}</td>
+        <td>${t.priority||"-"}</td>
+        <td>${t.status||"-"}</td>
+        <td>${new Date(t.date).toLocaleString()}</td>
+        <td><button class="btn-details btn btn-sm btn-primary" onclick="showDetails('${t.id}')">Detalhes</button></td>
+      `;
+      ticketTableBody.appendChild(row);
+    });
+  }
+
+  // DETALHES
+  window.showDetails = async function(id){
+    const ticket = tickets.find(t=>t.id==id);
+    if(!ticket) return;
+    const content = document.getElementById("reportContent");
+    content.innerHTML = `
+      <p><strong>Assunto:</strong> ${ticket.subject}</p>
+      <p><strong>Cliente:</strong> ${ticket.client}</p>
+      <p><strong>Descrição:</strong> ${ticket.description}</p>
+      <p><strong>Técnico:</strong> ${ticket.tech}</p>
+      <p><strong>Prioridade:</strong> ${ticket.priority}</p>
+      <p><strong>Status:</strong> ${ticket.status}</p>
+      <p><strong>Data:</strong> ${new Date(ticket.date).toLocaleString()}</p>
+    `;
+    reportModal.show();
+  }
+
+  // RELATÓRIO
+  document.getElementById("btnReport").addEventListener("click", ()=>{
+    const content = document.getElementById("reportContent");
+    if(tickets.length==0){content.innerHTML="<p>Nenhum chamado registrado.</p>"; reportModal.show(); return;}
+    let html = `<table class="table table-dark table-striped"><thead><tr>
+      <th>Assunto</th><th>Cliente</th><th>Descrição</th><th>Técnico</th><th>Prioridade</th><th>Status</th><th>Data</th>
+    </tr></thead><tbody>`;
+    tickets.forEach(t=>{
+      html+=`<tr>
+        <td>${t.subject}</td><td>${t.client}</td><td>${t.description}</td><td>${t.tech}</td>
+        <td>${t.priority}</td><td>${t.status}</td><td>${new Date(t.date).toLocaleString()}</td>
+      </tr>`;
+    });
+    html += "</tbody></table>";
+    content.innerHTML = html;
+    reportModal.show();
+  });
+
+  function downloadPDF(){
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    let y=10;
+    doc.text("Relatório de Chamados",10,y); y+=10;
+    tickets.forEach(t=>{
+      doc.text(`Assunto: ${t.subject}`,10,y); y+=6;
+      doc.text(`Cliente: ${t.client}`,10,y); y+=6;
+      doc.text(`Descrição: ${t.description}`,10,y); y+=6;
+      doc.text(`Técnico: ${t.tech}`,10,y); y+=6;
+      doc.text(`Prioridade: ${t.priority}`,10,y); y+=6;
+      doc.text(`Status: ${t.status}`,10,y); y+=6;
+      doc.text(`Data: ${new Date(t.date).toLocaleString()}`,10,y); y+=10;
+    });
+    doc.save("relatorio_chamados.pdf");
+  }
+
+  function downloadExcel(){
+    const wb = XLSX.utils.book_new();
+    const ws_data=[["Assunto","Cliente","Descrição","Técnico","Prioridade","Status","Data"]];
+    tickets.forEach(t=>ws_data.push([t.subject,t.client,t.description,t.tech,t.priority,t.status,new Date(t.date).toLocaleString()]));
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    XLSX.utils.book_append_sheet(wb,ws,"Chamados");
+    XLSX.writeFile(wb,"relatorio_chamados.xlsx");
   }
 
   // USUÁRIOS
   btnUserRegister.addEventListener("click",()=>userModal.show());
   document.getElementById("userForm").addEventListener("submit",async e=>{
     e.preventDefault();
-    const newUser={
+    const newUser = {
       name: document.getElementById("userName").value,
       login: document.getElementById("userLogin").value,
       password: document.getElementById("userPass").value,
@@ -203,13 +297,12 @@ const firebaseConfig = {
   });
   async function fetchUsers(){
     const snapshot = await db.collection("users").get();
-    const ul = document.getElementById("usersList");
-    ul.innerHTML="";
+    const ul = document.getElementById("usersList"); ul.innerHTML="";
     snapshot.forEach(doc=>{
-      const u=doc.data();
-      const li=document.createElement("li");
+      const u = doc.data();
+      const li = document.createElement("li");
       li.className="list-group-item bg-dark text-white";
-      li.textContent=`${u.name} (${u.login}) - ${u.role}`;
+      li.textContent = `${u.name} (${u.login}) - ${u.role}`;
       ul.appendChild(li);
     });
   }
