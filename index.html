@@ -1,261 +1,164 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Sistema de Chamados</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<style>
-  .btn-edit{background-color:#facc15;color:#000;padding:0.25rem 0.5rem;border-radius:0.25rem;}
-  .btn-edit:hover{background-color:#eab308;}
-  .btn-close{background-color:#ef4444;color:#fff;padding:0.25rem 0.5rem;border-radius:0.25rem;}
-  .btn-close:hover{background-color:#b91c1c;}
-  .btn-details{background-color:#3b82f6;color:#fff;padding:0.25rem 0.5rem;border-radius:0.25rem;}
-  .btn-details:hover{background-color:#1d4ed8;}
-</style>
+  <meta charset="UTF-8">
+  <title>Sistema de Chamados</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <style>
+    body {
+      background-color: #121212;
+      color: #f5f5f5;
+    }
+    .card {
+      background-color: #1e1e1e;
+      border: 1px solid #333;
+    }
+    .navbar {
+      background-color: #212121 !important;
+    }
+  </style>
 </head>
-<body class="bg-gray-100 text-gray-900">
+<body>
 
-<!-- Tela de Login -->
-<div id="loginScreen" class="flex justify-center items-center min-h-screen">
-  <div class="bg-white shadow-lg rounded-lg p-8 w-96">
-    <h1 class="text-2xl font-bold mb-4">Login</h1>
-    <form id="loginForm" class="space-y-2">
-      <input id="loginUser" placeholder="Usuário" class="border p-2 w-full" required />
-      <input id="loginPass" type="password" placeholder="Senha" class="border p-2 w-full" required />
-      <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded w-full">Entrar</button>
-    </form>
-  </div>
-</div>
-
-<!-- Tela Principal -->
-<div id="systemScreen" class="p-6 hidden">
-  <div class="flex justify-between items-center mb-4">
-    <h1 class="text-2xl font-bold">Sistema de Chamados</h1>
-    <div>
-      <button id="btnUserRegister" class="px-4 py-2 bg-green-600 text-white rounded hidden">Cadastrar Usuário</button>
-      <button id="btnLogout" class="px-4 py-2 bg-red-600 text-white rounded ml-2">Logout</button>
+  <!-- Navbar -->
+  <nav class="navbar navbar-dark mb-4">
+    <div class="container-fluid">
+      <span class="navbar-brand mb-0 h1">Painel de Chamados</span>
+      <button id="logoutBtn" class="btn btn-outline-light btn-sm d-none">Sair</button>
     </div>
-  </div>
+  </nav>
 
-  <div class="flex gap-2 mb-4">
-    <button id="btnSettings" class="px-4 py-2 bg-blue-600 text-white rounded">⚙️ Técnicos</button>
-    <button id="btnReport" class="px-4 py-2 bg-purple-600 text-white rounded">📄 Relatório</button>
-  </div>
-
-  <!-- Formulário de Chamado -->
-  <form id="ticketForm" class="mt-4 space-y-2">
-    <input id="subject" placeholder="Assunto" class="border p-2 w-full" required />
-    <input id="client" placeholder="Cliente" class="border p-2 w-full" required />
-    <select id="tech" class="border p-2 w-full" required></select>
-    <select id="priority" class="border p-2 w-full">
-      <option value="baixa">Baixa</option>
-      <option value="média">Média</option>
-      <option value="alta">Alta</option>
-      <option value="crítica">Crítica</option>
-    </select>
-    <textarea id="description" placeholder="Descrição" class="border p-2 w-full"></textarea>
-    <div class="flex gap-2">
-      <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded">Abrir Chamado</button>
-      <button type="button" id="cancelEditBtn" class="px-4 py-2 bg-red-500 text-white rounded hidden" onclick="cancelEdit()">Cancelar</button>
-    </div>
-  </form>
-
-  <!-- Lista de Chamados -->
-  <table class="mt-6 w-full border">
-    <thead>
-      <tr class="bg-gray-200">
-        <th class="border px-4 py-2">Assunto</th>
-        <th class="border px-4 py-2">Cliente</th>
-        <th class="border px-4 py-2">Técnico</th>
-        <th class="border px-4 py-2">Prioridade</th>
-        <th class="border px-4 py-2">Status</th>
-        <th class="border px-4 py-2">Ações</th>
-      </tr>
-    </thead>
-    <tbody id="ticketsList"></tbody>
-  </table>
-</div>
-
-<!-- Modal Técnicos -->
-<div id="modalSettings" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center">
-  <div class="bg-white rounded-lg shadow-lg w-96 p-6">
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-lg font-bold">Gerenciar Técnicos</h2>
-      <button id="closeSettingsBtn" class="text-red-600 font-bold">X</button>
-    </div>
-    <div class="flex space-x-2 mb-4">
-      <input id="newOperator" placeholder="Nome do Técnico" class="border p-2 flex-1"/>
-      <button id="addOperatorBtn" class="px-3 py-2 bg-blue-600 text-white rounded">Adicionar</button>
-    </div>
-    <ul id="operatorsList" class="space-y-2"></ul>
-  </div>
-</div>
-
-<!-- Modal Cadastro de Usuário -->
-<div id="userModal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center">
-  <div class="bg-white rounded-lg shadow-lg w-96 p-6">
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-lg font-bold">Cadastrar Usuário</h2>
-      <button onclick="closeUserModal()" class="text-red-600 font-bold">X</button>
-    </div>
-    <form id="userForm" class="space-y-2">
-      <input id="userName" placeholder="Nome" class="border p-2 w-full" required />
-      <input id="userLogin" placeholder="Login" class="border p-2 w-full" required />
-      <input id="userPass" type="password" placeholder="Senha" class="border p-2 w-full" required />
-      <select id="userRole" class="border p-2 w-full" required>
-        <option value="admin">Admin</option>
-        <option value="tech">Técnico</option>
-        <option value="operator">Operador</option>
-      </select>
-      <div class="flex gap-2">
-        <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded">Salvar</button>
-        <button type="button" onclick="closeUserModal()" class="px-4 py-2 bg-red-500 text-white rounded">Cancelar</button>
+  <!-- Login -->
+  <div class="container" id="loginContainer">
+    <div class="row justify-content-center">
+      <div class="col-md-4">
+        <div class="card p-4 shadow">
+          <h4 class="text-center mb-3">Login</h4>
+          <div class="mb-3">
+            <label class="form-label">Usuário</label>
+            <input type="text" class="form-control" id="loginUser">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Senha</label>
+            <input type="password" class="form-control" id="loginPass">
+          </div>
+          <button class="btn btn-primary w-100" id="loginBtn">Entrar</button>
+        </div>
       </div>
-    </form>
-    <ul id="usersList" class="mt-4 space-y-1"></ul>
-  </div>
-</div>
-
-<!-- Modal Relatório -->
-<div id="reportModal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center">
-  <div class="bg-white rounded-lg shadow-lg w-11/12 max-w-4xl p-6 overflow-y-auto max-h-[80vh]">
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-lg font-bold">Relatório de Chamados</h2>
-      <button id="closeReportBtn" class="text-red-600 font-bold px-2 py-1 rounded border border-red-600 hover:bg-red-100">X</button>
     </div>
-    <div class="flex gap-2 mb-4">
-      <button onclick="downloadPDF()" class="px-4 py-2 bg-red-600 text-white rounded">📄 PDF</button>
-      <button onclick="downloadExcel()" class="px-4 py-2 bg-green-600 text-white rounded">📊 Excel</button>
-    </div>
-    <div id="reportContent"></div>
   </div>
-</div>
 
-<!-- SCRIPT FIREBASE -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, setDoc, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+  <!-- Painel -->
+  <div class="container d-none" id="mainContainer">
+    <h3 class="mb-4"><i class="bi bi-ticket-detailed"></i> Chamados</h3>
+    <div class="table-responsive">
+      <table class="table table-dark table-striped align-middle">
+        <thead>
+          <tr>
+            <th>Assunto</th>
+            <th>Cliente</th>
+            <th>Descrição</th>
+            <th>Técnico</th>
+            <th>Prioridade</th>
+            <th>Status</th>
+            <th>Data</th>
+          </tr>
+        </thead>
+        <tbody id="ticketTableBody"></tbody>
+      </table>
+    </div>
+  </div>
 
-const firebaseConfig = {
-  apiKey: "AIzaSyBA16WHE768N9eUcqEoQqUF7uEIB82nNM0",
-  authDomain: "chamados-37b34.firebaseapp.com",
-  projectId: "chamados-37b34",
-  storageBucket: "chamados-37b34.appspot.com",
-  messagingSenderId: "164935126006",
-  appId: "1:164935126006:web:e49fd19961993d5b62d5d7"
-};
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+  <script>
+    // === CONFIGURAÇÃO FIREBASE ===
+    const firebaseConfig = {
+      apiKey: "SUA_API_KEY",
+      authDomain: "SEU_AUTH_DOMAIN",
+      projectId: "SEU_PROJECT_ID",
+      storageBucket: "SEU_STORAGE_BUCKET",
+      messagingSenderId: "SEU_SENDER_ID",
+      appId: "SEU_APP_ID"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-let currentUser = null;
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const loginContainer = document.getElementById("loginContainer");
+    const mainContainer = document.getElementById("mainContainer");
+    const ticketTableBody = document.getElementById("ticketTableBody");
 
-/* --- Criar admin padrão --- */
-async function ensureAdminUser(){
-  const snap = await getDocs(collection(db, "users"));
-  let exists = false;
-  snap.forEach(d=>{ if(d.data().login==="admin") exists=true; });
-  if(!exists){
-    await setDoc(doc(db,"users","admin_default"),{
-      name:"Administrador",
-      login:"admin",
-      pass:"1234",
-      role:"admin"
+    // === LOGIN ===
+    loginBtn.addEventListener("click", async () => {
+      const user = document.getElementById("loginUser").value.trim();
+      const pass = document.getElementById("loginPass").value.trim();
+
+      if (!user || !pass) {
+        alert("Preencha todos os campos!");
+        return;
+      }
+
+      const snapshot = await db.collection("users")
+        .where("login", "==", user)
+        .where("pass", "==", pass)
+        .get();
+
+      if (snapshot.empty) {
+        alert("Usuário ou senha incorretos!");
+        return;
+      }
+
+      loginContainer.classList.add("d-none");
+      mainContainer.classList.remove("d-none");
+      logoutBtn.classList.remove("d-none");
+
+      carregarChamados();
     });
-  }
-}
-ensureAdminUser();
 
-/* --- LOGIN --- */
-document.getElementById("loginForm").addEventListener("submit", async (e)=>{
-  e.preventDefault();
-  const login=document.getElementById("loginUser").value;
-  const pass=document.getElementById("loginPass").value;
+    // === LOGOUT ===
+    logoutBtn.addEventListener("click", () => {
+      loginContainer.classList.remove("d-none");
+      mainContainer.classList.add("d-none");
+      logoutBtn.classList.add("d-none");
+    });
 
-  const usersSnap=await getDocs(collection(db,"users"));
-  let user=null;
-  usersSnap.forEach(d=>{
-    const u=d.data();
-    if(u.login===login && u.pass===pass){ user={id:d.id,...u}; }
-  });
+    // === CARREGAR CHAMADOS ===
+    async function carregarChamados() {
+      ticketTableBody.innerHTML = "<tr><td colspan='7' class='text-center'>Carregando...</td></tr>";
 
-  if(user){
-    currentUser=user;
-    document.getElementById("loginScreen").classList.add("hidden");
-    document.getElementById("systemScreen").classList.remove("hidden");
-    if(user.role==="admin") document.getElementById("btnUserRegister").classList.remove("hidden");
-    loadTechnicians();
-    loadTickets();
-  } else {
-    alert("Usuário ou senha inválidos");
-  }
-});
+      try {
+        const snapshot = await db.collection("tickets").get();
 
-/* --- Técnicos --- */
-async function loadTechnicians(){
-  const techSelect=document.getElementById("tech");
-  techSelect.innerHTML="";
-  const snap=await getDocs(collection(db,"technicians"));
-  snap.forEach(d=>{
-    const t=d.data();
-    const opt=document.createElement("option");
-    opt.value=t.name;
-    opt.textContent=t.name;
-    techSelect.appendChild(opt);
-  });
-}
+        if (snapshot.empty) {
+          ticketTableBody.innerHTML = "<tr><td colspan='7' class='text-center text-muted'>Nenhum chamado encontrado.</td></tr>";
+          return;
+        }
 
-/* --- Chamados --- */
-async function loadTickets(){
-  const tbody=document.getElementById("ticketsList");
-  tbody.innerHTML="";
-  const snap=await getDocs(collection(db,"tickets"));
-  snap.forEach(d=>{
-    const t=d.data();
-    const tr=document.createElement("tr");
-    tr.innerHTML=`
-      <td class="border px-2 py-1">${t.subject}</td>
-      <td class="border px-2 py-1">${t.client}</td>
-      <td class="border px-2 py-1">${t.tech}</td>
-      <td class="border px-2 py-1">${t.priority}</td>
-      <td class="border px-2 py-1">${t.status||'aberto'}</td>
-      <td class="border px-2 py-1">
-        <button class="btn-close" onclick="deleteTicket('${d.id}')">Excluir</button>
-      </td>`;
-    tbody.appendChild(tr);
-  });
-}
-
-/* --- Salvar chamado --- */
-document.getElementById("ticketForm").addEventListener("submit", async (e)=>{
-  e.preventDefault();
-  const subject=document.getElementById("subject").value;
-  const client=document.getElementById("client").value;
-  const tech=document.getElementById("tech").value;
-  const priority=document.getElementById("priority").value;
-  const description=document.getElementById("description").value;
-  await addDoc(collection(db,"tickets"),{
-    subject,client,tech,priority,description,status:"aberto",created:new Date().toISOString()
-  });
-  e.target.reset();
-  loadTickets();
-});
-
-/* --- Excluir chamado --- */
-window.deleteTicket = async (id)=>{
-  await deleteDoc(doc(db,"tickets",id));
-  loadTickets();
-};
-
-/* --- Logout --- */
-document.getElementById("btnLogout").addEventListener("click", ()=>{
-  currentUser=null;
-  document.getElementById("systemScreen").classList.add("hidden");
-  document.getElementById("loginScreen").classList.remove("hidden");
-});
-</script>
-
+        ticketTableBody.innerHTML = "";
+        snapshot.forEach(doc => {
+          const t = doc.data();
+          const data = new Date(t.date).toLocaleDateString("pt-BR");
+          const row = `
+            <tr>
+              <td>${t.subject || "-"}</td>
+              <td>${t.client || "-"}</td>
+              <td>${t.description || "-"}</td>
+              <td>${t.tech || "-"}</td>
+              <td>${t.priority || "-"}</td>
+              <td>${t.status || "-"}</td>
+              <td>${data}</td>
+            </tr>`;
+          ticketTableBody.innerHTML += row;
+        });
+      } catch (error) {
+        console.error("Erro ao buscar chamados:", error);
+        ticketTableBody.innerHTML = "<tr><td colspan='7' class='text-center text-danger'>Erro ao carregar chamados.</td></tr>";
+      }
+    }
+  </script>
 </body>
 </html>
