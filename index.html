@@ -20,92 +20,98 @@
     .navbar {
       background-color: #212121 !important;
     }
+    .table-dark tbody tr td {
+      vertical-align: middle;
+    }
   </style>
 </head>
 <body>
 
-  <!-- Navbar -->
-  <nav class="navbar navbar-dark mb-4">
-    <div class="container-fluid">
-      <span class="navbar-brand mb-0 h1">Painel de Chamados</span>
-      <button id="logoutBtn" class="btn btn-outline-light btn-sm d-none">Sair</button>
-    </div>
-  </nav>
+<!-- Navbar -->
+<nav class="navbar navbar-dark mb-4">
+  <div class="container-fluid">
+    <span class="navbar-brand mb-0 h1">Painel de Chamados</span>
+    <button id="logoutBtn" class="btn btn-outline-light btn-sm d-none">Sair</button>
+  </div>
+</nav>
 
-  <!-- Login -->
-  <div class="container" id="loginContainer">
-    <div class="row justify-content-center">
-      <div class="col-md-4">
-        <div class="card p-4 shadow">
-          <h4 class="text-center mb-3">Login</h4>
-          <div class="mb-3">
-            <label class="form-label">Usuário</label>
-            <input type="text" class="form-control" id="loginUser">
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Senha</label>
-            <input type="password" class="form-control" id="loginPass">
-          </div>
-          <button class="btn btn-primary w-100" id="loginBtn">Entrar</button>
+<!-- Login -->
+<div class="container" id="loginContainer">
+  <div class="row justify-content-center">
+    <div class="col-md-4">
+      <div class="card p-4 shadow">
+        <h4 class="text-center mb-3">Login</h4>
+        <div class="mb-3">
+          <label class="form-label">Usuário</label>
+          <input type="text" class="form-control" id="loginUser">
         </div>
+        <div class="mb-3">
+          <label class="form-label">Senha</label>
+          <input type="password" class="form-control" id="loginPass">
+        </div>
+        <button class="btn btn-primary w-100" id="loginBtn">Entrar</button>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- Painel -->
-  <div class="container d-none" id="mainContainer">
-    <h3 class="mb-4"><i class="bi bi-ticket-detailed"></i> Chamados</h3>
-    <div class="table-responsive">
-      <table class="table table-dark table-striped align-middle">
-        <thead>
-          <tr>
-            <th>Assunto</th>
-            <th>Cliente</th>
-            <th>Descrição</th>
-            <th>Técnico</th>
-            <th>Prioridade</th>
-            <th>Status</th>
-            <th>Data</th>
-          </tr>
-        </thead>
-        <tbody id="ticketTableBody"></tbody>
-      </table>
-    </div>
+<!-- Painel -->
+<div class="container d-none" id="mainContainer">
+  <h3 class="mb-4"><i class="bi bi-ticket-detailed"></i> Chamados</h3>
+  <div class="table-responsive">
+    <table class="table table-dark table-striped align-middle">
+      <thead>
+        <tr>
+          <th>Assunto</th>
+          <th>Cliente</th>
+          <th>Descrição</th>
+          <th>Técnico</th>
+          <th>Prioridade</th>
+          <th>Status</th>
+          <th>Data</th>
+        </tr>
+      </thead>
+      <tbody id="ticketTableBody"></tbody>
+    </table>
   </div>
+</div>
 
-  <script>
-    // === CONFIGURAÇÃO FIREBASE ===
-    const firebaseConfig = {
-       apiKey: "AIzaSyBA16WHE768N9eUcqEoQqUF7uEIB82nNM0",
-       authDomain: "chamados-37b34.firebaseapp.com",
-       projectId: "chamados-37b34",
-       storageBucket: "chamados-37b34.firebasestorage.app",
-       messagingSenderId: "164935126006",
-       appId: "1:164935126006:web:e49fd19961993d5b62d5d7"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+<script>
+  // === CONFIGURAÇÃO FIREBASE ===
+  const firebaseConfig = {
+    apiKey: "SUA_API_KEY",
+    authDomain: "SEU_AUTH_DOMAIN",
+    projectId: "SEU_PROJECT_ID",
+    storageBucket: "SEU_STORAGE_BUCKET",
+    messagingSenderId: "SEU_SENDER_ID",
+    appId: "SEU_APP_ID"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
 
-    const loginBtn = document.getElementById("loginBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
-    const loginContainer = document.getElementById("loginContainer");
-    const mainContainer = document.getElementById("mainContainer");
-    const ticketTableBody = document.getElementById("ticketTableBody");
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const loginContainer = document.getElementById("loginContainer");
+  const mainContainer = document.getElementById("mainContainer");
+  const ticketTableBody = document.getElementById("ticketTableBody");
 
-    // === LOGIN ===
-    loginBtn.addEventListener("click", async () => {
-      const user = document.getElementById("loginUser").value.trim();
-      const pass = document.getElementById("loginPass").value.trim();
+  // === LOGIN ===
+  loginBtn.addEventListener("click", async () => {
+    const user = document.getElementById("loginUser").value.trim();
+    const pass = document.getElementById("loginPass").value.trim();
 
-      if (!user || !pass) {
-        alert("Preencha todos os campos!");
-        return;
-      }
+    if (!user || !pass) {
+      alert("Preencha todos os campos!");
+      return;
+    }
 
+    try {
       const snapshot = await db.collection("users")
         .where("login", "==", user)
-        .where("pass", "==", pass)
+        .where("password", "==", pass)
         .get();
+
+      console.log("Usuários encontrados:", snapshot.size);
 
       if (snapshot.empty) {
         alert("Usuário ou senha incorretos!");
@@ -117,48 +123,54 @@
       logoutBtn.classList.remove("d-none");
 
       carregarChamados();
-    });
 
-    // === LOGOUT ===
-    logoutBtn.addEventListener("click", () => {
-      loginContainer.classList.remove("d-none");
-      mainContainer.classList.add("d-none");
-      logoutBtn.classList.add("d-none");
-    });
-
-    // === CARREGAR CHAMADOS ===
-    async function carregarChamados() {
-      ticketTableBody.innerHTML = "<tr><td colspan='7' class='text-center'>Carregando...</td></tr>";
-
-      try {
-        const snapshot = await db.collection("tickets").get();
-
-        if (snapshot.empty) {
-          ticketTableBody.innerHTML = "<tr><td colspan='7' class='text-center text-muted'>Nenhum chamado encontrado.</td></tr>";
-          return;
-        }
-
-        ticketTableBody.innerHTML = "";
-        snapshot.forEach(doc => {
-          const t = doc.data();
-          const data = new Date(t.date).toLocaleDateString("pt-BR");
-          const row = `
-            <tr>
-              <td>${t.subject || "-"}</td>
-              <td>${t.client || "-"}</td>
-              <td>${t.description || "-"}</td>
-              <td>${t.tech || "-"}</td>
-              <td>${t.priority || "-"}</td>
-              <td>${t.status || "-"}</td>
-              <td>${data}</td>
-            </tr>`;
-          ticketTableBody.innerHTML += row;
-        });
-      } catch (error) {
-        console.error("Erro ao buscar chamados:", error);
-        ticketTableBody.innerHTML = "<tr><td colspan='7' class='text-center text-danger'>Erro ao carregar chamados.</td></tr>";
-      }
+    } catch (err) {
+      console.error("Erro no login:", err);
+      alert("Erro ao tentar logar. Veja o console.");
     }
-  </script>
+  });
+
+  // === LOGOUT ===
+  logoutBtn.addEventListener("click", () => {
+    loginContainer.classList.remove("d-none");
+    mainContainer.classList.add("d-none");
+    logoutBtn.classList.add("d-none");
+  });
+
+  // === CARREGAR CHAMADOS ===
+  async function carregarChamados() {
+    ticketTableBody.innerHTML = "<tr><td colspan='7' class='text-center'>Carregando...</td></tr>";
+
+    try {
+      const snapshot = await db.collection("tickets").orderBy("date", "asc").get();
+
+      if (snapshot.empty) {
+        ticketTableBody.innerHTML = "<tr><td colspan='7' class='text-center text-muted'>Nenhum chamado encontrado.</td></tr>";
+        return;
+      }
+
+      ticketTableBody.innerHTML = "";
+      snapshot.forEach(doc => {
+        const t = doc.data();
+        const data = new Date(t.date).toLocaleString("pt-BR");
+        const row = `
+          <tr>
+            <td>${t.subject || "-"}</td>
+            <td>${t.client || "-"}</td>
+            <td>${t.description || "-"}</td>
+            <td>${t.tech || "-"}</td>
+            <td>${t.priority || "-"}</td>
+            <td>${t.status || "-"}</td>
+            <td>${data}</td>
+          </tr>`;
+        ticketTableBody.innerHTML += row;
+      });
+    } catch (error) {
+      console.error("Erro ao buscar chamados:", error);
+      ticketTableBody.innerHTML = "<tr><td colspan='7' class='text-center text-danger'>Erro ao carregar chamados.</td></tr>";
+    }
+  }
+</script>
+
 </body>
 </html>
