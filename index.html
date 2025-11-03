@@ -366,4 +366,48 @@
     const snapshot = await db.collection("operators").get();
     operatorsList.innerHTML="";
     const techSelect = document.getElementById("ticketTech");
-    techSelect.innerHTML="<option value=''>Sele
+    techSelect.innerHTML="<option value=''>Selecione o Técnico</option>";
+    snapshot.forEach(doc=>{
+      const o = doc.data();
+      const li = document.createElement("li");
+      li.className="list-group-item bg-dark text-white d-flex justify-content-between align-items-center";
+      li.textContent=o.name;
+      const btnDel = document.createElement("button");
+      btnDel.className="btn btn-sm btn-danger";
+      btnDel.innerHTML="<i class='bi bi-trash'></i>";
+      btnDel.onclick=async()=>{await db.collection("operators").doc(doc.id).delete();fetchOperators();};
+      li.appendChild(btnDel);
+      operatorsList.appendChild(li);
+      const opt=document.createElement("option");
+      opt.value=o.name;
+      opt.textContent=o.name;
+      techSelect.appendChild(opt);
+    });
+  }
+
+  // NOVO CHAMADO
+  document.getElementById("btnNewTicket").addEventListener("click",()=>{
+    const modal = new bootstrap.Modal(document.getElementById("newTicketModal"));
+    modal.show();
+  });
+
+  document.getElementById("ticketForm").addEventListener("submit",async e=>{
+    e.preventDefault();
+    const novoChamado = {
+      subject: ticketSubject.value,
+      client: ticketClient.value,
+      description: ticketDescription.value,
+      tech: ticketTech.value,
+      priority: ticketPriority.value,
+      status: ticketStatus.value,
+      date: Date.now()
+    };
+    await db.collection("tickets").add(novoChamado);
+    e.target.reset();
+    carregarChamados();
+    bootstrap.Modal.getInstance(document.getElementById("newTicketModal")).hide();
+  });
+</script>
+
+</body>
+</html>
