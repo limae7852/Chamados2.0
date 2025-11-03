@@ -22,6 +22,8 @@
   .btn-close:hover{background-color:#b91c1c;}
   .btn-details{background-color:#3b82f6;color:#fff;padding:0.25rem 0.5rem;border-radius:0.25rem;}
   .btn-details:hover{background-color:#1d4ed8;}
+  .btn-end{background-color:#10b981;color:#fff;padding:0.25rem 0.5rem;border-radius:0.25rem;}
+  .btn-end:hover{background-color:#059669;}
 </style>
 </head>
 <body>
@@ -211,10 +213,6 @@
   const ticketTableBody = document.getElementById("ticketTableBody");
   const btnUserRegister = document.getElementById("btnUserRegister");
 
-  const userModal = new bootstrap.Modal(document.getElementById("userModal"));
-  const operatorsModal = new bootstrap.Modal(document.getElementById("operatorsModal"));
-  const reportModal = new bootstrap.Modal(document.getElementById("reportModal"));
-
   let currentUser = null;
   let tickets = [];
 
@@ -262,10 +260,23 @@
         <td>${t.priority||"-"}</td>
         <td>${t.status||"-"}</td>
         <td>${new Date(t.date).toLocaleString()}</td>
-        <td><button class="btn-details btn btn-sm btn-primary" onclick="showDetails('${t.id}')">Detalhes</button></td>
+        <td>
+          <button class="btn-details btn btn-sm" onclick="showDetails('${t.id}')">Detalhes</button>
+          ${currentUser && currentUser.role=="admin" && t.status!=="Encerrado" 
+            ? `<button class="btn-end btn btn-sm ms-1" onclick="encerrarChamado('${t.id}')"><i class='bi bi-check2-circle'></i> Encerrar</button>` 
+            : ""}
+        </td>
       `;
       ticketTableBody.appendChild(row);
     });
+  }
+
+  // ENCERRAR CHAMADO
+  window.encerrarChamado = async function(id){
+    if(!confirm("Deseja realmente encerrar este chamado?")) return;
+    await db.collection("tickets").doc(id).update({status:"Encerrado"});
+    alert("Chamado encerrado com sucesso!");
+    carregarChamados();
   }
 
   // DETALHES
@@ -282,27 +293,11 @@
       <p><strong>Status:</strong> ${ticket.status}</p>
       <p><strong>Data:</strong> ${new Date(ticket.date).toLocaleString()}</p>
     `;
+    const reportModal = new bootstrap.Modal(document.getElementById("reportModal"));
     reportModal.show();
   }
 
-  // RELATÓRIO
-  document.getElementById("btnReport").addEventListener("click", ()=>{
-    const content = document.getElementById("reportContent");
-    if(tickets.length==0){content.innerHTML="<p>Nenhum chamado registrado.</p>"; reportModal.show(); return;}
-    let html = `<table class="table table-dark table-striped"><thead><tr>
-      <th>Assunto</th><th>Cliente</th><th>Descrição</th><th>Técnico</th><th>Prioridade</th><th>Status</th><th>Data</th>
-    </tr></thead><tbody>`;
-    tickets.forEach(t=>{
-      html+=`<tr>
-        <td>${t.subject}</td><td>${t.client}</td><td>${t.description}</td><td>${t.tech}</td>
-        <td>${t.priority}</td><td>${t.status}</td><td>${new Date(t.date).toLocaleString()}</td>
-      </tr>`;
-    });
-    html += "</tbody></table>";
-    content.innerHTML = html;
-    reportModal.show();
-  });
-
+  // RELATÓRIO PDF / EXCEL
   function downloadPDF(){
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
@@ -330,7 +325,8 @@
   }
 
   // USUÁRIOS
-  btnUserRegister.addEventListener("click",()=>userModal.show());
+  const userModal = new bootstrap.Modal(document.getElementById("userModal"));
+  btnUserRegister.addEventListener("click",()=>{fetchUsers();userModal.show();});
   document.getElementById("userForm").addEventListener("submit",async e=>{
     e.preventDefault();
     const newUser = {
@@ -356,7 +352,8 @@
   }
 
   // OPERADORES
-  document.getElementById("btnOperators").addEventListener("click",()=>operatorsModal.show());
+  const operatorsModal = new bootstrap.Modal(document.getElementById("operatorsModal"));
+  document.getElementById("btnOperators").addEventListener("click",()=>{fetchOperators();operatorsModal.show();});
   const operatorsList = document.getElementById("operatorsList");
   document.getElementById("addOperatorBtn").addEventListener("click",async ()=>{
     const name = document.getElementById("newOperator").value.trim();
@@ -369,41 +366,4 @@
     const snapshot = await db.collection("operators").get();
     operatorsList.innerHTML="";
     const techSelect = document.getElementById("ticketTech");
-    techSelect.innerHTML="<option value=''>Selecione o Técnico</option>";
-    snapshot.forEach(doc=>{
-      const op = doc.data();
-      const li = document.createElement("li");
-      li.className="list-group-item bg-dark text-white d-flex justify-content-between";
-      li.innerHTML=`${op.name}<button class="btn btn-sm btn-danger" onclick="removeOperator('${doc.id}')">Excluir</button>`;
-      operatorsList.appendChild(li);
-      techSelect.innerHTML += `<option value="${op.name}">${op.name}</option>`;
-    });
-  }
-  window.removeOperator = async function(id){ await db.collection("operators").doc(id).delete(); fetchOperators(); }
-
-  // NOVO CHAMADO
-  const newTicketModal = new bootstrap.Modal(document.getElementById("newTicketModal"));
-  document.getElementById("btnNewTicket").addEventListener("click",()=>{
-    fetchOperators(); // garante lista atualizada
-    newTicketModal.show();
-  });
-  document.getElementById("ticketForm").addEventListener("submit",async e=>{
-    e.preventDefault();
-    const ticket = {
-      subject: document.getElementById("ticketSubject").value,
-      client: document.getElementById("ticketClient").value,
-      description: document.getElementById("ticketDescription").value,
-      tech: document.getElementById("ticketTech").value,
-      priority: document.getElementById("ticketPriority").value,
-      status: document.getElementById("ticketStatus").value,
-      date: new Date().toISOString()
-    };
-    await db.collection("tickets").add(ticket);
-    e.target.reset();
-    newTicketModal.hide();
-    carregarChamados();
-  });
-</script>
-
-</body>
-</html>
+    techSelect.innerHTML="<option value=''>Sele
