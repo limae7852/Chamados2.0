@@ -52,7 +52,12 @@
 
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h3><i class="bi bi-ticket-detailed"></i> Chamados</h3>
-    <button id="btnUserRegister" class="btn btn-success btn-sm d-none">Cadastrar Usuário</button>
+    <div>
+      <button id="btnNewTicket" class="btn btn-primary btn-sm me-2">
+        <i class="bi bi-plus-lg"></i> Novo Chamado
+      </button>
+      <button id="btnUserRegister" class="btn btn-success btn-sm d-none">Cadastrar Usuário</button>
+    </div>
   </div>
 
   <div class="table-responsive mb-3">
@@ -136,6 +141,51 @@
         <button onclick="downloadExcel()" class="btn btn-success btn-sm">Excel</button>
       </div>
       <div id="reportContent"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Novo Chamado -->
+<div class="modal fade" id="newTicketModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content p-3">
+      <div class="d-flex justify-content-between mb-2">
+        <h5 class="modal-title">Novo Chamado</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="ticketForm">
+        <div class="row">
+          <div class="col-md-6 mb-2">
+            <input class="form-control" id="ticketSubject" placeholder="Assunto" required>
+          </div>
+          <div class="col-md-6 mb-2">
+            <input class="form-control" id="ticketClient" placeholder="Cliente" required>
+          </div>
+          <div class="col-12 mb-2">
+            <textarea class="form-control" id="ticketDescription" placeholder="Descrição" required></textarea>
+          </div>
+          <div class="col-md-4 mb-2">
+            <select id="ticketTech" class="form-select" required>
+              <option value="">Selecione o Técnico</option>
+            </select>
+          </div>
+          <div class="col-md-4 mb-2">
+            <select id="ticketPriority" class="form-select" required>
+              <option value="Baixa">Baixa</option>
+              <option value="Média">Média</option>
+              <option value="Alta">Alta</option>
+            </select>
+          </div>
+          <div class="col-md-4 mb-2">
+            <select id="ticketStatus" class="form-select" required>
+              <option value="Aberto">Aberto</option>
+              <option value="Em andamento">Em andamento</option>
+              <option value="Resolvido">Resolvido</option>
+            </select>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary w-100 mt-2">Salvar Chamado</button>
+      </form>
     </div>
   </div>
 </div>
@@ -316,26 +366,44 @@
     fetchOperators();
   });
   async function fetchOperators(){
-    const snapshot = await db.collection("operators").orderBy("name").get();
+    const snapshot = await db.collection("operators").get();
     operatorsList.innerHTML="";
+    const techSelect = document.getElementById("ticketTech");
+    techSelect.innerHTML="<option value=''>Selecione o Técnico</option>";
     snapshot.forEach(doc=>{
       const op = doc.data();
       const li = document.createElement("li");
-      li.className="list-group-item d-flex justify-content-between align-items-center bg-dark text-white";
-      li.textContent=op.name;
-      const btn = document.createElement("button");
-      btn.className="btn btn-sm btn-danger";
-      btn.textContent="Remover";
-      btn.onclick=async()=>{await db.collection("operators").doc(doc.id).delete(); fetchOperators();}
-      li.appendChild(btn);
+      li.className="list-group-item bg-dark text-white d-flex justify-content-between";
+      li.innerHTML=`${op.name}<button class="btn btn-sm btn-danger" onclick="removeOperator('${doc.id}')">Excluir</button>`;
       operatorsList.appendChild(li);
+      techSelect.innerHTML += `<option value="${op.name}">${op.name}</option>`;
     });
   }
+  window.removeOperator = async function(id){ await db.collection("operators").doc(id).delete(); fetchOperators(); }
 
-  // Inicial fetch
-  fetchUsers();
-  fetchOperators();
-
+  // NOVO CHAMADO
+  const newTicketModal = new bootstrap.Modal(document.getElementById("newTicketModal"));
+  document.getElementById("btnNewTicket").addEventListener("click",()=>{
+    fetchOperators(); // garante lista atualizada
+    newTicketModal.show();
+  });
+  document.getElementById("ticketForm").addEventListener("submit",async e=>{
+    e.preventDefault();
+    const ticket = {
+      subject: document.getElementById("ticketSubject").value,
+      client: document.getElementById("ticketClient").value,
+      description: document.getElementById("ticketDescription").value,
+      tech: document.getElementById("ticketTech").value,
+      priority: document.getElementById("ticketPriority").value,
+      status: document.getElementById("ticketStatus").value,
+      date: new Date().toISOString()
+    };
+    await db.collection("tickets").add(ticket);
+    e.target.reset();
+    newTicketModal.hide();
+    carregarChamados();
+  });
 </script>
+
 </body>
 </html>
