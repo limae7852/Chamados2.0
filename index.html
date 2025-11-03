@@ -49,11 +49,14 @@
 
 <!-- Sistema -->
 <div class="container d-none" id="mainContainer">
+
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h3><i class="bi bi-ticket-detailed"></i> Chamados</h3>
     <div>
-      <button id="btnNewTicket" class="btn btn-success btn-sm me-2 d-none"><i class="bi bi-plus-circle"></i> Novo Chamado</button>
-      <button id="btnUserRegister" class="btn btn-warning btn-sm d-none"><i class="bi bi-person-plus"></i> Cadastrar Usuário</button>
+      <button id="btnNewTicket" class="btn btn-primary btn-sm me-2">
+        <i class="bi bi-plus-lg"></i> Novo Chamado
+      </button>
+      <button id="btnUserRegister" class="btn btn-success btn-sm d-none">Cadastrar Usuário</button>
     </div>
   </div>
 
@@ -79,180 +82,328 @@
     <button id="btnOperators" class="btn btn-info btn-sm">Gerenciar Operadores</button>
     <button id="btnReport" class="btn btn-warning btn-sm">Relatório PDF/Excel</button>
   </div>
+
+</div>
+
+<!-- Modal Usuários -->
+<div class="modal fade" id="userModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content p-3">
+      <div class="d-flex justify-content-between mb-2">
+        <h5 class="modal-title">Cadastrar Usuário</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="userForm">
+        <div class="mb-2"><input class="form-control" placeholder="Nome" id="userName" required></div>
+        <div class="mb-2"><input class="form-control" placeholder="Login" id="userLogin" required></div>
+        <div class="mb-2"><input type="password" class="form-control" placeholder="Senha" id="userPass" required></div>
+        <div class="mb-2">
+          <select id="userRole" class="form-control" required>
+            <option value="admin">Admin</option>
+            <option value="tech">Técnico</option>
+            <option value="operator">Operador</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-success w-100">Salvar</button>
+      </form>
+      <ul id="usersList" class="mt-3 list-group list-group-flush"></ul>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Operadores -->
+<div class="modal fade" id="operatorsModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content p-3">
+      <div class="d-flex justify-content-between mb-2">
+        <h5 class="modal-title">Operadores</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="d-flex mb-2">
+        <input id="newOperator" class="form-control me-2" placeholder="Nome do Técnico">
+        <button id="addOperatorBtn" class="btn btn-primary">Adicionar</button>
+      </div>
+      <ul id="operatorsList" class="list-group list-group-flush"></ul>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Relatório -->
+<div class="modal fade" id="reportModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content p-3">
+      <div class="d-flex justify-content-between mb-2">
+        <h5 class="modal-title">Relatório de Chamados</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="mb-2">
+        <button onclick="downloadPDF()" class="btn btn-danger btn-sm">PDF</button>
+        <button onclick="downloadExcel()" class="btn btn-success btn-sm">Excel</button>
+      </div>
+      <div id="reportContent"></div>
+    </div>
+  </div>
 </div>
 
 <!-- Modal Novo Chamado -->
 <div class="modal fade" id="newTicketModal" tabindex="-1">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-lg">
     <div class="modal-content p-3">
       <div class="d-flex justify-content-between mb-2">
         <h5 class="modal-title">Novo Chamado</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <form id="ticketForm">
-        <div class="mb-2"><input class="form-control" id="ticketSubject" placeholder="Assunto" required></div>
-        <div class="mb-2"><input class="form-control" id="ticketClient" placeholder="Cliente" required></div>
-        <div class="mb-2"><textarea class="form-control" id="ticketDescription" placeholder="Descrição" required></textarea></div>
-        <div class="mb-2"><select id="ticketTech" class="form-control" required><option value="">Selecione o Técnico</option></select></div>
-        <div class="mb-2"><select id="ticketPriority" class="form-control">
-          <option value="Baixa">Baixa</option><option value="Média">Média</option><option value="Alta">Alta</option>
-        </select></div>
-        <div class="mb-2"><select id="ticketStatus" class="form-control">
-          <option value="Aberto">Aberto</option><option value="Em andamento">Em andamento</option><option value="Resolvido">Resolvido</option>
-        </select></div>
-        <button class="btn btn-success w-100" type="submit">Salvar</button>
+        <div class="row">
+          <div class="col-md-6 mb-2">
+            <input class="form-control" id="ticketSubject" placeholder="Assunto" required>
+          </div>
+          <div class="col-md-6 mb-2">
+            <input class="form-control" id="ticketClient" placeholder="Cliente" required>
+          </div>
+          <div class="col-12 mb-2">
+            <textarea class="form-control" id="ticketDescription" placeholder="Descrição" required></textarea>
+          </div>
+          <div class="col-md-4 mb-2">
+            <select id="ticketTech" class="form-select" required>
+              <option value="">Selecione o Técnico</option>
+            </select>
+          </div>
+          <div class="col-md-4 mb-2">
+            <select id="ticketPriority" class="form-select" required>
+              <option value="Baixa">Baixa</option>
+              <option value="Média">Média</option>
+              <option value="Alta">Alta</option>
+            </select>
+          </div>
+          <div class="col-md-4 mb-2">
+            <select id="ticketStatus" class="form-select" required>
+              <option value="Aberto">Aberto</option>
+              <option value="Em andamento">Em andamento</option>
+              <option value="Resolvido">Resolvido</option>
+            </select>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary w-100 mt-2">Salvar Chamado</button>
       </form>
     </div>
   </div>
 </div>
 
-<!-- Firebase + Lógica -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyBA16WHE768N9eUcqEoQqUF7uEIB82nNM0",
-  authDomain: "chamados-37b34.firebaseapp.com",
-  projectId: "chamados-37b34",
-  storageBucket: "chamados-37b34.firebasestorage.app",
-  messagingSenderId: "164935126006",
-  appId: "1:164935126006:web:e49fd19961993d5b62d5d7"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-
-const loginBtn = document.getElementById("loginBtn");
-const logoutBtn = document.getElementById("logoutBtn");
-const loginContainer = document.getElementById("loginContainer");
-const mainContainer = document.getElementById("mainContainer");
-const ticketTableBody = document.getElementById("ticketTableBody");
-const btnUserRegister = document.getElementById("btnUserRegister");
-const btnNewTicket = document.getElementById("btnNewTicket");
-
-let currentUser = null;
-let tickets = [];
-
-// === LOGIN ===
-loginBtn.addEventListener("click", async ()=>{
-  const user = document.getElementById("loginUser").value.trim();
-  const pass = document.getElementById("loginPass").value.trim();
-  if(!user||!pass){alert("Preencha todos os campos!"); return;}
-  const snapshot = await db.collection("users").where("login","==",user).where("password","==",pass).get();
-  if(snapshot.empty){alert("Usuário ou senha incorretos!"); return;}
-  currentUser = snapshot.docs[0].data();
-  loginContainer.classList.add("d-none");
-  mainContainer.classList.remove("d-none");
-  logoutBtn.classList.remove("d-none");
-  if(currentUser.role=="admin"){
-    btnUserRegister.classList.remove("d-none");
-    btnNewTicket.classList.remove("d-none");
-  }
-  carregarChamados();
-});
-
-// === LOGOUT ===
-logoutBtn.addEventListener("click",()=>{
-  currentUser=null;
-  loginContainer.classList.remove("d-none");
-  mainContainer.classList.add("d-none");
-  logoutBtn.classList.add("d-none");
-});
-
-// === CARREGAR CHAMADOS ===
-async function carregarChamados(){
-  ticketTableBody.innerHTML="<tr><td colspan='8' class='text-center'>Carregando...</td></tr>";
-  const snapshot = await db.collection("tickets").orderBy("date","asc").get();
-  tickets = snapshot.docs.map(d=>({id:d.id,...d.data()}));
-  renderTickets();
-}
-
-function renderTickets(){
-  if(tickets.length==0){ticketTableBody.innerHTML="<tr><td colspan='8'>Nenhum chamado.</td></tr>"; return;}
-  ticketTableBody.innerHTML="";
-  tickets.forEach(t=>{
-    const row = document.createElement("tr");
-    let actionBtns = `<button class='btn-details btn btn-sm' onclick="showDetails('${t.id}')">Detalhes</button>`;
-    if(currentUser && currentUser.role==="admin"){
-      actionBtns += `
-        <button class='btn-edit btn btn-sm' onclick="editTicket('${t.id}')">Editar</button>
-        <button class='btn-close btn btn-sm' onclick="deleteTicket('${t.id}')">Excluir</button>`;
-    }
-    row.innerHTML = `
-      <td>${t.subject||"-"}</td>
-      <td>${t.client||"-"}</td>
-      <td>${t.description||"-"}</td>
-      <td>${t.tech||"-"}</td>
-      <td>${t.priority||"-"}</td>
-      <td>${t.status||"-"}</td>
-      <td>${new Date(t.date).toLocaleString()}</td>
-      <td>${actionBtns}</td>`;
-    ticketTableBody.appendChild(row);
-  });
-}
-
-// === NOVO CHAMADO ===
-const newTicketModal = new bootstrap.Modal(document.getElementById("newTicketModal"));
-btnNewTicket.addEventListener("click",()=>{fetchOperators(); newTicketModal.show();});
-
-document.getElementById("ticketForm").addEventListener("submit",async e=>{
-  e.preventDefault();
-  const ticket = {
-    subject: ticketSubject.value,
-    client: ticketClient.value,
-    description: ticketDescription.value,
-    tech: ticketTech.value,
-    priority: ticketPriority.value,
-    status: ticketStatus.value,
-    date: new Date().toISOString()
+  // === FIREBASE ===
+  const firebaseConfig = {
+    apiKey: "AIzaSyBA16WHE768N9eUcqEoQqUF7uEIB82nNM0",
+    authDomain: "chamados-37b34.firebaseapp.com",
+    projectId: "chamados-37b34",
+    storageBucket: "chamados-37b34.firebasestorage.app",
+    messagingSenderId: "164935126006",
+    appId: "1:164935126006:web:e49fd19961993d5b62d5d7"
   };
-  await db.collection("tickets").add(ticket);
-  e.target.reset();
-  newTicketModal.hide();
-  carregarChamados();
-});
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
 
-// === EDITAR E EXCLUIR ===
-window.editTicket = async function(id){
-  const t = tickets.find(tt=>tt.id==id);
-  if(!t) return;
-  document.getElementById("ticketSubject").value=t.subject;
-  document.getElementById("ticketClient").value=t.client;
-  document.getElementById("ticketDescription").value=t.description;
-  document.getElementById("ticketTech").value=t.tech;
-  document.getElementById("ticketPriority").value=t.priority;
-  document.getElementById("ticketStatus").value=t.status;
-  newTicketModal.show();
-  document.getElementById("ticketForm").onsubmit = async e=>{
-    e.preventDefault();
-    await db.collection("tickets").doc(id).update({
-      subject: ticketSubject.value,
-      client: ticketClient.value,
-      description: ticketDescription.value,
-      tech: ticketTech.value,
-      priority: ticketPriority.value,
-      status: ticketStatus.value
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const loginContainer = document.getElementById("loginContainer");
+  const mainContainer = document.getElementById("mainContainer");
+  const ticketTableBody = document.getElementById("ticketTableBody");
+  const btnUserRegister = document.getElementById("btnUserRegister");
+
+  const userModal = new bootstrap.Modal(document.getElementById("userModal"));
+  const operatorsModal = new bootstrap.Modal(document.getElementById("operatorsModal"));
+  const reportModal = new bootstrap.Modal(document.getElementById("reportModal"));
+
+  let currentUser = null;
+  let tickets = [];
+
+  // LOGIN
+  loginBtn.addEventListener("click", async () => {
+    const user = document.getElementById("loginUser").value.trim();
+    const pass = document.getElementById("loginPass").value.trim();
+    if(!user||!pass){alert("Preencha todos os campos!"); return;}
+    const snapshot = await db.collection("users").where("login","==",user).where("password","==",pass).get();
+    if(snapshot.empty){alert("Usuário ou senha incorretos!"); return;}
+    currentUser = snapshot.docs[0].data();
+    loginContainer.classList.add("d-none");
+    mainContainer.classList.remove("d-none");
+    logoutBtn.classList.remove("d-none");
+    if(currentUser.role=="admin") btnUserRegister.classList.remove("d-none");
+    carregarChamados();
+  });
+
+  // LOGOUT
+  logoutBtn.addEventListener("click", ()=>{
+    currentUser=null;
+    loginContainer.classList.remove("d-none");
+    mainContainer.classList.add("d-none");
+    logoutBtn.classList.add("d-none");
+  });
+
+  // CARREGAR CHAMADOS
+  async function carregarChamados(){
+    ticketTableBody.innerHTML="<tr><td colspan='8' class='text-center'>Carregando...</td></tr>";
+    const snapshot = await db.collection("tickets").orderBy("date","asc").get();
+    tickets = snapshot.docs.map(d=>({id:d.id,...d.data()}));
+    renderTickets();
+  }
+
+  function renderTickets(){
+    if(tickets.length==0){ticketTableBody.innerHTML="<tr><td colspan='8'>Nenhum chamado.</td></tr>"; return;}
+    ticketTableBody.innerHTML="";
+    tickets.forEach(t=>{
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${t.subject||"-"}</td>
+        <td>${t.client||"-"}</td>
+        <td>${t.description||"-"}</td>
+        <td>${t.tech||"-"}</td>
+        <td>${t.priority||"-"}</td>
+        <td>${t.status||"-"}</td>
+        <td>${new Date(t.date).toLocaleString()}</td>
+        <td><button class="btn-details btn btn-sm btn-primary" onclick="showDetails('${t.id}')">Detalhes</button></td>
+      `;
+      ticketTableBody.appendChild(row);
     });
+  }
+
+  // DETALHES
+  window.showDetails = async function(id){
+    const ticket = tickets.find(t=>t.id==id);
+    if(!ticket) return;
+    const content = document.getElementById("reportContent");
+    content.innerHTML = `
+      <p><strong>Assunto:</strong> ${ticket.subject}</p>
+      <p><strong>Cliente:</strong> ${ticket.client}</p>
+      <p><strong>Descrição:</strong> ${ticket.description}</p>
+      <p><strong>Técnico:</strong> ${ticket.tech}</p>
+      <p><strong>Prioridade:</strong> ${ticket.priority}</p>
+      <p><strong>Status:</strong> ${ticket.status}</p>
+      <p><strong>Data:</strong> ${new Date(ticket.date).toLocaleString()}</p>
+    `;
+    reportModal.show();
+  }
+
+  // RELATÓRIO
+  document.getElementById("btnReport").addEventListener("click", ()=>{
+    const content = document.getElementById("reportContent");
+    if(tickets.length==0){content.innerHTML="<p>Nenhum chamado registrado.</p>"; reportModal.show(); return;}
+    let html = `<table class="table table-dark table-striped"><thead><tr>
+      <th>Assunto</th><th>Cliente</th><th>Descrição</th><th>Técnico</th><th>Prioridade</th><th>Status</th><th>Data</th>
+    </tr></thead><tbody>`;
+    tickets.forEach(t=>{
+      html+=`<tr>
+        <td>${t.subject}</td><td>${t.client}</td><td>${t.description}</td><td>${t.tech}</td>
+        <td>${t.priority}</td><td>${t.status}</td><td>${new Date(t.date).toLocaleString()}</td>
+      </tr>`;
+    });
+    html += "</tbody></table>";
+    content.innerHTML = html;
+    reportModal.show();
+  });
+
+  function downloadPDF(){
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    let y=10;
+    doc.text("Relatório de Chamados",10,y); y+=10;
+    tickets.forEach(t=>{
+      doc.text(`Assunto: ${t.subject}`,10,y); y+=6;
+      doc.text(`Cliente: ${t.client}`,10,y); y+=6;
+      doc.text(`Descrição: ${t.description}`,10,y); y+=6;
+      doc.text(`Técnico: ${t.tech}`,10,y); y+=6;
+      doc.text(`Prioridade: ${t.priority}`,10,y); y+=6;
+      doc.text(`Status: ${t.status}`,10,y); y+=6;
+      doc.text(`Data: ${new Date(t.date).toLocaleString()}`,10,y); y+=10;
+    });
+    doc.save("relatorio_chamados.pdf");
+  }
+
+  function downloadExcel(){
+    const wb = XLSX.utils.book_new();
+    const ws_data=[["Assunto","Cliente","Descrição","Técnico","Prioridade","Status","Data"]];
+    tickets.forEach(t=>ws_data.push([t.subject,t.client,t.description,t.tech,t.priority,t.status,new Date(t.date).toLocaleString()]));
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    XLSX.utils.book_append_sheet(wb,ws,"Chamados");
+    XLSX.writeFile(wb,"relatorio_chamados.xlsx");
+  }
+
+  // USUÁRIOS
+  btnUserRegister.addEventListener("click",()=>userModal.show());
+  document.getElementById("userForm").addEventListener("submit",async e=>{
+    e.preventDefault();
+    const newUser = {
+      name: document.getElementById("userName").value,
+      login: document.getElementById("userLogin").value,
+      password: document.getElementById("userPass").value,
+      role: document.getElementById("userRole").value
+    };
+    await db.collection("users").add(newUser);
+    e.target.reset();
+    fetchUsers();
+  });
+  async function fetchUsers(){
+    const snapshot = await db.collection("users").get();
+    const ul = document.getElementById("usersList"); ul.innerHTML="";
+    snapshot.forEach(doc=>{
+      const u = doc.data();
+      const li = document.createElement("li");
+      li.className="list-group-item bg-dark text-white";
+      li.textContent = `${u.name} (${u.login}) - ${u.role}`;
+      ul.appendChild(li);
+    });
+  }
+
+  // OPERADORES
+  document.getElementById("btnOperators").addEventListener("click",()=>operatorsModal.show());
+  const operatorsList = document.getElementById("operatorsList");
+  document.getElementById("addOperatorBtn").addEventListener("click",async ()=>{
+    const name = document.getElementById("newOperator").value.trim();
+    if(!name) return;
+    await db.collection("operators").add({name});
+    document.getElementById("newOperator").value="";
+    fetchOperators();
+  });
+  async function fetchOperators(){
+    const snapshot = await db.collection("operators").get();
+    operatorsList.innerHTML="";
+    const techSelect = document.getElementById("ticketTech");
+    techSelect.innerHTML="<option value=''>Selecione o Técnico</option>";
+    snapshot.forEach(doc=>{
+      const op = doc.data();
+      const li = document.createElement("li");
+      li.className="list-group-item bg-dark text-white d-flex justify-content-between";
+      li.innerHTML=`${op.name}<button class="btn btn-sm btn-danger" onclick="removeOperator('${doc.id}')">Excluir</button>`;
+      operatorsList.appendChild(li);
+      techSelect.innerHTML += `<option value="${op.name}">${op.name}</option>`;
+    });
+  }
+  window.removeOperator = async function(id){ await db.collection("operators").doc(id).delete(); fetchOperators(); }
+
+  // NOVO CHAMADO
+  const newTicketModal = new bootstrap.Modal(document.getElementById("newTicketModal"));
+  document.getElementById("btnNewTicket").addEventListener("click",()=>{
+    fetchOperators(); // garante lista atualizada
+    newTicketModal.show();
+  });
+  document.getElementById("ticketForm").addEventListener("submit",async e=>{
+    e.preventDefault();
+    const ticket = {
+      subject: document.getElementById("ticketSubject").value,
+      client: document.getElementById("ticketClient").value,
+      description: document.getElementById("ticketDescription").value,
+      tech: document.getElementById("ticketTech").value,
+      priority: document.getElementById("ticketPriority").value,
+      status: document.getElementById("ticketStatus").value,
+      date: new Date().toISOString()
+    };
+    await db.collection("tickets").add(ticket);
+    e.target.reset();
     newTicketModal.hide();
     carregarChamados();
-  };
-};
-
-window.deleteTicket = async function(id){
-  if(confirm("Deseja excluir este chamado?")){
-    await db.collection("tickets").doc(id).delete();
-    carregarChamados();
-  }
-};
-
-// === OPERADORES ===
-async function fetchOperators(){
-  const snapshot = await db.collection("operators").get();
-  const techSelect = document.getElementById("ticketTech");
-  techSelect.innerHTML="<option value=''>Selecione o Técnico</option>";
-  snapshot.forEach(doc=>{
-    const op = doc.data();
-    techSelect.innerHTML += `<option value="${op.name}">${op.name}</option>`;
   });
-}
 </script>
+
 </body>
 </html>
