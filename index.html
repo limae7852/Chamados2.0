@@ -10,8 +10,6 @@
 <!-- Firebase compat -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-<!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <!-- XLSX e jsPDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -39,19 +37,24 @@
     transition: background-color .25s, color .25s;
   }
 
-  .navbar { background: var(--navbar); color: #fff !important; }
-  .card { background-color: var(--card); border: 1px solid var(--border); border-radius: 0.75rem; box-shadow: 0 3px 12px rgba(0,0,0,0.08); }
+  .navbar {
+    background: var(--navbar);
+    color: #fff !important;
+  }
+
+  .card {
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+  }
+
   .table thead th { background-color: var(--border); }
   .btn { border-radius: .4rem; font-weight: 500; }
   .theme-toggle { background: transparent; color: #fff; border: none; font-size:1.2rem; }
+  .modal-content { border-radius: .75rem; }
   #loginContainer { margin-top: 8vh; }
   footer { text-align:center; color: #6c757d; padding:10px; font-size: .85rem; }
-
-  /* 🔥 Destaque chamados abertos de prioridade alta */
-  .highlight-high {
-    background-color: rgba(255, 0, 0, 0.1) !important;
-    border-left: 4px solid red !important;
-  }
 </style>
 </head>
 <body>
@@ -97,12 +100,6 @@
     </div>
   </div>
 
-  <!-- Gráfico de Status -->
-  <div class="card p-3 mb-4">
-    <h5><i class="bi bi-bar-chart"></i> Status dos Chamados</h5>
-    <canvas id="statusChart" height="100"></canvas>
-  </div>
-
   <div class="card p-3 mb-4 shadow-sm">
     <div class="table-responsive">
       <table class="table table-striped align-middle text-center">
@@ -123,17 +120,114 @@
   </div>
 </div>
 
-<!-- MODAIS (iguais ao código anterior, omitidos para brevidade) -->
-<!-- ... (usuários, operadores, relatório, novo chamado, footer etc.) -->
+<!-- Modal Usuários -->
+<div class="modal fade" id="userModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content p-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="modal-title">Cadastrar Usuário</h5>
+        <button type="button" class="btn-close btn-close-black" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="userForm">
+        <div class="mb-2"><input class="form-control" placeholder="Nome" id="userName" required></div>
+        <div class="mb-2"><input class="form-control" placeholder="Login" id="userLogin" required></div>
+        <div class="mb-2"><input type="password" class="form-control" placeholder="Senha" id="userPass" required></div>
+        <div class="mb-2">
+          <select id="userRole" class="form-control" required>
+            <option value="admin">Admin</option>
+            <option value="tech">Técnico</option>
+            <option value="operator">Operador</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-success w-100">Salvar</button>
+      </form>
+      <ul id="usersList" class="mt-3 list-group list-group-flush"></ul>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Operadores -->
+<div class="modal fade" id="operatorsModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content p-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="modal-title">Operadores</h5>
+        <button type="button" class="btn-close btn-close-black" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="d-flex mb-2">
+        <input id="newOperator" class="form-control me-2" placeholder="Nome do Técnico">
+        <button id="addOperatorBtn" class="btn btn-primary">Adicionar</button>
+      </div>
+      <ul id="operatorsList" class="list-group list-group-flush"></ul>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Relatório -->
+<div class="modal fade" id="reportModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content p-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="modal-title">Relatório de Chamados</h5>
+        <button type="button" class="btn-close btn-close-black" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="mb-2">
+        <button id="downloadPdfBtn" class="btn btn-danger btn-sm">PDF</button>
+        <button id="downloadExcelBtn" class="btn btn-success btn-sm">Excel</button>
+      </div>
+      <div id="reportContent"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Novo Chamado -->
+<div class="modal fade" id="newTicketModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content p-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="modal-title">Novo Chamado</h5>
+        <button type="button" class="btn-close btn-close-black" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="ticketForm">
+        <div class="row">
+          <div class="col-md-6 mb-2"><input class="form-control" id="ticketSubject" placeholder="Assunto" required></div>
+          <div class="col-md-6 mb-2"><input class="form-control" id="ticketClient" placeholder="Cliente" required></div>
+          <div class="col-12 mb-2"><textarea class="form-control" id="ticketDescription" placeholder="Descrição" required></textarea></div>
+          <div class="col-md-4 mb-2">
+            <select id="ticketTech" class="form-select" required>
+              <option value="">Selecione o Técnico</option>
+            </select>
+          </div>
+          <div class="col-md-4 mb-2">
+            <select id="ticketPriority" class="form-select" required>
+              <option value="Baixa">Baixa</option>
+              <option value="Média">Média</option>
+              <option value="Alta">Alta</option>
+            </select>
+          </div>
+          <div class="col-md-4 mb-2">
+            <select id="ticketStatus" class="form-select" required>
+              <option value="Aberto">Aberto</option>
+              <option value="Em andamento">Em andamento</option>
+              <option value="Resolvido">Resolvido</option>
+            </select>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary w-100 mt-2">Salvar Chamado</button>
+      </form>
+    </div>
+  </div>
+</div>
+
 <footer>
-  <p>© 2025 Sistema de Chamados - Desenvolvido com ❤️ por Eduardo Lima</p>
+  <p>© 2025 Sistema de Chamados - Desenvolvido por Eduardo Lima</p>
 </footer>
 
 <!-- Bootstrap bundle -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-/* =================== FIREBASE =================== */
+/* ========== FIREBASE ========== */
 const firebaseConfig = {
   apiKey: "AIzaSyBA16WHE768N9eUcqEoQqUF7uEIB82nNM0",
   authDomain: "chamados-37b34.firebaseapp.com",
@@ -145,7 +239,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-/* =================== ELEMENTOS =================== */
+/* ========== ELEMENTS ========== */
 const loginBtn = document.getElementById("loginBtn");
 const logoutBtn = document.getElementById("logoutBtn");
 const loginContainer = document.getElementById("loginContainer");
@@ -153,98 +247,246 @@ const mainContainer = document.getElementById("mainContainer");
 const ticketTableBody = document.getElementById("ticketTableBody");
 const btnUserRegister = document.getElementById("btnUserRegister");
 const btnNewTicket = document.getElementById("btnNewTicket");
+const btnOperators = document.getElementById("btnOperators");
+const btnReport = document.getElementById("btnReport");
 const themeToggle = document.getElementById("themeToggle");
+
+const userModal = new bootstrap.Modal(document.getElementById("userModal"));
+const operatorsModal = new bootstrap.Modal(document.getElementById("operatorsModal"));
+const reportModal = new bootstrap.Modal(document.getElementById("reportModal"));
+const newTicketModal = new bootstrap.Modal(document.getElementById("newTicketModal"));
+
+/* ========== STATE ========== */
 let currentUser = null;
 let tickets = [];
-let chart = null;
 
-/* =================== LOGIN =================== */
-loginBtn.addEventListener("click", async ()=>{
+/* ========== LOGIN / LOGOUT ========== */
+loginBtn.addEventListener("click", async () => {
   const user = document.getElementById("loginUser").value.trim();
   const pass = document.getElementById("loginPass").value.trim();
+  if(!user || !pass){ alert("Preencha todos os campos!"); return; }
   const snapshot = await db.collection("users").where("login","==",user).where("password","==",pass).get();
   if(snapshot.empty){ alert("Usuário ou senha incorretos!"); return; }
   currentUser = snapshot.docs[0].data();
   loginContainer.classList.add("d-none");
   mainContainer.classList.remove("d-none");
   logoutBtn.classList.remove("d-none");
-  if(currentUser.role==="admin") btnUserRegister.classList.remove("d-none");
+  if(currentUser.role === "admin") btnUserRegister.classList.remove("d-none");
   carregarChamados();
 });
 
-logoutBtn.addEventListener("click", ()=>{
-  currentUser=null;
+logoutBtn.addEventListener("click", () => {
+  currentUser = null;
   loginContainer.classList.remove("d-none");
   mainContainer.classList.add("d-none");
   logoutBtn.classList.add("d-none");
 });
 
-/* =================== CARREGAR CHAMADOS =================== */
+/* ========== CARREGAR / RENDER CHAMADOS ========== */
 async function carregarChamados(){
+  ticketTableBody.innerHTML = "<tr><td colspan='8' class='text-center'>Carregando...</td></tr>";
   const snapshot = await db.collection("tickets").orderBy("date","asc").get();
-  tickets = snapshot.docs.map(d=>({id:d.id,...d.data()}));
+  tickets = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
   renderTickets();
-  atualizarGrafico();
 }
 
 function renderTickets(){
-  ticketTableBody.innerHTML="";
-  if(tickets.length===0){ticketTableBody.innerHTML="<tr><td colspan='8'>Nenhum chamado.</td></tr>";return;}
-  tickets.forEach(t=>{
-    const tr=document.createElement("tr");
-    if(t.status==="Aberto" && t.priority==="Alta") tr.classList.add("highlight-high");
-    tr.innerHTML=`
-      <td>${t.subject||"-"}</td>
-      <td>${t.client||"-"}</td>
-      <td class="text-start">${t.description||"-"}</td>
-      <td>${t.tech||"-"}</td>
-      <td>${t.priority||"-"}</td>
-      <td>${t.status||"-"}</td>
+  ticketTableBody.innerHTML = "";
+  if(!tickets || tickets.length === 0){
+    ticketTableBody.innerHTML = "<tr><td colspan='8'>Nenhum chamado.</td></tr>";
+    return;
+  }
+  tickets.forEach(t => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${escapeHtml(t.subject||"-")}</td>
+      <td>${escapeHtml(t.client||"-")}</td>
+      <td class="text-start">${escapeHtml(t.description||"-")}</td>
+      <td>${escapeHtml(t.tech||"-")}</td>
+      <td>${escapeHtml(t.priority||"-")}</td>
+      <td>${escapeHtml(t.status||"-")}</td>
       <td>${t.date ? new Date(t.date).toLocaleString() : "-"}</td>
       <td>
-        <button class="btn btn-primary btn-sm"><i class="bi bi-eye"></i></button>
-        ${currentUser?.role==="admin" && t.status!=="Encerrado"
-          ? `<button class="btn btn-success btn-sm ms-1" onclick="encerrarChamado('${t.id}')"><i class="bi bi-check2-circle"></i></button>`:""}
-      </td>`;
-    ticketTableBody.appendChild(tr);
+        <button class="btn btn-primary btn-sm" onclick="showDetails('${t.id}')"><i class="bi bi-eye"></i></button>
+        ${currentUser && currentUser.role === "admin" && t.status !== "Encerrado"
+          ? `<button class="btn btn-success btn-sm ms-1" onclick="encerrarChamado('${t.id}')"><i class="bi bi-check2-circle"></i></button>`
+          : ""}
+      </td>
+    `;
+    ticketTableBody.appendChild(row);
   });
 }
 
-/* =================== GRÁFICO =================== */
-function atualizarGrafico(){
-  const statusCount = {Aberto:0,"Em andamento":0,Resolvido:0,Encerrado:0};
-  tickets.forEach(t=>{ if(statusCount[t.status]!==undefined) statusCount[t.status]++; });
-  const ctx=document.getElementById("statusChart").getContext("2d");
-  const data = {
-    labels:Object.keys(statusCount),
-    datasets:[{
-      label:"Chamados",
-      data:Object.values(statusCount),
-      backgroundColor:["#dc3545","#ffc107","#0d6efd","#198754"]
-    }]
-  };
-  if(chart){ chart.destroy(); }
-  chart=new Chart(ctx,{ type:"bar", data, options:{responsive:true, plugins:{legend:{display:false}}}});
-}
+/* ========== DETALHES E ENCERRAR ========== */
+window.showDetails = function(id){
+  const ticket = tickets.find(x => x.id === id);
+  if(!ticket) return alert("Chamado não encontrado.");
+  const content = document.getElementById("reportContent");
+  content.innerHTML = `
+    <p><strong>Assunto:</strong> ${escapeHtml(ticket.subject||"-")}</p>
+    <p><strong>Cliente:</strong> ${escapeHtml(ticket.client||"-")}</p>
+    <p><strong>Descrição:</strong> ${escapeHtml(ticket.description||"-")}</p>
+    <p><strong>Técnico:</strong> ${escapeHtml(ticket.tech||"-")}</p>
+    <p><strong>Prioridade:</strong> ${escapeHtml(ticket.priority||"-")}</p>
+    <p><strong>Status:</strong> ${escapeHtml(ticket.status||"-")}</p>
+    <p><strong>Data:</strong> ${ticket.date ? new Date(ticket.date).toLocaleString() : "-"}</p>
+  `;
+  reportModal.show();
+};
 
-/* =================== ENCERRAR CHAMADO =================== */
-async function encerrarChamado(id){
-  if(!confirm("Encerrar chamado?"))return;
-  await db.collection("tickets").doc(id).update({status:"Encerrado"});
+window.encerrarChamado = async function(id){
+  if(!confirm("Deseja realmente encerrar este chamado?")) return;
+  await db.collection("tickets").doc(id).update({ status: "Encerrado" });
+  alert("Chamado encerrado com sucesso!");
   carregarChamados();
+};
+
+/* ========== RELATÓRIO PDF / EXCEL ========== */
+document.getElementById("downloadPdfBtn").addEventListener("click", downloadPDF);
+document.getElementById("downloadExcelBtn").addEventListener("click", downloadExcel);
+
+function downloadPDF(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  let y = 10;
+  doc.text("Relatório de Chamados", 10, y); y += 8;
+  tickets.forEach(t=>{
+    const line = `Assunto: ${t.subject || "-"} | Status: ${t.status || "-"} | Prioridade: ${t.priority || "-"}`;
+    // quebra simples de linha se necessário
+    if(y > 270){ doc.addPage(); y = 10; }
+    doc.text(line.substring(0, 120), 10, y); y += 7;
+  });
+  doc.save("relatorio_chamados.pdf");
 }
 
-/* =================== TEMA =================== */
-function toggleTheme(){
-  const dark=document.documentElement.getAttribute("data-theme")==="dark";
-  if(dark){document.documentElement.removeAttribute("data-theme");themeToggle.innerHTML='<i class="bi bi-moon-fill"></i>';localStorage.setItem("theme","light");}
-  else{document.documentElement.setAttribute("data-theme","dark");themeToggle.innerHTML='<i class="bi bi-sun-fill"></i>';localStorage.setItem("theme","dark");}
+function downloadExcel(){
+  // transforma em planilha simples com campos relevantes
+  const ws_data = [["Assunto","Cliente","Descrição","Técnico","Prioridade","Status","Data"]];
+  tickets.forEach(t => ws_data.push([
+    t.subject||"", t.client||"", t.description||"", t.tech||"", t.priority||"", t.status||"", t.date ? new Date(t.date).toLocaleString() : ""
+  ]));
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(ws_data);
+  XLSX.utils.book_append_sheet(wb, ws, "Chamados");
+  XLSX.writeFile(wb, "relatorio_chamados.xlsx");
 }
-themeToggle.addEventListener("click",toggleTheme);
-window.addEventListener("DOMContentLoaded",()=>{
-  const saved=localStorage.getItem("theme");
-  if(saved==="dark"){document.documentElement.setAttribute("data-theme","dark");themeToggle.innerHTML='<i class="bi bi-sun-fill"></i>';}
+
+/* ========== USUÁRIOS ======== */
+document.getElementById("userForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const newUser = {
+    name: document.getElementById("userName").value,
+    login: document.getElementById("userLogin").value,
+    password: document.getElementById("userPass").value,
+    role: document.getElementById("userRole").value
+  };
+  await db.collection("users").add(newUser);
+  e.target.reset();
+  fetchUsers();
 });
+
+async function fetchUsers(){
+  const snapshot = await db.collection("users").get();
+  const ul = document.getElementById("usersList"); ul.innerHTML = "";
+  snapshot.forEach(doc => {
+    const u = doc.data();
+    const li = document.createElement("li");
+    li.className = "list-group-item bg-light";
+    li.textContent = `${u.name} (${u.login}) - ${u.role}`;
+    ul.appendChild(li);
+  });
+}
+
+/* ========== OPERADORES (TÉCNICOS) ======== */
+document.getElementById("addOperatorBtn").addEventListener("click", async (e) => {
+  e.preventDefault();
+  const name = document.getElementById("newOperator").value.trim();
+  if(!name) return;
+  await db.collection("operators").add({ name });
+  document.getElementById("newOperator").value = "";
+  fetchOperators();
+});
+
+async function fetchOperators(){
+  const snapshot = await db.collection("operators").get();
+  const list = document.getElementById("operatorsList"); list.innerHTML = "";
+  const techSelect = document.getElementById("ticketTech");
+  techSelect.innerHTML = '<option value="">Selecione o Técnico</option>';
+  snapshot.forEach(doc => {
+    const obj = doc.data();
+    const li = document.createElement("li");
+    li.className = "list-group-item bg-light";
+    li.textContent = obj.name;
+    list.appendChild(li);
+
+    const opt = document.createElement("option");
+    opt.value = obj.name;
+    opt.textContent = obj.name;
+    techSelect.appendChild(opt);
+  });
+}
+
+/* ========== NOVO CHAMADO ======== */
+btnNewTicket.addEventListener("click", () => {
+  fetchOperators();
+  newTicketModal.show();
+});
+
+document.getElementById("ticketForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  await db.collection("tickets").add({
+    subject: document.getElementById("ticketSubject").value,
+    client: document.getElementById("ticketClient").value,
+    description: document.getElementById("ticketDescription").value,
+    tech: document.getElementById("ticketTech").value,
+    priority: document.getElementById("ticketPriority").value,
+    status: document.getElementById("ticketStatus").value,
+    date: new Date().getTime()
+  });
+  e.target.reset();
+  newTicketModal.hide();
+  carregarChamados();
+});
+
+/* ========== BOTÕES: abrir modais usuários, operadores, relatório ======== */
+btnUserRegister.addEventListener("click", async () => { await fetchUsers(); userModal.show(); });
+btnOperators.addEventListener("click", async () => { await fetchOperators(); operatorsModal.show(); });
+btnReport.addEventListener("click", () => { reportModal.show(); });
+
+/* ========== TEMA CLARO / ESCURO ======== */
+function toggleTheme(){
+  const currentTheme = document.documentElement.getAttribute("data-theme");
+  if(currentTheme === "dark"){
+    document.documentElement.removeAttribute("data-theme");
+    themeToggle.innerHTML = '<i class="bi bi-moon-fill"></i>';
+    localStorage.setItem("theme","light");
+  } else {
+    document.documentElement.setAttribute("data-theme","dark");
+    themeToggle.innerHTML = '<i class="bi bi-sun-fill"></i>';
+    localStorage.setItem("theme","dark");
+  }
+}
+themeToggle.addEventListener("click", toggleTheme);
+window.addEventListener("DOMContentLoaded", () => {
+  const saved = localStorage.getItem("theme");
+  if(saved === "dark"){
+    document.documentElement.setAttribute("data-theme","dark");
+    themeToggle.innerHTML = '<i class="bi bi-sun-fill"></i>';
+  } else {
+    themeToggle.innerHTML = '<i class="bi bi-moon-fill"></i>';
+  }
+});
+
+/* ========== UTIL ========= */
+function escapeHtml(text){
+  if(!text) return "";
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
 </script>
 </body>
 </html>
