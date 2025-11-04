@@ -10,190 +10,229 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 <style>
-  body { background-color:#f8f9fa; color:#212529; }
-  .card{background-color:#ffffff; border:1px solid #ced4da;}
-  .navbar{background-color:#e3f2fd !important;}
-  .table-dark{--bs-table-bg:#ffffff; --bs-table-striped-bg:#f1f3f5; --bs-table-striped-color:#212529; color:#212529; border-color:#ced4da;}
-  .table-dark tbody tr td{vertical-align:middle;}
-  .modal-content{background-color:#ffffff; color:#212529;}
-  .btn-edit{background-color:#facc15;color:#000;padding:0.25rem 0.5rem;border-radius:0.25rem;}
-  .btn-edit:hover{background-color:#eab308;}
-  .btn-close{background-color:#ef4444;color:#fff;padding:0.25rem 0.5rem;border-radius:0.25rem;}
-  .btn-close:hover{background-color:#b91c1c;}
-  .btn-details{background-color:#0d6efd;color:#fff;padding:0.25rem 0.5rem;border-radius:0.25rem;}
-  .btn-details:hover{background-color:#0b5ed7;}
-  .btn-end{background-color:#198754;color:#fff;padding:0.25rem 0.5rem;border-radius:0.25rem;}
-  .btn-end:hover{background-color:#157347;}
-  .list-group-item.bg-dark{background-color:#f1f3f5 !important; color:#212529 !important;}
-  .btn-danger{background-color:#dc3545;}
-  .btn-danger:hover{background-color:#b02a37;}
+  body {
+    background-color: #f1f5f9;
+    color: #212529;
+    font-family: "Segoe UI", Roboto, sans-serif;
+  }
+
+  .navbar {
+    background: linear-gradient(90deg, #0d6efd, #0a58ca);
+    color: #fff !important;
+  }
+
+  .navbar .navbar-brand {
+    color: #fff !important;
+    font-weight: 600;
+  }
+
+  .card {
+    border: none;
+    border-radius: 0.75rem;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .table-dark {
+    --bs-table-bg: #ffffff;
+    --bs-table-striped-bg: #f8fafc;
+    --bs-table-striped-color: #212529;
+    color: #212529;
+    border-color: #e2e8f0;
+  }
+
+  .table thead th {
+    background-color: #e9ecef;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+  }
+
+  .btn {
+    border-radius: 0.4rem;
+    font-weight: 500;
+  }
+
+  .btn-primary {
+    background-color: #0d6efd;
+    border: none;
+  }
+  .btn-primary:hover {
+    background-color: #0b5ed7;
+  }
+
+  .btn-success {
+    background-color: #198754;
+    border: none;
+  }
+
+  .btn-success:hover {
+    background-color: #157347;
+  }
+
+  .btn-warning {
+    background-color: #ffc107;
+    border: none;
+    color: #212529;
+  }
+
+  .btn-warning:hover {
+    background-color: #e0a800;
+  }
+
+  .btn-info {
+    background-color: #0dcaf0;
+    border: none;
+    color: #212529;
+  }
+
+  .btn-info:hover {
+    background-color: #31d2f2;
+  }
+
+  .modal-content {
+    border-radius: 0.75rem;
+    border: none;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+  }
+
+  .modal-header, .modal-title {
+    font-weight: 600;
+  }
+
+  .form-control, .form-select {
+    border-radius: 0.5rem;
+  }
+
+  .btn-details {
+    background-color: #0d6efd;
+    color: #fff;
+    border: none;
+  }
+  .btn-details:hover {
+    background-color: #0b5ed7;
+  }
+
+  .btn-edit {
+    background-color: #facc15;
+    color: #000;
+  }
+  .btn-edit:hover {
+    background-color: #eab308;
+  }
+
+  .btn-end {
+    background-color: #198754;
+    color: #fff;
+  }
+  .btn-end:hover {
+    background-color: #157347;
+  }
+
+  .btn-close {
+    background-color: #ef4444;
+    color: #fff;
+  }
+  .btn-close:hover {
+    background-color: #dc2626;
+  }
+
+  .list-group-item.bg-dark {
+    background-color: #f8f9fa !important;
+    color: #212529 !important;
+  }
+
+  #loginContainer {
+    margin-top: 10vh;
+  }
+
+  #mainContainer {
+    animation: fadeIn 0.4s ease-in-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  footer {
+    text-align: center;
+    padding: 10px;
+    color: #6c757d;
+    font-size: 0.85rem;
+  }
 </style>
 </head>
 <body>
 
-<nav class="navbar navbar-light mb-4">
-  <div class="container-fluid">
-    <span class="navbar-brand mb-0 h1">Painel de Chamados</span>
-    <button id="logoutBtn" class="btn btn-outline-dark btn-sm d-none">Sair</button>
+<nav class="navbar navbar-expand-lg shadow-sm">
+  <div class="container-fluid px-4">
+    <span class="navbar-brand"><i class="bi bi-headset"></i> Sistema de Chamados</span>
+    <button id="logoutBtn" class="btn btn-light btn-sm d-none"><i class="bi bi-box-arrow-right"></i> Sair</button>
   </div>
 </nav>
 
-<!-- Login -->
+<!-- LOGIN -->
 <div class="container" id="loginContainer">
   <div class="row justify-content-center">
     <div class="col-md-4">
-      <div class="card p-4 shadow">
-        <h4 class="text-center mb-3">Login</h4>
-        <div class="mb-3"><label class="form-label">Usuário</label><input type="text" class="form-control" id="loginUser"></div>
-        <div class="mb-3"><label class="form-label">Senha</label><input type="password" class="form-control" id="loginPass"></div>
+      <div class="card p-4 shadow-sm mt-5">
+        <h4 class="text-center mb-3 text-primary"><i class="bi bi-person-circle"></i> Login</h4>
+        <div class="mb-3">
+          <label class="form-label">Usuário</label>
+          <input type="text" class="form-control" id="loginUser" placeholder="Digite seu login">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Senha</label>
+          <input type="password" class="form-control" id="loginPass" placeholder="Digite sua senha">
+        </div>
         <button class="btn btn-primary w-100" id="loginBtn">Entrar</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Sistema -->
+<!-- SISTEMA -->
 <div class="container d-none" id="mainContainer">
 
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3><i class="bi bi-ticket-detailed"></i> Chamados</h3>
+  <div class="d-flex justify-content-between align-items-center mb-4 mt-4">
+    <h3 class="text-primary"><i class="bi bi-ticket-detailed"></i> Chamados</h3>
     <div>
       <button id="btnNewTicket" class="btn btn-primary btn-sm me-2">
         <i class="bi bi-plus-lg"></i> Novo Chamado
       </button>
-      <button id="btnUserRegister" class="btn btn-success btn-sm d-none">Cadastrar Usuário</button>
+      <button id="btnUserRegister" class="btn btn-success btn-sm d-none">
+        <i class="bi bi-person-plus"></i> Cadastrar Usuário
+      </button>
     </div>
   </div>
 
-  <div class="table-responsive mb-3">
-    <table class="table table-dark table-striped align-middle">
-      <thead>
-        <tr>
-          <th>Assunto</th>
-          <th>Cliente</th>
-          <th>Descrição</th>
-          <th>Técnico</th>
-          <th>Prioridade</th>
-          <th>Status</th>
-          <th>Data</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody id="ticketTableBody"></tbody>
-    </table>
-  </div>
-
-  <div class="mb-4">
-    <button id="btnOperators" class="btn btn-info btn-sm">Gerenciar Operadores</button>
-    <button id="btnReport" class="btn btn-warning btn-sm">Relatório PDF/Excel</button>
-  </div>
-
-</div>
-
-<!-- Modal Usuários -->
-<div class="modal fade" id="userModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content p-3">
-      <div class="d-flex justify-content-between mb-2">
-        <h5 class="modal-title">Cadastrar Usuário</h5>
-        <button type="button" class="btn-close btn-close-black" data-bs-dismiss="modal"></button>
-      </div>
-      <form id="userForm">
-        <div class="mb-2"><input class="form-control" placeholder="Nome" id="userName" required></div>
-        <div class="mb-2"><input class="form-control" placeholder="Login" id="userLogin" required></div>
-        <div class="mb-2"><input type="password" class="form-control" placeholder="Senha" id="userPass" required></div>
-        <div class="mb-2">
-          <select id="userRole" class="form-control" required>
-            <option value="admin">Admin</option>
-            <option value="tech">Técnico</option>
-            <option value="operator">Operador</option>
-          </select>
-        </div>
-        <button type="submit" class="btn btn-success w-100">Salvar</button>
-      </form>
-      <ul id="usersList" class="mt-3 list-group list-group-flush"></ul>
+  <div class="card p-3 mb-4 shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-dark table-striped align-middle text-center">
+        <thead>
+          <tr>
+            <th>Assunto</th>
+            <th>Cliente</th>
+            <th>Descrição</th>
+            <th>Técnico</th>
+            <th>Prioridade</th>
+            <th>Status</th>
+            <th>Data</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="ticketTableBody"></tbody>
+      </table>
     </div>
   </div>
-</div>
 
-<!-- Modal Operadores -->
-<div class="modal fade" id="operatorsModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content p-3">
-      <div class="d-flex justify-content-between mb-2">
-        <h5 class="modal-title">Operadores</h5>
-        <button type="button" class="btn-close btn-close-black" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="d-flex mb-2">
-        <input id="newOperator" class="form-control me-2" placeholder="Nome do Técnico">
-        <button id="addOperatorBtn" class="btn btn-primary">Adicionar</button>
-      </div>
-      <ul id="operatorsList" class="list-group list-group-flush"></ul>
-    </div>
+  <div class="d-flex gap-2 mb-5">
+    <button id="btnOperators" class="btn btn-info btn-sm"><i class="bi bi-people"></i> Gerenciar Técnicos</button>
+    <button id="btnReport" class="btn btn-warning btn-sm"><i class="bi bi-file-earmark-bar-graph"></i> Relatório PDF/Excel</button>
   </div>
-</div>
 
-<!-- Modal Relatório -->
-<div class="modal fade" id="reportModal" tabindex="-1">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content p-3">
-      <div class="d-flex justify-content-between mb-2">
-        <h5 class="modal-title">Relatório de Chamados</h5>
-        <button type="button" class="btn-close btn-close-black" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="mb-2">
-        <button onclick="downloadPDF()" class="btn btn-danger btn-sm">PDF</button>
-        <button onclick="downloadExcel()" class="btn btn-success btn-sm">Excel</button>
-      </div>
-      <div id="reportContent"></div>
-    </div>
-  </div>
-</div>
-
-<!-- Modal Novo Chamado -->
-<div class="modal fade" id="newTicketModal" tabindex="-1">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content p-3">
-      <div class="d-flex justify-content-between mb-2">
-        <h5 class="modal-title">Novo Chamado</h5>
-        <button type="button" class="btn-close btn-close-black" data-bs-dismiss="modal"></button>
-      </div>
-      <form id="ticketForm">
-        <div class="row">
-          <div class="col-md-6 mb-2">
-            <input class="form-control" id="ticketSubject" placeholder="Assunto" required>
-          </div>
-          <div class="col-md-6 mb-2">
-            <input class="form-control" id="ticketClient" placeholder="Cliente" required>
-          </div>
-          <div class="col-12 mb-2">
-            <textarea class="form-control" id="ticketDescription" placeholder="Descrição" required></textarea>
-          </div>
-          <div class="col-md-4 mb-2">
-            <select id="ticketTech" class="form-select" required>
-              <option value="">Selecione o Técnico</option>
-            </select>
-          </div>
-          <div class="col-md-4 mb-2">
-            <select id="ticketPriority" class="form-select" required>
-              <option value="Baixa">Baixa</option>
-              <option value="Média">Média</option>
-              <option value="Alta">Alta</option>
-            </select>
-          </div>
-          <div class="col-md-4 mb-2">
-            <select id="ticketStatus" class="form-select" required>
-              <option value="Aberto">Aberto</option>
-              <option value="Em andamento">Em andamento</option>
-              <option value="Resolvido">Resolvido</option>
-            </select>
-          </div>
-        </div>
-        <button type="submit" class="btn btn-primary w-100 mt-2">Salvar Chamado</button>
-      </form>
-    </div>
-  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
