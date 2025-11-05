@@ -1,183 +1,233 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>GateGuard - Controle de Entrada/Saída</title>
+<meta charset="UTF-8">
+<title>Sistema de Chamados</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<!-- Bootstrap + Icons -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<!-- Firebase compat -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<!-- XLSX e jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-  <!-- Bootstrap + Icons -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f8fafc;
+    --text: #1e293b;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --navbar: linear-gradient(90deg, #0d6efd, #0a58ca);
+  }
+  [data-theme="dark"] {
+    --bg: #0f172a;
+    --text: #f8fafc;
+    --card: #111827;
+    --border: #334155;
+    --navbar: linear-gradient(90deg, #1e40af, #1e3a8a);
+  }
 
-  <!-- Firebase compat (Firestore compat) -->
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", Roboto, sans-serif;
+    transition: background-color .25s, color .25s;
+  }
 
-  <style>
-    body { background:#f4f6fb; color:#0f172a; font-family: Inter, system-ui, sans-serif; }
-    .card { border-radius: .75rem; box-shadow: 0 8px 30px rgba(10,15,30,0.06); }
-    .table thead th { background:#eef2ff; }
-    .small-muted { font-size:.85rem; color:#6b7280; }
-    footer { text-align:center; padding:12px; color:#6b7280; }
-    .badge-present { background:#10b981; color:#fff; }
-    .badge-left { background:#6b7280; color:#fff; }
-  </style>
+  .navbar {
+    background: var(--navbar);
+    color: #fff !important;
+  }
+
+  .card {
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+  }
+
+  .table thead th { background-color: var(--border); }
+  .btn { border-radius: .4rem; font-weight: 500; }
+  .theme-toggle { background: transparent; color: #fff; border: none; font-size:1.2rem; }
+  .modal-content { border-radius: .75rem; }
+  #loginContainer { margin-top: 8vh; }
+  footer { text-align:center; color: #6c757d; padding:10px; font-size: .85rem; }
+</style>
 </head>
 <body>
 
-<nav class="navbar navbar-expand-lg navbar-dark" style="background: linear-gradient(90deg,#0d6efd,#0a58ca);">
+<!-- NAVBAR -->
+<nav class="navbar navbar-expand-lg shadow-sm">
   <div class="container-fluid px-4">
-    <a class="navbar-brand" href="#"><i class="bi bi-door-open-fill"></i> GateGuard</a>
-    <div class="d-flex gap-2">
-      <button id="btnNew" class="btn btn-light btn-sm"><i class="bi bi-plus-lg"></i> Novo Registro</button>
+    <span class="navbar-brand"><i class="bi bi-headset"></i> Sistema de Chamados</span>
+    <div class="d-flex align-items-center gap-2">
+      <button id="themeToggle" class="theme-toggle" title="Alterar tema"><i class="bi bi-moon-fill"></i></button>
+      <button id="logoutBtn" class="btn btn-light btn-sm d-none"><i class="bi bi-box-arrow-right"></i> Sair</button>
     </div>
   </div>
 </nav>
 
-<div class="container my-4">
-  <div class="row g-3">
-    <div class="col-lg-4">
-      <div class="card p-3">
-        <h5 class="mb-3">Filtros</h5>
-        <div class="mb-2">
-          <label class="form-label small-muted">Nome</label>
-          <input id="filterName" class="form-control" placeholder="Pesquisar por nome">
+<!-- LOGIN -->
+<div class="container" id="loginContainer">
+  <div class="row justify-content-center">
+    <div class="col-md-4">
+      <div class="card p-4 shadow-sm mt-5">
+        <h4 class="text-center mb-3 text-primary"><i class="bi bi-person-circle"></i> Login</h4>
+        <div class="mb-3">
+          <label class="form-label">Usuário</label>
+          <input type="text" class="form-control" id="loginUser" placeholder="Digite seu login">
         </div>
-        <div class="mb-2">
-          <label class="form-label small-muted">Placa</label>
-          <input id="filterPlate" class="form-control" placeholder="Pesquisar por placa">
+        <div class="mb-3">
+          <label class="form-label">Senha</label>
+          <input type="password" class="form-control" id="loginPass" placeholder="Digite sua senha">
         </div>
-        <div class="mb-2">
-          <label class="form-label small-muted">Motivo</label>
-          <input id="filterReason" class="form-control" placeholder="Pesquisar por motivo">
-        </div>
-        <div class="row g-2">
-          <div class="col-6">
-            <label class="form-label small-muted">De (entrada)</label>
-            <input id="filterFrom" type="date" class="form-control">
-          </div>
-          <div class="col-6">
-            <label class="form-label small-muted">Até (entrada)</label>
-            <input id="filterTo" type="date" class="form-control">
-          </div>
-        </div>
-        <div class="mt-3 d-flex gap-2">
-          <button id="btnApplyFilters" class="btn btn-primary btn-sm">Aplicar</button>
-          <button id="btnClearFilters" class="btn btn-outline-secondary btn-sm">Limpar</button>
-        </div>
-        <hr class="my-3">
-        <div>
-          <p class="small-muted mb-1">Mostrar</p>
-          <div class="form-check form-check-inline">
-            <input class="form-check-input" type="radio" name="filterShow" id="showAll" value="all" checked>
-            <label class="form-check-label" for="showAll">Todos</label>
-          </div>
-          <div class="form-check form-check-inline">
-            <input class="form-check-input" type="radio" name="filterShow" id="showPresent" value="present">
-            <label class="form-check-label" for="showPresent">Presentes</label>
-          </div>
-          <div class="form-check form-check-inline">
-            <input class="form-check-input" type="radio" name="filterShow" id="showLeft" value="left">
-            <label class="form-check-label" for="showLeft">Saiu</label>
-          </div>
-        </div>
-      </div>
-      <div class="card p-3 mt-3">
-        <h6 class="mb-2">Controles</h6>
-        <div class="d-flex gap-2">
-          <button id="btnRefresh" class="btn btn-outline-primary btn-sm"><i class="bi bi-arrow-clockwise"></i> Atualizar</button>
-          <button id="btnExportCsv" class="btn btn-outline-success btn-sm"><i class="bi bi-file-earmark-spreadsheet"></i> CSV</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-lg-8">
-      <div class="card p-3">
-        <div class="d-flex justify-content-between align-items-start mb-3">
-          <div>
-            <h5>Registros</h5>
-            <div class="small-muted">Registros de entrada e saída</div>
-          </div>
-          <div class="small-muted" id="totalCount">— registros</div>
-        </div>
-
-        <div class="table-responsive">
-          <table class="table table-hover align-middle">
-            <thead>
-              <tr class="text-center">
-                <th>Nome</th>
-                <th>Empresa</th>
-                <th>Placa</th>
-                <th>Motivo</th>
-                <th>Entrada</th>
-                <th>Saída</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody id="recordsBody">
-              <!-- preenchido via JS -->
-            </tbody>
-          </table>
-        </div>
+        <button class="btn btn-primary w-100" id="loginBtn">Entrar</button>
       </div>
     </div>
   </div>
 </div>
 
-<footer>
-  <small>© 2025 GateGuard - Desenvolvido por você</small>
-</footer>
+<!-- MAIN -->
+<div class="container d-none" id="mainContainer">
+  <div class="d-flex justify-content-between align-items-center mb-4 mt-4">
+    <h3 class="text-primary"><i class="bi bi-ticket-detailed"></i> Chamados</h3>
+    <div>
+      <button id="btnNewTicket" class="btn btn-primary btn-sm me-2"><i class="bi bi-plus-lg"></i> Novo Chamado</button>
+      <button id="btnUserRegister" class="btn btn-success btn-sm d-none"><i class="bi bi-person-plus"></i> Cadastrar Usuário</button>
+    </div>
+  </div>
 
-<!-- Modal: Novo / Editar Registro -->
-<div class="modal fade" id="recordModal" tabindex="-1">
+  <div class="card p-3 mb-4 shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-striped align-middle text-center">
+        <thead>
+          <tr>
+            <th>Assunto</th><th>Cliente</th><th>Descrição</th><th>Técnico</th>
+            <th>Prioridade</th><th>Status</th><th>Data</th><th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="ticketTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 mb-5">
+    <button id="btnOperators" class="btn btn-info btn-sm"><i class="bi bi-people"></i> Gerenciar Técnicos</button>
+    <button id="btnReport" class="btn btn-warning btn-sm"><i class="bi bi-file-earmark-bar-graph"></i> Relatório PDF/Excel</button>
+  </div>
+</div>
+
+<!-- Modal Usuários -->
+<div class="modal fade" id="userModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content p-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="modal-title">Cadastrar Usuário</h5>
+        <button type="button" class="btn-close btn-close-black" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="userForm">
+        <div class="mb-2"><input class="form-control" placeholder="Nome" id="userName" required></div>
+        <div class="mb-2"><input class="form-control" placeholder="Login" id="userLogin" required></div>
+        <div class="mb-2"><input type="password" class="form-control" placeholder="Senha" id="userPass" required></div>
+        <div class="mb-2">
+          <select id="userRole" class="form-control" required>
+            <option value="admin">Admin</option>
+            <option value="tech">Técnico</option>
+            <option value="operator">Operador</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-success w-100">Salvar</button>
+      </form>
+      <ul id="usersList" class="mt-3 list-group list-group-flush"></ul>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Operadores -->
+<div class="modal fade" id="operatorsModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content p-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="modal-title">Operadores</h5>
+        <button type="button" class="btn-close btn-close-black" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="d-flex mb-2">
+        <input id="newOperator" class="form-control me-2" placeholder="Nome do Técnico">
+        <button id="addOperatorBtn" class="btn btn-primary">Adicionar</button>
+      </div>
+      <ul id="operatorsList" class="list-group list-group-flush"></ul>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Relatório -->
+<div class="modal fade" id="reportModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <div class="modal-content p-3">
       <div class="d-flex justify-content-between align-items-center mb-2">
-        <h5 id="recordModalTitle">Novo Registro</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <h5 class="modal-title">Relatório de Chamados</h5>
+        <button type="button" class="btn-close btn-close-black" data-bs-dismiss="modal"></button>
       </div>
-      <form id="recordForm">
-        <input type="hidden" id="recordId" value="">
-        <div class="row g-2">
-          <div class="col-md-6">
-            <label class="form-label">Nome</label>
-            <input id="inputName" class="form-control" required>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Empresa</label>
-            <input id="inputCompany" class="form-control">
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Placa do Veículo</label>
-            <input id="inputPlate" class="form-control" placeholder="AAA0A00 / ABC-1234">
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Motivo</label>
-            <input id="inputReason" class="form-control" placeholder="Motivo da visita (ex.: Entrega, Reunião)">
-          </div>
-          <div class="col-12">
-            <label class="form-label">Observações</label>
-            <textarea id="inputNotes" class="form-control" rows="2" placeholder="Observações (opcional)"></textarea>
-          </div>
-        </div>
+      <div class="mb-2">
+        <button id="downloadPdfBtn" class="btn btn-danger btn-sm">PDF</button>
+        <button id="downloadExcelBtn" class="btn btn-success btn-sm">Excel</button>
+      </div>
+      <div id="reportContent"></div>
+    </div>
+  </div>
+</div>
 
-        <div class="mt-3 d-flex gap-2">
-          <button class="btn btn-primary" type="submit" id="saveRecordBtn"><i class="bi bi-save"></i> Salvar</button>
-          <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancelar</button>
+<!-- Modal Novo Chamado -->
+<div class="modal fade" id="newTicketModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content p-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="modal-title">Novo Chamado</h5>
+        <button type="button" class="btn-close btn-close-black" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="ticketForm">
+        <div class="row">
+          <div class="col-md-6 mb-2"><input class="form-control" id="ticketSubject" placeholder="Assunto" required></div>
+          <div class="col-md-6 mb-2"><input class="form-control" id="ticketClient" placeholder="Cliente" required></div>
+          <div class="col-12 mb-2"><textarea class="form-control" id="ticketDescription" placeholder="Descrição" required></textarea></div>
+          <div class="col-md-4 mb-2">
+            <select id="ticketTech" class="form-select" required>
+              <option value="">Selecione o Técnico</option>
+            </select>
+          </div>
+          <div class="col-md-4 mb-2">
+            <select id="ticketPriority" class="form-select" required>
+              <option value="Baixa">Baixa</option>
+              <option value="Média">Média</option>
+              <option value="Alta">Alta</option>
+            </select>
+          </div>
+          <div class="col-md-4 mb-2">
+            <select id="ticketStatus" class="form-select" required>
+              <option value="Aberto">Aberto</option>
+              <option value="Em andamento">Em andamento</option>
+              <option value="Resolvido">Resolvido</option>
+            </select>
+          </div>
         </div>
+        <button type="submit" class="btn btn-primary w-100 mt-2">Salvar Chamado</button>
       </form>
     </div>
   </div>
 </div>
 
+<footer>
+  <p>© 2025 Sistema de Chamados - Desenvolvido por Eduardo Lima</p>
+</footer>
+
 <!-- Bootstrap bundle -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-/* =========================
-   CONFIGURAÇÃO FIREBASE
-   Substitua pelas suas credenciais, se desejar.
-   ========================= */
+/* ========== FIREBASE ========== */
 const firebaseConfig = {
   apiKey: "AIzaSyBA16WHE768N9eUcqEoQqUF7uEIB82nNM0",
   authDomain: "chamados-37b34.firebaseapp.com",
@@ -189,310 +239,254 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-/* =========================
-   ELEMENTOS
-   ========================= */
-const btnNew = document.getElementById('btnNew');
-const recordsBody = document.getElementById('recordsBody');
-const totalCount = document.getElementById('totalCount');
+/* ========== ELEMENTS ========== */
+const loginBtn = document.getElementById("loginBtn");
+const logoutBtn = document.getElementById("logoutBtn");
+const loginContainer = document.getElementById("loginContainer");
+const mainContainer = document.getElementById("mainContainer");
+const ticketTableBody = document.getElementById("ticketTableBody");
+const btnUserRegister = document.getElementById("btnUserRegister");
+const btnNewTicket = document.getElementById("btnNewTicket");
+const btnOperators = document.getElementById("btnOperators");
+const btnReport = document.getElementById("btnReport");
+const themeToggle = document.getElementById("themeToggle");
 
-const filterName = document.getElementById('filterName');
-const filterPlate = document.getElementById('filterPlate');
-const filterReason = document.getElementById('filterReason');
-const filterFrom = document.getElementById('filterFrom');
-const filterTo = document.getElementById('filterTo');
-const btnApplyFilters = document.getElementById('btnApplyFilters');
-const btnClearFilters = document.getElementById('btnClearFilters');
-const btnRefresh = document.getElementById('btnRefresh');
-const btnExportCsv = document.getElementById('btnExportCsv');
+const userModal = new bootstrap.Modal(document.getElementById("userModal"));
+const operatorsModal = new bootstrap.Modal(document.getElementById("operatorsModal"));
+const reportModal = new bootstrap.Modal(document.getElementById("reportModal"));
+const newTicketModal = new bootstrap.Modal(document.getElementById("newTicketModal"));
 
-const recordModalEl = document.getElementById('recordModal');
-const recordModal = new bootstrap.Modal(recordModalEl);
-const recordForm = document.getElementById('recordForm');
-const recordModalTitle = document.getElementById('recordModalTitle');
-const inputName = document.getElementById('inputName');
-const inputCompany = document.getElementById('inputCompany');
-const inputPlate = document.getElementById('inputPlate');
-const inputReason = document.getElementById('inputReason');
-const inputNotes = document.getElementById('inputNotes');
-const recordIdInput = document.getElementById('recordId');
+/* ========== STATE ========== */
+let currentUser = null;
+let tickets = [];
 
-let records = []; // cache local
-let lastFetch = null;
+/* ========== LOGIN / LOGOUT ========== */
+loginBtn.addEventListener("click", async () => {
+  const user = document.getElementById("loginUser").value.trim();
+  const pass = document.getElementById("loginPass").value.trim();
+  if(!user || !pass){ alert("Preencha todos os campos!"); return; }
+  const snapshot = await db.collection("users").where("login","==",user).where("password","==",pass).get();
+  if(snapshot.empty){ alert("Usuário ou senha incorretos!"); return; }
+  currentUser = snapshot.docs[0].data();
+  loginContainer.classList.add("d-none");
+  mainContainer.classList.remove("d-none");
+  logoutBtn.classList.remove("d-none");
+  if(currentUser.role === "admin") btnUserRegister.classList.remove("d-none");
+  carregarChamados();
+});
 
-/* =========================
-   UTILITÁRIOS
-   ========================= */
-function formatDate(ts) {
-  if (!ts) return '-';
-  const d = (ts instanceof Date) ? ts : new Date(ts);
-  return d.toLocaleString();
-}
-function escapeHtml(text){
-  if(!text && text !== 0) return '';
-  return String(text).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[s]));
-}
+logoutBtn.addEventListener("click", () => {
+  currentUser = null;
+  loginContainer.classList.remove("d-none");
+  mainContainer.classList.add("d-none");
+  logoutBtn.classList.add("d-none");
+});
 
-/* =========================
-   FUNÇÕES PRINCIPAIS
-   ========================= */
-
-/* carregar todos os registros (ordem decrescente por entryTime) */
-async function loadRecords() {
-  recordsBody.innerHTML = '<tr><td colspan="7" class="text-center small-muted">Carregando...</td></tr>';
-  try {
-    const snapshot = await db.collection('gate_records').orderBy('entryTime', 'desc').get();
-    records = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-    lastFetch = new Date();
-    applyFiltersAndRender();
-  } catch (err) {
-    console.error(err);
-    recordsBody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao carregar registros.</td></tr>';
-  }
+/* ========== CARREGAR / RENDER CHAMADOS ========== */
+async function carregarChamados(){
+  ticketTableBody.innerHTML = "<tr><td colspan='8' class='text-center'>Carregando...</td></tr>";
+  const snapshot = await db.collection("tickets").orderBy("date","asc").get();
+  tickets = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+  renderTickets();
 }
 
-/* aplica filtros (cliente-side) e renderiza */
-function applyFiltersAndRender() {
-  let filtered = [...records];
-
-  // filtro "mostrar" (presentes / saiu / all)
-  const show = document.querySelector('input[name="filterShow"]:checked').value;
-  if (show === 'present') filtered = filtered.filter(r => !r.exitTime);
-  if (show === 'left') filtered = filtered.filter(r => !!r.exitTime);
-
-  // texto: nome
-  const nameQ = filterName.value.trim().toLowerCase();
-  if (nameQ) filtered = filtered.filter(r => (r.name||'').toLowerCase().includes(nameQ));
-
-  // placa
-  const plateQ = filterPlate.value.trim().toLowerCase();
-  if (plateQ) filtered = filtered.filter(r => (r.plate||'').toLowerCase().includes(plateQ));
-
-  // motivo
-  const reasonQ = filterReason.value.trim().toLowerCase();
-  if (reasonQ) filtered = filtered.filter(r => (r.reason||'').toLowerCase().includes(reasonQ));
-
-  // intervalo data (entryTime)
-  const from = filterFrom.value ? new Date(filterFrom.value + 'T00:00:00') : null;
-  const to = filterTo.value ? new Date(filterTo.value + 'T23:59:59') : null;
-  if (from) filtered = filtered.filter(r => new Date(r.entryTime) >= from);
-  if (to) filtered = filtered.filter(r => new Date(r.entryTime) <= to);
-
-  renderRecords(filtered);
-}
-
-/* render tabela */
-function renderRecords(list) {
-  if (!list || list.length === 0) {
-    recordsBody.innerHTML = '<tr><td colspan="7" class="text-center small-muted">Nenhum registro encontrado.</td></tr>';
-    totalCount.textContent = `0 registros`;
+function renderTickets(){
+  ticketTableBody.innerHTML = "";
+  if(!tickets || tickets.length === 0){
+    ticketTableBody.innerHTML = "<tr><td colspan='8'>Nenhum chamado.</td></tr>";
     return;
   }
-  totalCount.textContent = `${list.length} registros (ult. atualização: ${lastFetch ? lastFetch.toLocaleTimeString() : '-'})`;
-
-  recordsBody.innerHTML = '';
-  list.forEach(r => {
-    const tr = document.createElement('tr');
-    tr.className = r.exitTime ? '' : 'table-success'; // destaque para presentes (sem saída)
-    tr.innerHTML = `
-      <td>${escapeHtml(r.name || '')}</td>
-      <td>${escapeHtml(r.company || '')}</td>
-      <td>${escapeHtml(r.plate || '')}</td>
-      <td>${escapeHtml(r.reason || '')}</td>
-      <td class="text-nowrap">${formatDate(r.entryTime)}</td>
-      <td class="text-nowrap">${r.exitTime ? formatDate(r.exitTime) : '<span class="badge badge-present">Presente</span>'}</td>
-      <td class="text-center">
-        ${!r.exitTime ? `<button class="btn btn-sm btn-success me-1" data-id="${r.id}" data-action="exit"><i class="bi bi-box-arrow-in-right"></i> Registrar Saída</button>` : ''}
-        ${!r.exitTime ? `<button class="btn btn-sm btn-danger ms-1" data-id="${r.id}" data-action="delete"><i class="bi bi-trash"></i></button>` : ''}
-        <button class="btn btn-sm btn-outline-primary ms-1" data-id="${r.id}" data-action="edit"><i class="bi bi-pencil"></i></button>
+  tickets.forEach(t => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${escapeHtml(t.subject||"-")}</td>
+      <td>${escapeHtml(t.client||"-")}</td>
+      <td class="text-start">${escapeHtml(t.description||"-")}</td>
+      <td>${escapeHtml(t.tech||"-")}</td>
+      <td>${escapeHtml(t.priority||"-")}</td>
+      <td>${escapeHtml(t.status||"-")}</td>
+      <td>${t.date ? new Date(t.date).toLocaleString() : "-"}</td>
+      <td>
+        <button class="btn btn-primary btn-sm" onclick="showDetails('${t.id}')"><i class="bi bi-eye"></i></button>
+        ${currentUser && currentUser.role === "admin" && t.status !== "Encerrado"
+          ? `<button class="btn btn-success btn-sm ms-1" onclick="encerrarChamado('${t.id}')"><i class="bi bi-check2-circle"></i></button>`
+          : ""}
       </td>
     `;
-    recordsBody.appendChild(tr);
+    ticketTableBody.appendChild(row);
   });
 }
 
-/* adicionar novo registro */
-async function addRecord(payload) {
-  const doc = {
-    name: payload.name || '',
-    company: payload.company || '',
-    plate: payload.plate || '',
-    reason: payload.reason || '',
-    notes: payload.notes || '',
-    entryTime: new Date().toISOString(),
-    exitTime: null
-  };
-  const ref = await db.collection('gate_records').add(doc);
-  // atualiza cache local imediatamente
-  records.unshift({ id: ref.id, ...doc });
-  applyFiltersAndRender();
+/* ========== DETALHES E ENCERRAR ========== */
+window.showDetails = function(id){
+  const ticket = tickets.find(x => x.id === id);
+  if(!ticket) return alert("Chamado não encontrado.");
+  const content = document.getElementById("reportContent");
+  content.innerHTML = `
+    <p><strong>Assunto:</strong> ${escapeHtml(ticket.subject||"-")}</p>
+    <p><strong>Cliente:</strong> ${escapeHtml(ticket.client||"-")}</p>
+    <p><strong>Descrição:</strong> ${escapeHtml(ticket.description||"-")}</p>
+    <p><strong>Técnico:</strong> ${escapeHtml(ticket.tech||"-")}</p>
+    <p><strong>Prioridade:</strong> ${escapeHtml(ticket.priority||"-")}</p>
+    <p><strong>Status:</strong> ${escapeHtml(ticket.status||"-")}</p>
+    <p><strong>Data:</strong> ${ticket.date ? new Date(ticket.date).toLocaleString() : "-"}</p>
+  `;
+  reportModal.show();
+};
+
+window.encerrarChamado = async function(id){
+  if(!confirm("Deseja realmente encerrar este chamado?")) return;
+  await db.collection("tickets").doc(id).update({ status: "Encerrado" });
+  alert("Chamado encerrado com sucesso!");
+  carregarChamados();
+};
+
+/* ========== RELATÓRIO PDF / EXCEL ========== */
+document.getElementById("downloadPdfBtn").addEventListener("click", downloadPDF);
+document.getElementById("downloadExcelBtn").addEventListener("click", downloadExcel);
+
+function downloadPDF(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  let y = 10;
+  doc.text("Relatório de Chamados", 10, y); y += 8;
+  tickets.forEach(t=>{
+    const line = `Assunto: ${t.subject || "-"} | Status: ${t.status || "-"} | Prioridade: ${t.priority || "-"}`;
+    // quebra simples de linha se necessário
+    if(y > 270){ doc.addPage(); y = 10; }
+    doc.text(line.substring(0, 120), 10, y); y += 7;
+  });
+  doc.save("relatorio_chamados.pdf");
 }
 
-/* atualizar registro (edição) */
-async function updateRecord(id, payload) {
-  await db.collection('gate_records').doc(id).update(payload);
-  // atualiza cache local
-  records = records.map(r => r.id === id ? { ...r, ...payload } : r);
-  applyFiltersAndRender();
+function downloadExcel(){
+  // transforma em planilha simples com campos relevantes
+  const ws_data = [["Assunto","Cliente","Descrição","Técnico","Prioridade","Status","Data"]];
+  tickets.forEach(t => ws_data.push([
+    t.subject||"", t.client||"", t.description||"", t.tech||"", t.priority||"", t.status||"", t.date ? new Date(t.date).toLocaleString() : ""
+  ]));
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(ws_data);
+  XLSX.utils.book_append_sheet(wb, ws, "Chamados");
+  XLSX.writeFile(wb, "relatorio_chamados.xlsx");
 }
 
-/* registrar saída -> define exitTime e remove botão excluir ao renderizar */
-async function registerExit(id) {
-  const nowIso = new Date().toISOString();
-  await db.collection('gate_records').doc(id).update({ exitTime: nowIso });
-  records = records.map(r => r.id === id ? { ...r, exitTime: nowIso } : r);
-  applyFiltersAndRender();
-}
-
-/* deletar registro (permanente) - só disponível enquanto não houve saída */
-async function deleteRecord(id) {
-  await db.collection('gate_records').doc(id).delete();
-  records = records.filter(r => r.id !== id);
-  applyFiltersAndRender();
-}
-
-/* export CSV simples */
-function exportCsv(list) {
-  if (!list || list.length === 0) { alert('Nada para exportar.'); return; }
-  const cols = ['Nome','Empresa','Placa','Motivo','Observações','Entrada','Saída'];
-  const rows = list.map(r => [
-    r.name || '', r.company || '', r.plate || '', r.reason || '', r.notes || '',
-    r.entryTime ? new Date(r.entryTime).toLocaleString() : '',
-    r.exitTime ? new Date(r.exitTime).toLocaleString() : ''
-  ]);
-  const csv = [cols, ...rows].map(r => r.map(cell => `"${String(cell).replace(/"/g,'""')}"`).join(',')).join('\r\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `gate_records_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-/* =========================
-   HANDLERS / EVENTS
-   ========================= */
-
-/* abrir modal novo registro */
-btnNew.addEventListener('click', () => {
-  recordModalTitle.textContent = 'Novo Registro';
-  recordForm.reset();
-  recordIdInput.value = '';
-  recordModal.show();
-});
-
-/* salvar novo / editar */
-recordForm.addEventListener('submit', async (e) => {
+/* ========== USUÁRIOS ======== */
+document.getElementById("userForm").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const payload = {
-    name: inputName.value.trim(),
-    company: inputCompany.value.trim(),
-    plate: inputPlate.value.trim(),
-    reason: inputReason.value.trim(),
-    notes: inputNotes.value.trim()
+  const newUser = {
+    name: document.getElementById("userName").value,
+    login: document.getElementById("userLogin").value,
+    password: document.getElementById("userPass").value,
+    role: document.getElementById("userRole").value
   };
-  const id = recordIdInput.value;
-  try {
-    if (!payload.name) { alert('Nome é obrigatório'); return; }
-    if (id) {
-      // editar existente (não altera entryTime/exitTime a menos que payload inclua)
-      await updateRecord(id, payload);
-      alert('Registro atualizado com sucesso!');
-    } else {
-      await addRecord(payload);
-      alert('Registro criado com sucesso!');
-    }
-    recordModal.hide();
-    recordForm.reset();
-  } catch (err) {
-    console.error(err);
-    alert('Erro ao salvar registro.');
+  await db.collection("users").add(newUser);
+  e.target.reset();
+  fetchUsers();
+});
+
+async function fetchUsers(){
+  const snapshot = await db.collection("users").get();
+  const ul = document.getElementById("usersList"); ul.innerHTML = "";
+  snapshot.forEach(doc => {
+    const u = doc.data();
+    const li = document.createElement("li");
+    li.className = "list-group-item bg-light";
+    li.textContent = `${u.name} (${u.login}) - ${u.role}`;
+    ul.appendChild(li);
+  });
+}
+
+/* ========== OPERADORES (TÉCNICOS) ======== */
+document.getElementById("addOperatorBtn").addEventListener("click", async (e) => {
+  e.preventDefault();
+  const name = document.getElementById("newOperator").value.trim();
+  if(!name) return;
+  await db.collection("operators").add({ name });
+  document.getElementById("newOperator").value = "";
+  fetchOperators();
+});
+
+async function fetchOperators(){
+  const snapshot = await db.collection("operators").get();
+  const list = document.getElementById("operatorsList"); list.innerHTML = "";
+  const techSelect = document.getElementById("ticketTech");
+  techSelect.innerHTML = '<option value="">Selecione o Técnico</option>';
+  snapshot.forEach(doc => {
+    const obj = doc.data();
+    const li = document.createElement("li");
+    li.className = "list-group-item bg-light";
+    li.textContent = obj.name;
+    list.appendChild(li);
+
+    const opt = document.createElement("option");
+    opt.value = obj.name;
+    opt.textContent = obj.name;
+    techSelect.appendChild(opt);
+  });
+}
+
+/* ========== NOVO CHAMADO ======== */
+btnNewTicket.addEventListener("click", () => {
+  fetchOperators();
+  newTicketModal.show();
+});
+
+document.getElementById("ticketForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  await db.collection("tickets").add({
+    subject: document.getElementById("ticketSubject").value,
+    client: document.getElementById("ticketClient").value,
+    description: document.getElementById("ticketDescription").value,
+    tech: document.getElementById("ticketTech").value,
+    priority: document.getElementById("ticketPriority").value,
+    status: document.getElementById("ticketStatus").value,
+    date: new Date().getTime()
+  });
+  e.target.reset();
+  newTicketModal.hide();
+  carregarChamados();
+});
+
+/* ========== BOTÕES: abrir modais usuários, operadores, relatório ======== */
+btnUserRegister.addEventListener("click", async () => { await fetchUsers(); userModal.show(); });
+btnOperators.addEventListener("click", async () => { await fetchOperators(); operatorsModal.show(); });
+btnReport.addEventListener("click", () => { reportModal.show(); });
+
+/* ========== TEMA CLARO / ESCURO ======== */
+function toggleTheme(){
+  const currentTheme = document.documentElement.getAttribute("data-theme");
+  if(currentTheme === "dark"){
+    document.documentElement.removeAttribute("data-theme");
+    themeToggle.innerHTML = '<i class="bi bi-moon-fill"></i>';
+    localStorage.setItem("theme","light");
+  } else {
+    document.documentElement.setAttribute("data-theme","dark");
+    themeToggle.innerHTML = '<i class="bi bi-sun-fill"></i>';
+    localStorage.setItem("theme","dark");
+  }
+}
+themeToggle.addEventListener("click", toggleTheme);
+window.addEventListener("DOMContentLoaded", () => {
+  const saved = localStorage.getItem("theme");
+  if(saved === "dark"){
+    document.documentElement.setAttribute("data-theme","dark");
+    themeToggle.innerHTML = '<i class="bi bi-sun-fill"></i>';
+  } else {
+    themeToggle.innerHTML = '<i class="bi bi-moon-fill"></i>';
   }
 });
 
-/* delegação de eventos na tabela (exit / delete / edit) */
-recordsBody.addEventListener('click', async (ev) => {
-  const btn = ev.target.closest('button');
-  if (!btn) return;
-  const id = btn.getAttribute('data-id');
-  const action = btn.getAttribute('data-action');
-  if (!id || !action) return;
-
-  if (action === 'exit') {
-    if (!confirm('Registrar saída para este visitante?')) return;
-    try {
-      await registerExit(id);
-      alert('Saída registrada.');
-    } catch (err) {
-      console.error(err);
-      alert('Erro ao registrar saída.');
-    }
-  } else if (action === 'delete') {
-    if (!confirm('Excluir permanentemente este registro?')) return;
-    try {
-      await deleteRecord(id);
-      alert('Registro excluído.');
-    } catch (err) {
-      console.error(err);
-      alert('Erro ao excluir registro.');
-    }
-  } else if (action === 'edit') {
-    // abrir modal preenchido
-    const rec = records.find(r => r.id === id);
-    if (!rec) { alert('Registro não encontrado.'); return; }
-    recordModalTitle.textContent = 'Editar Registro';
-    recordIdInput.value = rec.id;
-    inputName.value = rec.name || '';
-    inputCompany.value = rec.company || '';
-    inputPlate.value = rec.plate || '';
-    inputReason.value = rec.reason || '';
-    inputNotes.value = rec.notes || '';
-    recordModal.show();
-  }
-});
-
-/* filtros */
-btnApplyFilters.addEventListener('click', () => applyFiltersAndRender());
-btnClearFilters.addEventListener('click', () => {
-  filterName.value = '';
-  filterPlate.value = '';
-  filterReason.value = '';
-  filterFrom.value = '';
-  filterTo.value = '';
-  document.getElementById('showAll').checked = true;
-  applyFiltersAndRender();
-});
-
-/* atualizar manual */
-btnRefresh.addEventListener('click', () => loadRecords());
-
-/* export CSV */
-btnExportCsv.addEventListener('click', () => {
-  // aplica os filtros atuais e exporta os resultados visíveis
-  let filtered = [...records];
-  // replicar lógica rápida (poderia chamar applyFiltersAndRender e usar cache)
-  const nameQ = filterName.value.trim().toLowerCase();
-  if (nameQ) filtered = filtered.filter(r => (r.name||'').toLowerCase().includes(nameQ));
-  const plateQ = filterPlate.value.trim().toLowerCase();
-  if (plateQ) filtered = filtered.filter(r => (r.plate||'').toLowerCase().includes(plateQ));
-  const reasonQ = filterReason.value.trim().toLowerCase();
-  if (reasonQ) filtered = filtered.filter(r => (r.reason||'').toLowerCase().includes(reasonQ));
-  const from = filterFrom.value ? new Date(filterFrom.value + 'T00:00:00') : null;
-  const to = filterTo.value ? new Date(filterTo.value + 'T23:59:59') : null;
-  if (from) filtered = filtered.filter(r => new Date(r.entryTime) >= from);
-  if (to) filtered = filtered.filter(r => new Date(r.entryTime) <= to);
-  const show = document.querySelector('input[name="filterShow"]:checked').value;
-  if (show === 'present') filtered = filtered.filter(r => !r.exitTime);
-  if (show === 'left') filtered = filtered.filter(r => !!r.exitTime);
-
-  exportCsv(filtered);
-});
-
-/* carregamento inicial */
-window.addEventListener('DOMContentLoaded', () => {
-  loadRecords();
-});
+/* ========== UTIL ========= */
+function escapeHtml(text){
+  if(!text) return "";
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
 </script>
 </body>
 </html>
