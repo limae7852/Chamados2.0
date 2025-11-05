@@ -4,13 +4,10 @@
 <meta charset="UTF-8">
 <title>Sistema de Chamados</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<!-- Bootstrap + Icons -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-<!-- Firebase compat -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-<!-- XLSX e jsPDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -103,13 +100,13 @@
   </div>
 </div>
 
-<!-- Modal Novo/Edição Chamado -->
+<!-- MODAL CHAMADO -->
 <div class="modal fade" id="newTicketModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <div class="modal-content p-3">
       <div class="d-flex justify-content-between align-items-center mb-2">
         <h5 class="modal-title" id="ticketModalTitle">Novo Chamado</h5>
-        <button type="button" class="btn-close btn-close-black" data-bs-dismiss="modal"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <form id="ticketForm">
         <input type="hidden" id="editingTicketId">
@@ -134,21 +131,16 @@
             </select>
           </div>
         </div>
-        <button type="submit" class="btn btn-primary w-100 mt-2" id="saveTicketBtn">Salvar Chamado</button>
+        <button type="submit" class="btn btn-primary w-100 mt-2">Salvar Chamado</button>
       </form>
     </div>
   </div>
 </div>
 
-<footer>
-  <p>© 2025 Sistema de Chamados - Desenvolvido por Eduardo Lima</p>
-</footer>
-
-<!-- Bootstrap bundle -->
+<footer><p>© 2025 Sistema de Chamados - Desenvolvido por Eduardo Lima</p></footer>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-/* ========== FIREBASE CONFIG ========== */
 const firebaseConfig = {
   apiKey: "AIzaSyBA16WHE768N9eUcqEoQqUF7uEIB82nNM0",
   authDomain: "chamados-37b34.firebaseapp.com",
@@ -160,7 +152,6 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-/* ========== ELEMENTOS ========== */
 const loginBtn = document.getElementById("loginBtn");
 const logoutBtn = document.getElementById("logoutBtn");
 const loginContainer = document.getElementById("loginContainer");
@@ -168,51 +159,58 @@ const mainContainer = document.getElementById("mainContainer");
 const ticketTableBody = document.getElementById("ticketTableBody");
 const btnUserRegister = document.getElementById("btnUserRegister");
 const btnNewTicket = document.getElementById("btnNewTicket");
-const btnOperators = document.getElementById("btnOperators");
 const btnReport = document.getElementById("btnReport");
 const themeToggle = document.getElementById("themeToggle");
 const newTicketModal = new bootstrap.Modal(document.getElementById("newTicketModal"));
-
-/* ========== ESTADO ========== */
 let currentUser = null;
 let tickets = [];
 
-/* ========== LOGIN ========== */
-loginBtn.addEventListener("click", async () => {
-  const user = document.getElementById("loginUser").value.trim();
-  const pass = document.getElementById("loginPass").value.trim();
-  if(!user || !pass) return alert("Preencha todos os campos!");
-  const snapshot = await db.collection("users").where("login","==",user).where("password","==",pass).get();
-  if(snapshot.empty) return alert("Usuário ou senha incorretos!");
-  currentUser = snapshot.docs[0].data();
+/* LOGIN */
+loginBtn.addEventListener("click", async ()=>{
+  const user=document.getElementById("loginUser").value.trim();
+  const pass=document.getElementById("loginPass").value.trim();
+  if(!user||!pass) return alert("Preencha todos os campos!");
+  const snap=await db.collection("users").where("login","==",user).where("password","==",pass).get();
+  if(snap.empty) return alert("Usuário ou senha incorretos!");
+  currentUser=snap.docs[0].data();
   loginContainer.classList.add("d-none");
   mainContainer.classList.remove("d-none");
   logoutBtn.classList.remove("d-none");
-  if(currentUser.role === "admin") btnUserRegister.classList.remove("d-none");
+  if(currentUser.role==="admin") btnUserRegister.classList.remove("d-none");
   carregarChamados();
 });
 
-/* ========== LOGOUT ========== */
-logoutBtn.addEventListener("click", () => {
-  currentUser = null;
+/* LOGOUT */
+logoutBtn.addEventListener("click", ()=>{
+  currentUser=null;
   loginContainer.classList.remove("d-none");
   mainContainer.classList.add("d-none");
   logoutBtn.classList.add("d-none");
 });
 
-/* ========== CARREGAR CHAMADOS ========== */
+/* NOVO CHAMADO */
+btnNewTicket.addEventListener("click", async ()=>{
+  document.getElementById("ticketModalTitle").textContent="Novo Chamado";
+  document.getElementById("ticketForm").reset();
+  document.getElementById("editingTicketId").value="";
+  await fetchOperators();
+  newTicketModal.show();
+});
+
+/* CARREGAR CHAMADOS */
 async function carregarChamados(){
-  ticketTableBody.innerHTML = "<tr><td colspan='8'>Carregando...</td></tr>";
-  const snapshot = await db.collection("tickets").orderBy("date","asc").get();
-  tickets = snapshot.docs.map(d=>({id:d.id, ...d.data()}));
+  ticketTableBody.innerHTML="<tr><td colspan='8'>Carregando...</td></tr>";
+  const snap=await db.collection("tickets").orderBy("date","asc").get();
+  tickets=snap.docs.map(d=>({id:d.id,...d.data()}));
   renderTickets();
 }
 
-/* ========== RENDERIZAÇÃO ========== */
+/* RENDERIZAÇÃO */
 function renderTickets(){
-  ticketTableBody.innerHTML = "";
-  if(!tickets.length) return ticketTableBody.innerHTML = "<tr><td colspan='8'>Nenhum chamado.</td></tr>";
+  ticketTableBody.innerHTML="";
+  if(!tickets.length) return ticketTableBody.innerHTML="<tr><td colspan='8'>Nenhum chamado.</td></tr>";
   tickets.forEach(t=>{
+    const canEdit = t.status !== "Encerrado";
     const row=document.createElement("tr");
     row.innerHTML=`
       <td>${escapeHtml(t.subject)}</td>
@@ -221,89 +219,84 @@ function renderTickets(){
       <td>${escapeHtml(t.tech)}</td>
       <td>${escapeHtml(t.priority)}</td>
       <td>${escapeHtml(t.status)}</td>
-      <td>${t.date ? new Date(t.date).toLocaleString() : "-"}</td>
+      <td>${t.date?new Date(t.date).toLocaleString():"-"}</td>
       <td>
-        <button class="btn btn-primary btn-sm" onclick="showDetails('${t.id}')"><i class='bi bi-eye'></i></button>
-        ${t.status!=="Encerrado"
-          ? `<button class="btn btn-warning btn-sm ms-1" onclick="editTicket('${t.id}')"><i class='bi bi-pencil-square'></i></button>`
-          : ""}
+        <button class="btn btn-primary btn-sm" onclick="showDetails('${t.id}')"><i class="bi bi-eye"></i></button>
+        ${currentUser?.role==='admin' && canEdit
+          ? `<button class="btn btn-warning btn-sm ms-1" onclick="editTicket('${t.id}')"><i class="bi bi-pencil-square"></i></button>` : ""}
         ${currentUser?.role==='admin' && t.status!=="Encerrado"
-          ? `<button class="btn btn-success btn-sm ms-1" onclick="encerrarChamado('${t.id}')"><i class='bi bi-check2-circle'></i></button>`
-          : ""}
+          ? `<button class="btn btn-success btn-sm ms-1" onclick="encerrarChamado('${t.id}')"><i class="bi bi-check2-circle"></i></button>` : ""}
       </td>`;
     ticketTableBody.appendChild(row);
   });
 }
 
-/* ========== EDITAR CHAMADO ========== */
-window.editTicket = async function(id){
-  const ticket = tickets.find(t=>t.id===id);
-  if(!ticket) return alert("Chamado não encontrado");
-  document.getElementById("ticketModalTitle").textContent = "Editar Chamado";
-  document.getElementById("editingTicketId").value = id;
-  document.getElementById("ticketSubject").value = ticket.subject;
-  document.getElementById("ticketClient").value = ticket.client;
-  document.getElementById("ticketDescription").value = ticket.description;
-  document.getElementById("ticketPriority").value = ticket.priority;
-  document.getElementById("ticketStatus").value = ticket.status;
+/* EDITAR */
+window.editTicket=async id=>{
+  const t=tickets.find(x=>x.id===id);
+  if(!t) return alert("Chamado não encontrado");
+  document.getElementById("ticketModalTitle").textContent="Editar Chamado";
+  document.getElementById("editingTicketId").value=id;
+  document.getElementById("ticketSubject").value=t.subject;
+  document.getElementById("ticketClient").value=t.client;
+  document.getElementById("ticketDescription").value=t.description;
+  document.getElementById("ticketPriority").value=t.priority;
+  document.getElementById("ticketStatus").value=t.status;
   await fetchOperators();
-  document.getElementById("ticketTech").value = ticket.tech;
+  document.getElementById("ticketTech").value=t.tech;
   newTicketModal.show();
 };
 
-/* ========== SALVAR CHAMADO (NOVO/EDIÇÃO) ========== */
+/* SALVAR */
 document.getElementById("ticketForm").addEventListener("submit", async e=>{
   e.preventDefault();
-  const id = document.getElementById("editingTicketId").value;
-  const data = {
-    subject: document.getElementById("ticketSubject").value,
-    client: document.getElementById("ticketClient").value,
-    description: document.getElementById("ticketDescription").value,
-    tech: document.getElementById("ticketTech").value,
-    priority: document.getElementById("ticketPriority").value,
-    status: document.getElementById("ticketStatus").value,
-    date: id ? tickets.find(t=>t.id===id)?.date : new Date().getTime()
+  const id=document.getElementById("editingTicketId").value;
+  const data={
+    subject:document.getElementById("ticketSubject").value,
+    client:document.getElementById("ticketClient").value,
+    description:document.getElementById("ticketDescription").value,
+    tech:document.getElementById("ticketTech").value,
+    priority:document.getElementById("ticketPriority").value,
+    status:document.getElementById("ticketStatus").value,
+    date:id?tickets.find(t=>t.id===id)?.date:new Date().getTime()
   };
-  if(id){
-    await db.collection("tickets").doc(id).update(data);
-  }else{
-    await db.collection("tickets").add(data);
-  }
-  e.target.reset();
-  document.getElementById("editingTicketId").value="";
-  document.getElementById("ticketModalTitle").textContent = "Novo Chamado";
+  if(id) await db.collection("tickets").doc(id).update(data);
+  else await db.collection("tickets").add(data);
   newTicketModal.hide();
   carregarChamados();
 });
 
-/* ========== OUTRAS FUNÇÕES ========= */
+/* OUTRAS FUNÇÕES */
 async function fetchOperators(){
-  const snapshot=await db.collection("operators").get();
-  const techSelect=document.getElementById("ticketTech");
-  techSelect.innerHTML='<option value="">Selecione o Técnico</option>';
-  snapshot.forEach(doc=>{
-    const opt=document.createElement("option");
-    opt.value=doc.data().name;
-    opt.textContent=doc.data().name;
-    techSelect.appendChild(opt);
+  const s=await db.collection("operators").get();
+  const sel=document.getElementById("ticketTech");
+  sel.innerHTML='<option value="">Selecione o Técnico</option>';
+  s.forEach(doc=>{
+    const o=document.createElement("option");
+    o.value=doc.data().name;
+    o.textContent=doc.data().name;
+    sel.appendChild(o);
   });
 }
-
-window.encerrarChamado = async id=>{
+window.encerrarChamado=async id=>{
   if(confirm("Deseja encerrar este chamado?")){
     await db.collection("tickets").doc(id).update({status:"Encerrado"});
     carregarChamados();
   }
 };
-
-window.showDetails = id=>{
-  const t = tickets.find(x=>x.id===id);
-  if(!t) return alert("Chamado não encontrado.");
+window.showDetails=id=>{
+  const t=tickets.find(x=>x.id===id);
+  if(!t) return alert("Chamado não encontrado");
   alert(`Assunto: ${t.subject}\nCliente: ${t.client}\nDescrição: ${t.description}\nTécnico: ${t.tech}\nStatus: ${t.status}`);
 };
 
-/* ========== UTIL ========= */
-function escapeHtml(text){return text?String(text).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m])):"";}
+/* RELATÓRIO */
+btnReport.addEventListener("click", ()=>{
+  alert("Função de relatório em desenvolvimento.");
+});
+
+/* UTIL */
+function escapeHtml(txt){return txt?String(txt).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m])):"";}
 </script>
 </body>
 </html>
