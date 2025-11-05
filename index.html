@@ -6,8 +6,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+<!-- Firebase (mesmo projeto) -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<!-- jsPDF e XLSX para export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <style>
   :root{--bg:#f8fafc;--text:#1e293b;--card:#fff;--border:#e2e8f0;--navbar:linear-gradient(90deg,#0d6efd,#0a58ca);}
@@ -70,7 +74,11 @@
 
   <div class="d-flex gap-2 mb-5">
     <button id="btnOperators" class="btn btn-info btn-sm"><i class="bi bi-people"></i> Gerenciar Técnicos</button>
-    <button id="btnReport" class="btn btn-warning btn-sm"><i class="bi bi-file-earmark-bar-graph"></i> Relatório</button>
+    <div class="btn-group">
+      <button id="btnReport" class="btn btn-warning btn-sm"><i class="bi bi-file-earmark-bar-graph"></i> Relatório</button>
+      <button id="btnExportPdf" class="btn btn-outline-secondary btn-sm">PDF</button>
+      <button id="btnExportExcel" class="btn btn-outline-secondary btn-sm">Excel</button>
+    </div>
   </div>
 </div>
 
@@ -154,12 +162,32 @@
   </div>
 </div>
 
+<!-- MODAL: Editar Técnico (substitui prompt) -->
+<div class="modal fade" id="editOperatorModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content p-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="modal-title">Editar Técnico</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="editOperatorForm">
+        <input type="hidden" id="editOperatorId">
+        <div class="mb-2"><input id="editOperatorName" class="form-control" placeholder="Nome do técnico" required></div>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-secondary w-50" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary w-50">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <footer>© 2025 Sistema de Chamados - Desenvolvido por Eduardo Lima</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-/* ===== FIREBASE (mesmo projeto solicitado) ===== */
+/* ===== FIREBASE (mesmo projeto) ===== */
 const firebaseConfig = {
   apiKey: "AIzaSyBA16WHE768N9eUcqEoQqUF7uEIB82nNM0",
   authDomain: "chamados-37b34.firebaseapp.com",
@@ -180,10 +208,13 @@ const btnUserRegister = document.getElementById('btnUserRegister');
 const btnNewTicket = document.getElementById('btnNewTicket');
 const btnOperators = document.getElementById('btnOperators');
 const btnReport = document.getElementById('btnReport');
+const btnExportPdf = document.getElementById('btnExportPdf');
+const btnExportExcel = document.getElementById('btnExportExcel');
 
 const newTicketModal = new bootstrap.Modal(document.getElementById('newTicketModal'));
 const userModal = new bootstrap.Modal(document.getElementById('userModal'));
 const operatorsModal = new bootstrap.Modal(document.getElementById('operatorsModal'));
+const editOperatorModal = new bootstrap.Modal(document.getElementById('editOperatorModal'));
 
 const ticketTableBody = document.getElementById('ticketTableBody');
 const operatorsTableBody = document.getElementById('operatorsTableBody');
@@ -281,6 +312,7 @@ function renderTickets(){
   });
 }
 
+/* Edit / Close / Details */
 window.editTicket = async (id) => {
   const ticket = tickets.find(x => x.id === id);
   if (!ticket) return alert('Chamado não encontrado.');
@@ -319,7 +351,6 @@ document.getElementById('userForm').addEventListener('submit', async (e) => {
   const pass = document.getElementById('userPassword').value.trim();
   const role = document.getElementById('userRole').value;
   if (!name || !login || !pass) return alert('Preencha todos os campos!');
-  // evita duplicar login
   const exists = await db.collection('users').where('login','==',login).get();
   if (!exists.empty) return alert('Login já existe. Escolha outro.');
   await db.collection('users').add({ name, login, password: pass, role });
@@ -328,7 +359,7 @@ document.getElementById('userForm').addEventListener('submit', async (e) => {
   userModal.hide();
 });
 
-/* ===== Técnicos (modal) ===== */
+/* ===== Técnicos (modal + edit modal) ===== */
 btnOperators.addEventListener('click', async () => {
   await carregarTecnicos();
   operatorsModal.show();
@@ -345,7 +376,7 @@ async function carregarTecnicos(){
     tr.innerHTML = `
       <td>${escapeHtml(data.name)}</td>
       <td class="text-center">
-        <button class="btn btn-sm btn-secondary me-1" onclick="editarTecnico('${doc.id}','${escapeForAttr(data.name)}')"><i class="bi bi-pencil"></i></button>
+        <button class="btn btn-sm btn-secondary me-1" onclick="abrirEditarTecnico('${doc.id}','${escapeForAttr(data.name)}')"><i class="bi bi-pencil"></i></button>
         <button class="btn btn-sm btn-danger" onclick="excluirTecnico('${doc.id}')"><i class="bi bi-trash"></i></button>
       </td>`;
     operatorsTableBody.appendChild(tr);
@@ -361,22 +392,27 @@ document.getElementById('addOperatorBtn').addEventListener('click', async (e) =>
   await carregarTecnicos();
 });
 
-// excluir
 window.excluirTecnico = async (id) => {
   if (!confirm('Deseja excluir este técnico?')) return;
   await db.collection('operators').doc(id).delete();
   await carregarTecnicos();
 };
 
-// editar (abre prompt simples com nome atual — pode ser substituído por modal)
-window.editarTecnico = async (id, currentName) => {
-  const novo = prompt('Novo nome do técnico:', currentName);
-  if (novo === null) return; // cancelou
-  const value = novo.trim();
-  if (!value) { alert('Nome inválido.'); return; }
-  await db.collection('operators').doc(id).update({ name: value });
+/* Edit technician via modal */
+function abrirEditarTecnico(id, currentName) {
+  document.getElementById('editOperatorId').value = id;
+  document.getElementById('editOperatorName').value = currentName;
+  editOperatorModal.show();
+}
+document.getElementById('editOperatorForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const id = document.getElementById('editOperatorId').value;
+  const name = document.getElementById('editOperatorName').value.trim();
+  if (!name) return alert('Nome inválido.');
+  await db.collection('operators').doc(id).update({ name });
+  editOperatorModal.hide();
   await carregarTecnicos();
-};
+});
 
 /* ===== Helpers pra select de técnicos ===== */
 async function carregarOperadoresParaSelect(){
@@ -392,19 +428,50 @@ async function carregarOperadoresParaSelect(){
   });
 }
 
-/* ===== Relatório (placeholder) ===== */
-btnReport.addEventListener('click', () => {
-  alert('Exportador de relatórios ainda não implementado — posso adicionar PDF/Excel se desejar.');
+/* ===== Export PDF / Excel ===== */
+btnExportPdf.addEventListener('click', () => {
+  exportPDF();
+});
+btnExportExcel.addEventListener('click', () => {
+  exportExcel();
 });
 
+function exportPDF(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('p','pt','a4');
+  doc.setFontSize(14);
+  doc.text("Relatório de Chamados", 40, 40);
+  let y = 70;
+  const rows = tickets.map(t => [
+    t.subject || "-", t.client || "-", t.tech || "-", t.priority || "-", t.status || "-", t.date ? new Date(t.date).toLocaleString() : "-"
+  ]);
+  doc.setFontSize(10);
+  rows.forEach(r=>{
+    const line = `${r[0]} | ${r[1]} | ${r[2]} | ${r[3]} | ${r[4]} | ${r[5]}`;
+    doc.text(line.substring(0,140), 40, y);
+    y += 16;
+    if (y > 750) { doc.addPage(); y = 40; }
+  });
+  doc.save('relatorio_chamados.pdf');
+}
+
+function exportExcel(){
+  const ws_data = [["Assunto","Cliente","Técnico","Prioridade","Status","Data"]];
+  tickets.forEach(t => ws_data.push([
+    t.subject || "", t.client || "", t.tech || "", t.priority || "", t.status || "", t.date ? new Date(t.date).toLocaleString() : ""
+  ]));
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(ws_data);
+  XLSX.utils.book_append_sheet(wb, ws, "Chamados");
+  XLSX.writeFile(wb, "relatorio_chamados.xlsx");
+}
+
 /* ===== Util ===== */
-function escapeHtml(str){ if (!str && str !== 0) return ''; return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;', '<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#039;"}[s])); }
-// para passar texto sûro para atributos em gerar botões
+function escapeHtml(str){ if (!str && str !== 0) return ''; return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#039;"}[s])); }
 function escapeForAttr(s){ return (s||'').replace(/'/g,"\\'").replace(/"/g,'\\"'); }
 
-/* ===== Inicialização opcional: carregar técnicos/users se já logado ===== */
-/* (por simplicidade, a autenticação aqui é via Firestore match; não há persistência de sessão) */
-
+/* ===== Inicial ===== */
+// nada automático; espera login
 </script>
 </body>
 </html>
