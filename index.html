@@ -224,7 +224,7 @@ function renderTickets(){
       <td>${t.date ? new Date(t.date).toLocaleString() : "-"}</td>
       <td>
         <button class="btn btn-primary btn-sm" onclick="showDetails('${t.id}')"><i class='bi bi-eye'></i></button>
-        ${currentUser?.role==='admin'
+        ${t.status!=="Encerrado"
           ? `<button class="btn btn-warning btn-sm ms-1" onclick="editTicket('${t.id}')"><i class='bi bi-pencil-square'></i></button>`
           : ""}
         ${currentUser?.role==='admin' && t.status!=="Encerrado"
