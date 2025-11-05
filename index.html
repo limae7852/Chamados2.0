@@ -1,38 +1,22 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8" />
 <title>Sistema de Chamados</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
 <style>
-  :root {
-    --bg: #f8fafc;
-    --text: #1e293b;
-    --card: #ffffff;
-    --border: #e2e8f0;
-    --navbar: linear-gradient(90deg, #0d6efd, #0a58ca);
-  }
-  [data-theme="dark"] {
-    --bg: #0f172a;
-    --text: #f8fafc;
-    --card: #111827;
-    --border: #334155;
-    --navbar: linear-gradient(90deg, #1e40af, #1e3a8a);
-  }
-  body { background-color: var(--bg); color: var(--text); transition: background-color .25s, color .25s; font-family: "Segoe UI", Roboto, sans-serif; }
-  .navbar { background: var(--navbar); color: #fff !important; }
-  .card { background-color: var(--card); border: 1px solid var(--border); border-radius: .75rem; box-shadow: 0 3px 12px rgba(0,0,0,0.08); }
-  .table thead th { background-color: var(--border); }
-  .btn { border-radius: .4rem; font-weight: 500; }
-  .theme-toggle { background: transparent; color: #fff; border: none; font-size:1.2rem; }
-  .modal-content { border-radius: .75rem; }
-  #loginContainer { margin-top: 8vh; }
-  footer { text-align:center; color: #6c757d; padding:10px; font-size: .85rem; }
+  :root{--bg:#f8fafc;--text:#1e293b;--card:#fff;--border:#e2e8f0;--navbar:linear-gradient(90deg,#0d6efd,#0a58ca);}
+  body{background:var(--bg);color:var(--text);font-family:Inter, "Segoe UI", Roboto, sans-serif;}
+  .navbar{background:var(--navbar); color:#fff;}
+  .card{background:var(--card); border:1px solid var(--border); border-radius:.75rem;}
+  .theme-toggle{background:transparent;color:#fff;border:0;font-size:1.2rem;}
+  .modal-content{border-radius:.6rem;}
+  footer{font-size:.85rem;color:#6c757d;padding:12px;text-align:center;}
 </style>
 </head>
 <body>
@@ -41,7 +25,7 @@
 <nav class="navbar navbar-expand-lg shadow-sm">
   <div class="container-fluid px-4">
     <span class="navbar-brand"><i class="bi bi-headset"></i> Sistema de Chamados</span>
-    <div class="d-flex align-items-center gap-2">
+    <div class="d-flex gap-2 align-items-center">
       <button id="themeToggle" class="theme-toggle" title="Alterar tema"><i class="bi bi-moon-fill"></i></button>
       <button id="logoutBtn" class="btn btn-light btn-sm d-none"><i class="bi bi-box-arrow-right"></i> Sair</button>
     </div>
@@ -54,15 +38,9 @@
     <div class="col-md-4">
       <div class="card p-4 shadow-sm mt-5">
         <h4 class="text-center mb-3 text-primary"><i class="bi bi-person-circle"></i> Login</h4>
-        <div class="mb-3">
-          <label class="form-label">Usuário</label>
-          <input type="text" class="form-control" id="loginUser" placeholder="Digite seu login">
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Senha</label>
-          <input type="password" class="form-control" id="loginPass" placeholder="Digite sua senha">
-        </div>
-        <button class="btn btn-primary w-100" id="loginBtn">Entrar</button>
+        <div class="mb-3"><label class="form-label">Usuário</label><input id="loginUser" class="form-control" placeholder="login"></div>
+        <div class="mb-3"><label class="form-label">Senha</label><input id="loginPass" type="password" class="form-control" placeholder="senha"></div>
+        <button id="loginBtn" class="btn btn-primary w-100">Entrar</button>
       </div>
     </div>
   </div>
@@ -70,23 +48,21 @@
 
 <!-- MAIN -->
 <div class="container d-none" id="mainContainer">
-  <div class="d-flex justify-content-between align-items-center mb-4 mt-4">
+  <div class="d-flex justify-content-between align-items-center my-4">
     <h3 class="text-primary"><i class="bi bi-ticket-detailed"></i> Chamados</h3>
-    <div>
-      <button id="btnNewTicket" class="btn btn-primary btn-sm me-2"><i class="bi bi-plus-lg"></i> Novo Chamado</button>
+    <div class="d-flex gap-2">
+      <button id="btnNewTicket" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Novo Chamado</button>
       <button id="btnUserRegister" class="btn btn-success btn-sm d-none"><i class="bi bi-person-plus"></i> Cadastrar Usuário</button>
     </div>
   </div>
 
   <div class="card p-3 mb-4 shadow-sm">
     <div class="table-responsive">
-      <table class="table table-striped align-middle text-center">
-        <thead>
-          <tr>
-            <th>Assunto</th><th>Cliente</th><th>Descrição</th><th>Técnico</th>
-            <th>Prioridade</th><th>Status</th><th>Data</th><th>Ações</th>
-          </tr>
-        </thead>
+      <table class="table table-striped align-middle text-center mb-0">
+        <thead><tr>
+          <th>Assunto</th><th>Cliente</th><th>Descrição</th><th>Técnico</th>
+          <th>Prioridade</th><th>Status</th><th>Data</th><th>Ações</th>
+        </tr></thead>
         <tbody id="ticketTableBody"></tbody>
       </table>
     </div>
@@ -94,76 +70,96 @@
 
   <div class="d-flex gap-2 mb-5">
     <button id="btnOperators" class="btn btn-info btn-sm"><i class="bi bi-people"></i> Gerenciar Técnicos</button>
-    <button id="btnReport" class="btn btn-warning btn-sm"><i class="bi bi-file-earmark-bar-graph"></i> Relatório PDF/Excel</button>
+    <button id="btnReport" class="btn btn-warning btn-sm"><i class="bi bi-file-earmark-bar-graph"></i> Relatório</button>
   </div>
 </div>
 
-<!-- MODAL CHAMADO -->
+<!-- MODAL: Chamado (novo/editar) -->
 <div class="modal fade" id="newTicketModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <div class="modal-content p-3">
       <div class="d-flex justify-content-between align-items-center mb-2">
-        <h5 class="modal-title" id="ticketModalTitle">Novo Chamado</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <h5 id="ticketModalTitle">Novo Chamado</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <form id="ticketForm">
         <input type="hidden" id="editingTicketId">
         <div class="row">
-          <div class="col-md-6 mb-2"><input class="form-control" id="ticketSubject" placeholder="Assunto" required></div>
-          <div class="col-md-6 mb-2"><input class="form-control" id="ticketClient" placeholder="Cliente" required></div>
-          <div class="col-12 mb-2"><textarea class="form-control" id="ticketDescription" placeholder="Descrição" required></textarea></div>
+          <div class="col-md-6 mb-2"><input id="ticketSubject" class="form-control" placeholder="Assunto" required></div>
+          <div class="col-md-6 mb-2"><input id="ticketClient" class="form-control" placeholder="Cliente" required></div>
+          <div class="col-12 mb-2"><textarea id="ticketDescription" class="form-control" placeholder="Descrição" required></textarea></div>
           <div class="col-md-4 mb-2"><select id="ticketTech" class="form-select" required><option value="">Selecione o Técnico</option></select></div>
           <div class="col-md-4 mb-2">
             <select id="ticketPriority" class="form-select" required>
-              <option value="Baixa">Baixa</option>
-              <option value="Média">Média</option>
-              <option value="Alta">Alta</option>
+              <option value="Baixa">Baixa</option><option value="Média">Média</option><option value="Alta">Alta</option>
             </select>
           </div>
           <div class="col-md-4 mb-2">
             <select id="ticketStatus" class="form-select" required>
-              <option value="Aberto">Aberto</option>
-              <option value="Em andamento">Em andamento</option>
-              <option value="Resolvido">Resolvido</option>
-              <option value="Encerrado">Encerrado</option>
+              <option value="Aberto">Aberto</option><option value="Em andamento">Em andamento</option>
+              <option value="Resolvido">Resolvido</option><option value="Encerrado">Encerrado</option>
             </select>
           </div>
         </div>
-        <button type="submit" class="btn btn-primary w-100 mt-2">Salvar Chamado</button>
+        <button class="btn btn-primary w-100 mt-2" type="submit">Salvar Chamado</button>
       </form>
     </div>
   </div>
 </div>
 
-<!-- MODAL CADASTRO USUÁRIO -->
+<!-- MODAL: Cadastrar Usuário -->
 <div class="modal fade" id="userModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content p-3">
       <div class="d-flex justify-content-between align-items-center mb-2">
         <h5 class="modal-title">Cadastrar Usuário</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <form id="userForm">
         <div class="mb-2"><input id="userName" class="form-control" placeholder="Nome completo" required></div>
-        <div class="mb-2"><input id="userLogin" class="form-control" placeholder="Login de acesso" required></div>
+        <div class="mb-2"><input id="userLogin" class="form-control" placeholder="Login" required></div>
         <div class="mb-2"><input id="userPassword" type="password" class="form-control" placeholder="Senha" required></div>
         <div class="mb-3">
           <select id="userRole" class="form-select" required>
-            <option value="user">Usuário comum</option>
-            <option value="admin">Administrador</option>
+            <option value="user">Usuário</option><option value="admin">Administrador</option>
           </select>
         </div>
-        <button type="submit" class="btn btn-success w-100">Salvar Usuário</button>
+        <button class="btn btn-success w-100" type="submit">Salvar Usuário</button>
       </form>
     </div>
   </div>
 </div>
 
-<footer><p>© 2025 Sistema de Chamados - Desenvolvido por Eduardo Lima</p></footer>
+<!-- MODAL: Gerenciar Técnicos -->
+<div class="modal fade" id="operatorsModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content p-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="modal-title">Gerenciar Técnicos</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="mb-3 d-flex gap-2">
+        <input id="newOperatorName" class="form-control" placeholder="Nome do técnico">
+        <button id="addOperatorBtn" class="btn btn-success"><i class="bi bi-plus-circle"></i> Adicionar</button>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead class="table-light"><tr><th>Nome</th><th class="text-center">Ações</th></tr></thead>
+          <tbody id="operatorsTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>© 2025 Sistema de Chamados - Desenvolvido por Eduardo Lima</footer>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-/* ======= FIREBASE ======= */
+/* ===== FIREBASE (mesmo projeto solicitado) ===== */
 const firebaseConfig = {
   apiKey: "AIzaSyBA16WHE768N9eUcqEoQqUF7uEIB82nNM0",
   authDomain: "chamados-37b34.firebaseapp.com",
@@ -175,107 +171,240 @@ const firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-/* ======= ELEMENTOS ======= */
-const loginBtn = document.getElementById("loginBtn");
-const logoutBtn = document.getElementById("logoutBtn");
-const btnUserRegister = document.getElementById("btnUserRegister");
-const userModal = new bootstrap.Modal(document.getElementById("userModal"));
-const userForm = document.getElementById("userForm");
-const mainContainer = document.getElementById("mainContainer");
-const loginContainer = document.getElementById("loginContainer");
-const btnNewTicket = document.getElementById("btnNewTicket");
-const newTicketModal = new bootstrap.Modal(document.getElementById("newTicketModal"));
-const ticketTableBody = document.getElementById("ticketTableBody");
+/* ===== Elementos & modais ===== */
+const loginBtn = document.getElementById('loginBtn');
+const logoutBtn = document.getElementById('logoutBtn');
+const loginContainer = document.getElementById('loginContainer');
+const mainContainer = document.getElementById('mainContainer');
+const btnUserRegister = document.getElementById('btnUserRegister');
+const btnNewTicket = document.getElementById('btnNewTicket');
+const btnOperators = document.getElementById('btnOperators');
+const btnReport = document.getElementById('btnReport');
+
+const newTicketModal = new bootstrap.Modal(document.getElementById('newTicketModal'));
+const userModal = new bootstrap.Modal(document.getElementById('userModal'));
+const operatorsModal = new bootstrap.Modal(document.getElementById('operatorsModal'));
+
+const ticketTableBody = document.getElementById('ticketTableBody');
+const operatorsTableBody = document.getElementById('operatorsTableBody');
+
 let currentUser = null;
 let tickets = [];
 
-/* ======= LOGIN ======= */
-loginBtn.addEventListener("click", async ()=>{
-  const user=document.getElementById("loginUser").value.trim();
-  const pass=document.getElementById("loginPass").value.trim();
-  if(!user||!pass) return alert("Preencha todos os campos!");
-  try{
-    const snap=await db.collection("users").where("login","==",user).where("password","==",pass).get();
-    if(snap.empty) return alert("Usuário ou senha incorretos!");
-    currentUser=snap.docs[0].data();
-    loginContainer.classList.add("d-none");
-    mainContainer.classList.remove("d-none");
-    logoutBtn.classList.remove("d-none");
-    if(currentUser.role==="admin") btnUserRegister.classList.remove("d-none");
+/* ===== LOGIN ===== */
+loginBtn.addEventListener('click', async () => {
+  const user = document.getElementById('loginUser').value.trim();
+  const pass = document.getElementById('loginPass').value.trim();
+  if (!user || !pass) { alert('Preencha todos os campos!'); return; }
+
+  try {
+    const snap = await db.collection('users').where('login','==',user).where('password','==',pass).get();
+    if (snap.empty) { alert('Usuário ou senha incorretos!'); return; }
+    currentUser = snap.docs[0].data();
+    console.log('Login OK:', currentUser);
+    loginContainer.classList.add('d-none');
+    mainContainer.classList.remove('d-none');
+    logoutBtn.classList.remove('d-none');
+    if (currentUser.role === 'admin') btnUserRegister.classList.remove('d-none');
     carregarChamados();
-  }catch(e){alert("Erro ao conectar ao banco.");}
-});
-logoutBtn.addEventListener("click", ()=>{
-  currentUser=null;
-  loginContainer.classList.remove("d-none");
-  mainContainer.classList.add("d-none");
-  logoutBtn.classList.add("d-none");
+  } catch (err) {
+    console.error(err);
+    alert('Erro ao conectar com o banco.');
+  }
 });
 
-/* ======= CHAMADOS ======= */
-btnNewTicket.addEventListener("click", async ()=>{
-  document.getElementById("ticketForm").reset();
-  document.getElementById("editingTicketId").value="";
-  await fetchOperators();
+logoutBtn.addEventListener('click', () => {
+  currentUser = null;
+  loginContainer.classList.remove('d-none');
+  mainContainer.classList.add('d-none');
+  logoutBtn.classList.add('d-none');
+});
+
+/* ===== Chamados ===== */
+btnNewTicket.addEventListener('click', async () => {
+  document.getElementById('ticketModalTitle').textContent = 'Novo Chamado';
+  document.getElementById('ticketForm').reset();
+  document.getElementById('editingTicketId').value = '';
+  await carregarOperadoresParaSelect();
   newTicketModal.show();
 });
+
+document.getElementById('ticketForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const id = document.getElementById('editingTicketId').value;
+  const data = {
+    subject: document.getElementById('ticketSubject').value.trim(),
+    client: document.getElementById('ticketClient').value.trim(),
+    description: document.getElementById('ticketDescription').value.trim(),
+    tech: document.getElementById('ticketTech').value,
+    priority: document.getElementById('ticketPriority').value,
+    status: document.getElementById('ticketStatus').value,
+    date: id ? tickets.find(t => t.id === id)?.date : new Date().getTime()
+  };
+  try {
+    if (id) await db.collection('tickets').doc(id).update(data);
+    else await db.collection('tickets').add(data);
+    newTicketModal.hide();
+    carregarChamados();
+  } catch (err) {
+    console.error(err); alert('Erro ao salvar chamado.');
+  }
+});
+
 async function carregarChamados(){
-  ticketTableBody.innerHTML="<tr><td colspan='8'>Carregando...</td></tr>";
-  const snap=await db.collection("tickets").orderBy("date","asc").get();
-  tickets=snap.docs.map(d=>({id:d.id,...d.data()}));
+  ticketTableBody.innerHTML = '<tr><td colspan="8">Carregando...</td></tr>';
+  const snap = await db.collection('tickets').orderBy('date','asc').get();
+  tickets = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   renderTickets();
 }
+
 function renderTickets(){
-  ticketTableBody.innerHTML="";
-  if(!tickets.length) return ticketTableBody.innerHTML="<tr><td colspan='8'>Nenhum chamado.</td></tr>";
-  tickets.forEach(t=>{
-    const canEdit = t.status !== "Encerrado";
-    const row=document.createElement("tr");
-    row.innerHTML=`
-      <td>${t.subject}</td><td>${t.client}</td><td>${t.description}</td>
-      <td>${t.tech}</td><td>${t.priority}</td><td>${t.status}</td>
-      <td>${t.date?new Date(t.date).toLocaleString():"-"}</td>
+  ticketTableBody.innerHTML = '';
+  if (!tickets.length) { ticketTableBody.innerHTML = '<tr><td colspan="8">Nenhum chamado.</td></tr>'; return; }
+  tickets.forEach(t => {
+    const canEdit = t.status !== 'Encerrado';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${escapeHtml(t.subject)}</td>
+      <td>${escapeHtml(t.client)}</td>
+      <td class="text-start">${escapeHtml(t.description)}</td>
+      <td>${escapeHtml(t.tech||'-')}</td>
+      <td>${escapeHtml(t.priority||'-')}</td>
+      <td>${escapeHtml(t.status||'-')}</td>
+      <td>${t.date ? new Date(t.date).toLocaleString() : '-'}</td>
       <td>
-        ${canEdit ? `<button class='btn btn-warning btn-sm' onclick="editTicket('${t.id}')"><i class='bi bi-pencil-square'></i></button>` : ""}
-        ${t.status!=="Encerrado" ? `<button class='btn btn-success btn-sm ms-1' onclick="encerrarChamado('${t.id}')"><i class='bi bi-check2-circle'></i></button>` : ""}
+        <button class="btn btn-primary btn-sm" onclick="showDetails('${t.id}')"><i class="bi bi-eye"></i></button>
+        ${canEdit ? `<button class="btn btn-warning btn-sm ms-1" onclick="editTicket('${t.id}')"><i class="bi bi-pencil-square"></i></button>` : ''}
+        ${t.status !== 'Encerrado' ? `<button class="btn btn-success btn-sm ms-1" onclick="encerrarChamado('${t.id}')"><i class="bi bi-check2-circle"></i></button>` : ''}
       </td>`;
-    ticketTableBody.appendChild(row);
+    ticketTableBody.appendChild(tr);
   });
 }
-window.encerrarChamado=async id=>{
-  await db.collection("tickets").doc(id).update({status:"Encerrado"});
+
+window.editTicket = async (id) => {
+  const ticket = tickets.find(x => x.id === id);
+  if (!ticket) return alert('Chamado não encontrado.');
+  document.getElementById('ticketModalTitle').textContent = 'Editar Chamado';
+  document.getElementById('editingTicketId').value = id;
+  document.getElementById('ticketSubject').value = ticket.subject;
+  document.getElementById('ticketClient').value = ticket.client;
+  document.getElementById('ticketDescription').value = ticket.description;
+  document.getElementById('ticketPriority').value = ticket.priority;
+  document.getElementById('ticketStatus').value = ticket.status;
+  await carregarOperadoresParaSelect();
+  document.getElementById('ticketTech').value = ticket.tech;
+  newTicketModal.show();
+};
+
+window.encerrarChamado = async (id) => {
+  if (!confirm('Deseja encerrar este chamado?')) return;
+  await db.collection('tickets').doc(id).update({ status: 'Encerrado' });
   carregarChamados();
 };
 
-/* ======= CADASTRAR USUÁRIO ======= */
-btnUserRegister.addEventListener("click", ()=>userModal.show());
-userForm.addEventListener("submit", async e=>{
+window.showDetails = (id) => {
+  const t = tickets.find(x => x.id === id);
+  if (!t) return alert('Chamado não encontrado.');
+  const txt = `Assunto: ${t.subject}\nCliente: ${t.client}\nDescrição: ${t.description}\nTécnico: ${t.tech}\nPrioridade: ${t.priority}\nStatus: ${t.status}\nData: ${t.date ? new Date(t.date).toLocaleString() : '-'}`;
+  alert(txt);
+};
+
+/* ===== Usuários (modal) ===== */
+btnUserRegister.addEventListener('click', () => userModal.show());
+
+document.getElementById('userForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const name=document.getElementById("userName").value.trim();
-  const login=document.getElementById("userLogin").value.trim();
-  const pass=document.getElementById("userPassword").value.trim();
-  const role=document.getElementById("userRole").value;
-  if(!name||!login||!pass) return alert("Preencha todos os campos!");
-  const exists=await db.collection("users").where("login","==",login).get();
-  if(!exists.empty) return alert("Este login já existe!");
-  await db.collection("users").add({name,login,password:pass,role});
-  alert("Usuário cadastrado com sucesso!");
-  userForm.reset();
+  const name = document.getElementById('userName').value.trim();
+  const login = document.getElementById('userLogin').value.trim();
+  const pass = document.getElementById('userPassword').value.trim();
+  const role = document.getElementById('userRole').value;
+  if (!name || !login || !pass) return alert('Preencha todos os campos!');
+  // evita duplicar login
+  const exists = await db.collection('users').where('login','==',login).get();
+  if (!exists.empty) return alert('Login já existe. Escolha outro.');
+  await db.collection('users').add({ name, login, password: pass, role });
+  alert('Usuário criado com sucesso!');
+  document.getElementById('userForm').reset();
   userModal.hide();
 });
 
-/* ======= SUPORTE ======= */
-async function fetchOperators(){
-  const s=await db.collection("operators").get();
-  const sel=document.getElementById("ticketTech");
-  sel.innerHTML='<option value="">Selecione o Técnico</option>';
-  s.forEach(doc=>{
-    const o=document.createElement("option");
-    o.value=doc.data().name;
-    o.textContent=doc.data().name;
-    sel.appendChild(o);
+/* ===== Técnicos (modal) ===== */
+btnOperators.addEventListener('click', async () => {
+  await carregarTecnicos();
+  operatorsModal.show();
+});
+
+async function carregarTecnicos(){
+  operatorsTableBody.innerHTML = '<tr><td colspan="2">Carregando...</td></tr>';
+  const snap = await db.collection('operators').orderBy('name','asc').get();
+  operatorsTableBody.innerHTML = '';
+  if (snap.empty) { operatorsTableBody.innerHTML = '<tr><td colspan="2">Nenhum técnico cadastrado.</td></tr>'; return; }
+  snap.forEach(doc => {
+    const data = doc.data();
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${escapeHtml(data.name)}</td>
+      <td class="text-center">
+        <button class="btn btn-sm btn-secondary me-1" onclick="editarTecnico('${doc.id}','${escapeForAttr(data.name)}')"><i class="bi bi-pencil"></i></button>
+        <button class="btn btn-sm btn-danger" onclick="excluirTecnico('${doc.id}')"><i class="bi bi-trash"></i></button>
+      </td>`;
+    operatorsTableBody.appendChild(tr);
   });
 }
+
+document.getElementById('addOperatorBtn').addEventListener('click', async (e) => {
+  e.preventDefault();
+  const name = document.getElementById('newOperatorName').value.trim();
+  if (!name) return alert('Informe o nome do técnico.');
+  await db.collection('operators').add({ name });
+  document.getElementById('newOperatorName').value = '';
+  await carregarTecnicos();
+});
+
+// excluir
+window.excluirTecnico = async (id) => {
+  if (!confirm('Deseja excluir este técnico?')) return;
+  await db.collection('operators').doc(id).delete();
+  await carregarTecnicos();
+};
+
+// editar (abre prompt simples com nome atual — pode ser substituído por modal)
+window.editarTecnico = async (id, currentName) => {
+  const novo = prompt('Novo nome do técnico:', currentName);
+  if (novo === null) return; // cancelou
+  const value = novo.trim();
+  if (!value) { alert('Nome inválido.'); return; }
+  await db.collection('operators').doc(id).update({ name: value });
+  await carregarTecnicos();
+};
+
+/* ===== Helpers pra select de técnicos ===== */
+async function carregarOperadoresParaSelect(){
+  const sel = document.getElementById('ticketTech');
+  sel.innerHTML = '<option value="">Selecione o Técnico</option>';
+  const snap = await db.collection('operators').orderBy('name','asc').get();
+  snap.forEach(doc => {
+    const name = doc.data().name;
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    sel.appendChild(opt);
+  });
+}
+
+/* ===== Relatório (placeholder) ===== */
+btnReport.addEventListener('click', () => {
+  alert('Exportador de relatórios ainda não implementado — posso adicionar PDF/Excel se desejar.');
+});
+
+/* ===== Util ===== */
+function escapeHtml(str){ if (!str && str !== 0) return ''; return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;', '<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#039;"}[s])); }
+// para passar texto sûro para atributos em gerar botões
+function escapeForAttr(s){ return (s||'').replace(/'/g,"\\'").replace(/"/g,'\\"'); }
+
+/* ===== Inicialização opcional: carregar técnicos/users se já logado ===== */
+/* (por simplicidade, a autenticação aqui é via Firestore match; não há persistência de sessão) */
+
 </script>
 </body>
 </html>
