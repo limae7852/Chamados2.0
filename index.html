@@ -141,6 +141,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
+/* ======= FIREBASE CONFIG ======= */
 const firebaseConfig = {
   apiKey: "AIzaSyBA16WHE768N9eUcqEoQqUF7uEIB82nNM0",
   authDomain: "chamados-37b34.firebaseapp.com",
@@ -149,9 +150,10 @@ const firebaseConfig = {
   messagingSenderId: "164935126006",
   appId: "1:164935126006:web:e49fd19961993d5b62d5d7"
 };
-firebase.initializeApp(firebaseConfig);
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+/* ======= ELEMENTOS ======= */
 const loginBtn = document.getElementById("loginBtn");
 const logoutBtn = document.getElementById("logoutBtn");
 const loginContainer = document.getElementById("loginContainer");
@@ -159,32 +161,33 @@ const mainContainer = document.getElementById("mainContainer");
 const ticketTableBody = document.getElementById("ticketTableBody");
 const btnUserRegister = document.getElementById("btnUserRegister");
 const btnNewTicket = document.getElementById("btnNewTicket");
-const btnOperators = document.getElementById("btnOperators");
 const btnReport = document.getElementById("btnReport");
-
 const newTicketModal = new bootstrap.Modal(document.getElementById("newTicketModal"));
-const userModal = new bootstrap.Modal(document.getElementById("userModal"));
-const operatorsModal = new bootstrap.Modal(document.getElementById("operatorsModal"));
-
 let currentUser = null;
 let tickets = [];
 
-/* LOGIN */
+/* ======= LOGIN ======= */
 loginBtn.addEventListener("click", async ()=>{
   const user=document.getElementById("loginUser").value.trim();
   const pass=document.getElementById("loginPass").value.trim();
   if(!user||!pass) return alert("Preencha todos os campos!");
-  const snap=await db.collection("users").where("login","==",user).where("password","==",pass).get();
-  if(snap.empty) return alert("Usuário ou senha incorretos!");
-  currentUser=snap.docs[0].data();
-  loginContainer.classList.add("d-none");
-  mainContainer.classList.remove("d-none");
-  logoutBtn.classList.remove("d-none");
-  if(currentUser.role==="admin") btnUserRegister.classList.remove("d-none");
-  carregarChamados();
+  try{
+    const snap=await db.collection("users").where("login","==",user).where("password","==",pass).get();
+    if(snap.empty) return alert("Usuário ou senha incorretos!");
+    currentUser=snap.docs[0].data();
+    console.log("Login OK:", currentUser);
+    loginContainer.classList.add("d-none");
+    mainContainer.classList.remove("d-none");
+    logoutBtn.classList.remove("d-none");
+    if(currentUser.role==="admin") btnUserRegister.classList.remove("d-none");
+    carregarChamados();
+  }catch(e){
+    console.error("Erro no login:",e);
+    alert("Erro ao conectar ao banco.");
+  }
 });
 
-/* LOGOUT */
+/* ======= LOGOUT ======= */
 logoutBtn.addEventListener("click", ()=>{
   currentUser=null;
   loginContainer.classList.remove("d-none");
@@ -192,7 +195,7 @@ logoutBtn.addEventListener("click", ()=>{
   logoutBtn.classList.add("d-none");
 });
 
-/* NOVO CHAMADO */
+/* ======= NOVO CHAMADO ======= */
 btnNewTicket.addEventListener("click", async ()=>{
   document.getElementById("ticketModalTitle").textContent="Novo Chamado";
   document.getElementById("ticketForm").reset();
@@ -201,70 +204,7 @@ btnNewTicket.addEventListener("click", async ()=>{
   newTicketModal.show();
 });
 
-/* CADASTRAR USUÁRIO */
-btnUserRegister.addEventListener("click", ()=>{
-  document.getElementById("userForm").reset();
-  userModal.show();
-});
-
-document.getElementById("userForm").addEventListener("submit", async e=>{
-  e.preventDefault();
-  const data={
-    name:document.getElementById("userName").value,
-    login:document.getElementById("userLogin").value,
-    password:document.getElementById("userPassword").value,
-    role:document.getElementById("userRole").value
-  };
-  await db.collection("users").add(data);
-  userModal.hide();
-  alert("Usuário cadastrado com sucesso!");
-});
-
-/* GERENCIAR TÉCNICOS */
-btnOperators.addEventListener("click", async ()=>{
-  await carregarTecnicos();
-  operatorsModal.show();
-});
-
-async function carregarTecnicos(){
-  const tbody=document.getElementById("operatorsTableBody");
-  tbody.innerHTML="<tr><td colspan='2'>Carregando...</td></tr>";
-  const snap=await db.collection("operators").get();
-  tbody.innerHTML="";
-  if(snap.empty){
-    tbody.innerHTML="<tr><td colspan='2'>Nenhum técnico cadastrado.</td></tr>";
-    return;
-  }
-  snap.forEach(doc=>{
-    const d=doc.data();
-    const tr=document.createElement("tr");
-    tr.innerHTML=`
-      <td>${escapeHtml(d.name)}</td>
-      <td class="text-center">
-        <button class="btn btn-danger btn-sm" onclick="excluirTecnico('${doc.id}')">
-          <i class="bi bi-trash"></i> Excluir
-        </button>
-      </td>`;
-    tbody.appendChild(tr);
-  });
-}
-
-document.getElementById("addOperatorBtn").addEventListener("click", async ()=>{
-  const name=document.getElementById("newOperatorName").value.trim();
-  if(!name) return alert("Informe o nome do técnico!");
-  await db.collection("operators").add({name});
-  document.getElementById("newOperatorName").value="";
-  await carregarTecnicos();
-});
-
-window.excluirTecnico=async id=>{
-  if(confirm("Deseja excluir este técnico?")){
-    await db.collection("operators").doc(id).delete();
-    await carregarTecnicos();
-  }
-};
-
-/* CARREGAR CHAMADOS */
+/* ======= CARREGAR CHAMADOS ======= */
 async function carregarChamados(){
   ticketTableBody.innerHTML="<tr><td colspan='8'>Carregando...</td></tr>";
   const snap=await db.collection("tickets").orderBy("date","asc").get();
@@ -272,7 +212,7 @@ async function carregarChamados(){
   renderTickets();
 }
 
-/* RENDERIZAÇÃO */
+/* ======= RENDERIZAÇÃO ======= */
 function renderTickets(){
   ticketTableBody.innerHTML="";
   if(!tickets.length) return ticketTableBody.innerHTML="<tr><td colspan='8'>Nenhum chamado.</td></tr>";
@@ -289,16 +229,14 @@ function renderTickets(){
       <td>${t.date?new Date(t.date).toLocaleString():"-"}</td>
       <td>
         <button class="btn btn-primary btn-sm" onclick="showDetails('${t.id}')"><i class="bi bi-eye"></i></button>
-        ${currentUser?.role==='admin' && canEdit
-          ? `<button class="btn btn-warning btn-sm ms-1" onclick="editTicket('${t.id}')"><i class="bi bi-pencil-square"></i></button>` : ""}
-        ${currentUser?.role==='admin' && t.status!=="Encerrado"
-          ? `<button class="btn btn-success btn-sm ms-1" onclick="encerrarChamado('${t.id}')"><i class="bi bi-check2-circle"></i></button>` : ""}
+        ${canEdit ? `<button class="btn btn-warning btn-sm ms-1" onclick="editTicket('${t.id}')"><i class="bi bi-pencil-square"></i></button>` : ""}
+        ${t.status!=="Encerrado" ? `<button class="btn btn-success btn-sm ms-1" onclick="encerrarChamado('${t.id}')"><i class="bi bi-check2-circle"></i></button>` : ""}
       </td>`;
     ticketTableBody.appendChild(row);
   });
 }
 
-/* EDITAR */
+/* ======= EDITAR ======= */
 window.editTicket=async id=>{
   const t=tickets.find(x=>x.id===id);
   if(!t) return alert("Chamado não encontrado");
@@ -314,7 +252,7 @@ window.editTicket=async id=>{
   newTicketModal.show();
 };
 
-/* SALVAR */
+/* ======= SALVAR ======= */
 document.getElementById("ticketForm").addEventListener("submit", async e=>{
   e.preventDefault();
   const id=document.getElementById("editingTicketId").value;
@@ -333,7 +271,7 @@ document.getElementById("ticketForm").addEventListener("submit", async e=>{
   carregarChamados();
 });
 
-/* OUTRAS FUNÇÕES */
+/* ======= OUTRAS FUNÇÕES ======= */
 async function fetchOperators(){
   const s=await db.collection("operators").get();
   const sel=document.getElementById("ticketTech");
@@ -357,12 +295,12 @@ window.showDetails=id=>{
   alert(`Assunto: ${t.subject}\nCliente: ${t.client}\nDescrição: ${t.description}\nTécnico: ${t.tech}\nStatus: ${t.status}`);
 };
 
-/* RELATÓRIO */
+/* ======= RELATÓRIO ======= */
 btnReport.addEventListener("click", ()=>{
   alert("Função de relatório em desenvolvimento.");
 });
 
-/* UTIL */
+/* ======= UTIL ======= */
 function escapeHtml(txt){return txt?String(txt).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m])):"";}
 </script>
 </body>
