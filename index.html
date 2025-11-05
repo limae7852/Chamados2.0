@@ -29,26 +29,9 @@
     --border: #334155;
     --navbar: linear-gradient(90deg, #1e40af, #1e3a8a);
   }
-
-  body {
-    background-color: var(--bg);
-    color: var(--text);
-    font-family: "Segoe UI", Roboto, sans-serif;
-    transition: background-color .25s, color .25s;
-  }
-
-  .navbar {
-    background: var(--navbar);
-    color: #fff !important;
-  }
-
-  .card {
-    background-color: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 0.75rem;
-    box-shadow: 0 3px 12px rgba(0,0,0,0.08);
-  }
-
+  body { background-color: var(--bg); color: var(--text); transition: background-color .25s, color .25s; font-family: "Segoe UI", Roboto, sans-serif; }
+  .navbar { background: var(--navbar); color: #fff !important; }
+  .card { background-color: var(--card); border: 1px solid var(--border); border-radius: .75rem; box-shadow: 0 3px 12px rgba(0,0,0,0.08); }
   .table thead th { background-color: var(--border); }
   .btn { border-radius: .4rem; font-weight: 500; }
   .theme-toggle { background: transparent; color: #fff; border: none; font-size:1.2rem; }
@@ -120,84 +103,21 @@
   </div>
 </div>
 
-<!-- Modal Usuários -->
-<div class="modal fade" id="userModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content p-3">
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <h5 class="modal-title">Cadastrar Usuário</h5>
-        <button type="button" class="btn-close btn-close-black" data-bs-dismiss="modal"></button>
-      </div>
-      <form id="userForm">
-        <div class="mb-2"><input class="form-control" placeholder="Nome" id="userName" required></div>
-        <div class="mb-2"><input class="form-control" placeholder="Login" id="userLogin" required></div>
-        <div class="mb-2"><input type="password" class="form-control" placeholder="Senha" id="userPass" required></div>
-        <div class="mb-2">
-          <select id="userRole" class="form-control" required>
-            <option value="admin">Admin</option>
-            <option value="tech">Técnico</option>
-            <option value="operator">Operador</option>
-          </select>
-        </div>
-        <button type="submit" class="btn btn-success w-100">Salvar</button>
-      </form>
-      <ul id="usersList" class="mt-3 list-group list-group-flush"></ul>
-    </div>
-  </div>
-</div>
-
-<!-- Modal Operadores -->
-<div class="modal fade" id="operatorsModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content p-3">
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <h5 class="modal-title">Operadores</h5>
-        <button type="button" class="btn-close btn-close-black" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="d-flex mb-2">
-        <input id="newOperator" class="form-control me-2" placeholder="Nome do Técnico">
-        <button id="addOperatorBtn" class="btn btn-primary">Adicionar</button>
-      </div>
-      <ul id="operatorsList" class="list-group list-group-flush"></ul>
-    </div>
-  </div>
-</div>
-
-<!-- Modal Relatório -->
-<div class="modal fade" id="reportModal" tabindex="-1">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content p-3">
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <h5 class="modal-title">Relatório de Chamados</h5>
-        <button type="button" class="btn-close btn-close-black" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="mb-2">
-        <button id="downloadPdfBtn" class="btn btn-danger btn-sm">PDF</button>
-        <button id="downloadExcelBtn" class="btn btn-success btn-sm">Excel</button>
-      </div>
-      <div id="reportContent"></div>
-    </div>
-  </div>
-</div>
-
-<!-- Modal Novo Chamado -->
+<!-- Modal Novo/Edição Chamado -->
 <div class="modal fade" id="newTicketModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <div class="modal-content p-3">
       <div class="d-flex justify-content-between align-items-center mb-2">
-        <h5 class="modal-title">Novo Chamado</h5>
+        <h5 class="modal-title" id="ticketModalTitle">Novo Chamado</h5>
         <button type="button" class="btn-close btn-close-black" data-bs-dismiss="modal"></button>
       </div>
       <form id="ticketForm">
+        <input type="hidden" id="editingTicketId">
         <div class="row">
           <div class="col-md-6 mb-2"><input class="form-control" id="ticketSubject" placeholder="Assunto" required></div>
           <div class="col-md-6 mb-2"><input class="form-control" id="ticketClient" placeholder="Cliente" required></div>
           <div class="col-12 mb-2"><textarea class="form-control" id="ticketDescription" placeholder="Descrição" required></textarea></div>
-          <div class="col-md-4 mb-2">
-            <select id="ticketTech" class="form-select" required>
-              <option value="">Selecione o Técnico</option>
-            </select>
-          </div>
+          <div class="col-md-4 mb-2"><select id="ticketTech" class="form-select" required><option value="">Selecione o Técnico</option></select></div>
           <div class="col-md-4 mb-2">
             <select id="ticketPriority" class="form-select" required>
               <option value="Baixa">Baixa</option>
@@ -210,10 +130,11 @@
               <option value="Aberto">Aberto</option>
               <option value="Em andamento">Em andamento</option>
               <option value="Resolvido">Resolvido</option>
+              <option value="Encerrado">Encerrado</option>
             </select>
           </div>
         </div>
-        <button type="submit" class="btn btn-primary w-100 mt-2">Salvar Chamado</button>
+        <button type="submit" class="btn btn-primary w-100 mt-2" id="saveTicketBtn">Salvar Chamado</button>
       </form>
     </div>
   </div>
@@ -227,7 +148,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-/* ========== FIREBASE ========== */
+/* ========== FIREBASE CONFIG ========== */
 const firebaseConfig = {
   apiKey: "AIzaSyBA16WHE768N9eUcqEoQqUF7uEIB82nNM0",
   authDomain: "chamados-37b34.firebaseapp.com",
@@ -239,7 +160,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-/* ========== ELEMENTS ========== */
+/* ========== ELEMENTOS ========== */
 const loginBtn = document.getElementById("loginBtn");
 const logoutBtn = document.getElementById("logoutBtn");
 const loginContainer = document.getElementById("loginContainer");
@@ -250,23 +171,19 @@ const btnNewTicket = document.getElementById("btnNewTicket");
 const btnOperators = document.getElementById("btnOperators");
 const btnReport = document.getElementById("btnReport");
 const themeToggle = document.getElementById("themeToggle");
-
-const userModal = new bootstrap.Modal(document.getElementById("userModal"));
-const operatorsModal = new bootstrap.Modal(document.getElementById("operatorsModal"));
-const reportModal = new bootstrap.Modal(document.getElementById("reportModal"));
 const newTicketModal = new bootstrap.Modal(document.getElementById("newTicketModal"));
 
-/* ========== STATE ========== */
+/* ========== ESTADO ========== */
 let currentUser = null;
 let tickets = [];
 
-/* ========== LOGIN / LOGOUT ========== */
+/* ========== LOGIN ========== */
 loginBtn.addEventListener("click", async () => {
   const user = document.getElementById("loginUser").value.trim();
   const pass = document.getElementById("loginPass").value.trim();
-  if(!user || !pass){ alert("Preencha todos os campos!"); return; }
+  if(!user || !pass) return alert("Preencha todos os campos!");
   const snapshot = await db.collection("users").where("login","==",user).where("password","==",pass).get();
-  if(snapshot.empty){ alert("Usuário ou senha incorretos!"); return; }
+  if(snapshot.empty) return alert("Usuário ou senha incorretos!");
   currentUser = snapshot.docs[0].data();
   loginContainer.classList.add("d-none");
   mainContainer.classList.remove("d-none");
@@ -275,6 +192,7 @@ loginBtn.addEventListener("click", async () => {
   carregarChamados();
 });
 
+/* ========== LOGOUT ========== */
 logoutBtn.addEventListener("click", () => {
   currentUser = null;
   loginContainer.classList.remove("d-none");
@@ -282,211 +200,110 @@ logoutBtn.addEventListener("click", () => {
   logoutBtn.classList.add("d-none");
 });
 
-/* ========== CARREGAR / RENDER CHAMADOS ========== */
+/* ========== CARREGAR CHAMADOS ========== */
 async function carregarChamados(){
-  ticketTableBody.innerHTML = "<tr><td colspan='8' class='text-center'>Carregando...</td></tr>";
+  ticketTableBody.innerHTML = "<tr><td colspan='8'>Carregando...</td></tr>";
   const snapshot = await db.collection("tickets").orderBy("date","asc").get();
-  tickets = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+  tickets = snapshot.docs.map(d=>({id:d.id, ...d.data()}));
   renderTickets();
 }
 
+/* ========== RENDERIZAÇÃO ========== */
 function renderTickets(){
   ticketTableBody.innerHTML = "";
-  if(!tickets || tickets.length === 0){
-    ticketTableBody.innerHTML = "<tr><td colspan='8'>Nenhum chamado.</td></tr>";
-    return;
-  }
-  tickets.forEach(t => {
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${escapeHtml(t.subject||"-")}</td>
-      <td>${escapeHtml(t.client||"-")}</td>
-      <td class="text-start">${escapeHtml(t.description||"-")}</td>
-      <td>${escapeHtml(t.tech||"-")}</td>
-      <td>${escapeHtml(t.priority||"-")}</td>
-      <td>${escapeHtml(t.status||"-")}</td>
+  if(!tickets.length) return ticketTableBody.innerHTML = "<tr><td colspan='8'>Nenhum chamado.</td></tr>";
+  tickets.forEach(t=>{
+    const row=document.createElement("tr");
+    row.innerHTML=`
+      <td>${escapeHtml(t.subject)}</td>
+      <td>${escapeHtml(t.client)}</td>
+      <td class="text-start">${escapeHtml(t.description)}</td>
+      <td>${escapeHtml(t.tech)}</td>
+      <td>${escapeHtml(t.priority)}</td>
+      <td>${escapeHtml(t.status)}</td>
       <td>${t.date ? new Date(t.date).toLocaleString() : "-"}</td>
       <td>
-        <button class="btn btn-primary btn-sm" onclick="showDetails('${t.id}')"><i class="bi bi-eye"></i></button>
-        ${currentUser && currentUser.role === "admin" && t.status !== "Encerrado"
-          ? `<button class="btn btn-success btn-sm ms-1" onclick="encerrarChamado('${t.id}')"><i class="bi bi-check2-circle"></i></button>`
+        <button class="btn btn-primary btn-sm" onclick="showDetails('${t.id}')"><i class='bi bi-eye'></i></button>
+        ${currentUser?.role==='admin'
+          ? `<button class="btn btn-warning btn-sm ms-1" onclick="editTicket('${t.id}')"><i class='bi bi-pencil-square'></i></button>`
           : ""}
-      </td>
-    `;
+        ${currentUser?.role==='admin' && t.status!=="Encerrado"
+          ? `<button class="btn btn-success btn-sm ms-1" onclick="encerrarChamado('${t.id}')"><i class='bi bi-check2-circle'></i></button>`
+          : ""}
+      </td>`;
     ticketTableBody.appendChild(row);
   });
 }
 
-/* ========== DETALHES E ENCERRAR ========== */
-window.showDetails = function(id){
-  const ticket = tickets.find(x => x.id === id);
-  if(!ticket) return alert("Chamado não encontrado.");
-  const content = document.getElementById("reportContent");
-  content.innerHTML = `
-    <p><strong>Assunto:</strong> ${escapeHtml(ticket.subject||"-")}</p>
-    <p><strong>Cliente:</strong> ${escapeHtml(ticket.client||"-")}</p>
-    <p><strong>Descrição:</strong> ${escapeHtml(ticket.description||"-")}</p>
-    <p><strong>Técnico:</strong> ${escapeHtml(ticket.tech||"-")}</p>
-    <p><strong>Prioridade:</strong> ${escapeHtml(ticket.priority||"-")}</p>
-    <p><strong>Status:</strong> ${escapeHtml(ticket.status||"-")}</p>
-    <p><strong>Data:</strong> ${ticket.date ? new Date(ticket.date).toLocaleString() : "-"}</p>
-  `;
-  reportModal.show();
-};
-
-window.encerrarChamado = async function(id){
-  if(!confirm("Deseja realmente encerrar este chamado?")) return;
-  await db.collection("tickets").doc(id).update({ status: "Encerrado" });
-  alert("Chamado encerrado com sucesso!");
-  carregarChamados();
-};
-
-/* ========== RELATÓRIO PDF / EXCEL ========== */
-document.getElementById("downloadPdfBtn").addEventListener("click", downloadPDF);
-document.getElementById("downloadExcelBtn").addEventListener("click", downloadExcel);
-
-function downloadPDF(){
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  let y = 10;
-  doc.text("Relatório de Chamados", 10, y); y += 8;
-  tickets.forEach(t=>{
-    const line = `Assunto: ${t.subject || "-"} | Status: ${t.status || "-"} | Prioridade: ${t.priority || "-"}`;
-    // quebra simples de linha se necessário
-    if(y > 270){ doc.addPage(); y = 10; }
-    doc.text(line.substring(0, 120), 10, y); y += 7;
-  });
-  doc.save("relatorio_chamados.pdf");
-}
-
-function downloadExcel(){
-  // transforma em planilha simples com campos relevantes
-  const ws_data = [["Assunto","Cliente","Descrição","Técnico","Prioridade","Status","Data"]];
-  tickets.forEach(t => ws_data.push([
-    t.subject||"", t.client||"", t.description||"", t.tech||"", t.priority||"", t.status||"", t.date ? new Date(t.date).toLocaleString() : ""
-  ]));
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(ws_data);
-  XLSX.utils.book_append_sheet(wb, ws, "Chamados");
-  XLSX.writeFile(wb, "relatorio_chamados.xlsx");
-}
-
-/* ========== USUÁRIOS ======== */
-document.getElementById("userForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const newUser = {
-    name: document.getElementById("userName").value,
-    login: document.getElementById("userLogin").value,
-    password: document.getElementById("userPass").value,
-    role: document.getElementById("userRole").value
-  };
-  await db.collection("users").add(newUser);
-  e.target.reset();
-  fetchUsers();
-});
-
-async function fetchUsers(){
-  const snapshot = await db.collection("users").get();
-  const ul = document.getElementById("usersList"); ul.innerHTML = "";
-  snapshot.forEach(doc => {
-    const u = doc.data();
-    const li = document.createElement("li");
-    li.className = "list-group-item bg-light";
-    li.textContent = `${u.name} (${u.login}) - ${u.role}`;
-    ul.appendChild(li);
-  });
-}
-
-/* ========== OPERADORES (TÉCNICOS) ======== */
-document.getElementById("addOperatorBtn").addEventListener("click", async (e) => {
-  e.preventDefault();
-  const name = document.getElementById("newOperator").value.trim();
-  if(!name) return;
-  await db.collection("operators").add({ name });
-  document.getElementById("newOperator").value = "";
-  fetchOperators();
-});
-
-async function fetchOperators(){
-  const snapshot = await db.collection("operators").get();
-  const list = document.getElementById("operatorsList"); list.innerHTML = "";
-  const techSelect = document.getElementById("ticketTech");
-  techSelect.innerHTML = '<option value="">Selecione o Técnico</option>';
-  snapshot.forEach(doc => {
-    const obj = doc.data();
-    const li = document.createElement("li");
-    li.className = "list-group-item bg-light";
-    li.textContent = obj.name;
-    list.appendChild(li);
-
-    const opt = document.createElement("option");
-    opt.value = obj.name;
-    opt.textContent = obj.name;
-    techSelect.appendChild(opt);
-  });
-}
-
-/* ========== NOVO CHAMADO ======== */
-btnNewTicket.addEventListener("click", () => {
-  fetchOperators();
+/* ========== EDITAR CHAMADO ========== */
+window.editTicket = async function(id){
+  const ticket = tickets.find(t=>t.id===id);
+  if(!ticket) return alert("Chamado não encontrado");
+  document.getElementById("ticketModalTitle").textContent = "Editar Chamado";
+  document.getElementById("editingTicketId").value = id;
+  document.getElementById("ticketSubject").value = ticket.subject;
+  document.getElementById("ticketClient").value = ticket.client;
+  document.getElementById("ticketDescription").value = ticket.description;
+  document.getElementById("ticketPriority").value = ticket.priority;
+  document.getElementById("ticketStatus").value = ticket.status;
+  await fetchOperators();
+  document.getElementById("ticketTech").value = ticket.tech;
   newTicketModal.show();
-});
+};
 
-document.getElementById("ticketForm").addEventListener("submit", async (e) => {
+/* ========== SALVAR CHAMADO (NOVO/EDIÇÃO) ========== */
+document.getElementById("ticketForm").addEventListener("submit", async e=>{
   e.preventDefault();
-  await db.collection("tickets").add({
+  const id = document.getElementById("editingTicketId").value;
+  const data = {
     subject: document.getElementById("ticketSubject").value,
     client: document.getElementById("ticketClient").value,
     description: document.getElementById("ticketDescription").value,
     tech: document.getElementById("ticketTech").value,
     priority: document.getElementById("ticketPriority").value,
     status: document.getElementById("ticketStatus").value,
-    date: new Date().getTime()
-  });
+    date: id ? tickets.find(t=>t.id===id)?.date : new Date().getTime()
+  };
+  if(id){
+    await db.collection("tickets").doc(id).update(data);
+  }else{
+    await db.collection("tickets").add(data);
+  }
   e.target.reset();
+  document.getElementById("editingTicketId").value="";
+  document.getElementById("ticketModalTitle").textContent = "Novo Chamado";
   newTicketModal.hide();
   carregarChamados();
 });
 
-/* ========== BOTÕES: abrir modais usuários, operadores, relatório ======== */
-btnUserRegister.addEventListener("click", async () => { await fetchUsers(); userModal.show(); });
-btnOperators.addEventListener("click", async () => { await fetchOperators(); operatorsModal.show(); });
-btnReport.addEventListener("click", () => { reportModal.show(); });
-
-/* ========== TEMA CLARO / ESCURO ======== */
-function toggleTheme(){
-  const currentTheme = document.documentElement.getAttribute("data-theme");
-  if(currentTheme === "dark"){
-    document.documentElement.removeAttribute("data-theme");
-    themeToggle.innerHTML = '<i class="bi bi-moon-fill"></i>';
-    localStorage.setItem("theme","light");
-  } else {
-    document.documentElement.setAttribute("data-theme","dark");
-    themeToggle.innerHTML = '<i class="bi bi-sun-fill"></i>';
-    localStorage.setItem("theme","dark");
-  }
+/* ========== OUTRAS FUNÇÕES ========= */
+async function fetchOperators(){
+  const snapshot=await db.collection("operators").get();
+  const techSelect=document.getElementById("ticketTech");
+  techSelect.innerHTML='<option value="">Selecione o Técnico</option>';
+  snapshot.forEach(doc=>{
+    const opt=document.createElement("option");
+    opt.value=doc.data().name;
+    opt.textContent=doc.data().name;
+    techSelect.appendChild(opt);
+  });
 }
-themeToggle.addEventListener("click", toggleTheme);
-window.addEventListener("DOMContentLoaded", () => {
-  const saved = localStorage.getItem("theme");
-  if(saved === "dark"){
-    document.documentElement.setAttribute("data-theme","dark");
-    themeToggle.innerHTML = '<i class="bi bi-sun-fill"></i>';
-  } else {
-    themeToggle.innerHTML = '<i class="bi bi-moon-fill"></i>';
+
+window.encerrarChamado = async id=>{
+  if(confirm("Deseja encerrar este chamado?")){
+    await db.collection("tickets").doc(id).update({status:"Encerrado"});
+    carregarChamados();
   }
-});
+};
+
+window.showDetails = id=>{
+  const t = tickets.find(x=>x.id===id);
+  if(!t) return alert("Chamado não encontrado.");
+  alert(`Assunto: ${t.subject}\nCliente: ${t.client}\nDescrição: ${t.description}\nTécnico: ${t.tech}\nStatus: ${t.status}`);
+};
 
 /* ========== UTIL ========= */
-function escapeHtml(text){
-  if(!text) return "";
-  return String(text)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
+function escapeHtml(text){return text?String(text).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m])):"";}
 </script>
 </body>
 </html>
