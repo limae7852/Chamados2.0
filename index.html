@@ -8,8 +8,6 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
   :root {
@@ -137,11 +135,35 @@
   </div>
 </div>
 
+<!-- MODAL CADASTRO USUÁRIO -->
+<div class="modal fade" id="userModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content p-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="modal-title">Cadastrar Usuário</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="userForm">
+        <div class="mb-2"><input id="userName" class="form-control" placeholder="Nome completo" required></div>
+        <div class="mb-2"><input id="userLogin" class="form-control" placeholder="Login de acesso" required></div>
+        <div class="mb-2"><input id="userPassword" type="password" class="form-control" placeholder="Senha" required></div>
+        <div class="mb-3">
+          <select id="userRole" class="form-select" required>
+            <option value="user">Usuário comum</option>
+            <option value="admin">Administrador</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-success w-100">Salvar Usuário</button>
+      </form>
+    </div>
+  </div>
+</div>
+
 <footer><p>© 2025 Sistema de Chamados - Desenvolvido por Eduardo Lima</p></footer>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-/* ======= FIREBASE CONFIG ======= */
+/* ======= FIREBASE ======= */
 const firebaseConfig = {
   apiKey: "AIzaSyBA16WHE768N9eUcqEoQqUF7uEIB82nNM0",
   authDomain: "chamados-37b34.firebaseapp.com",
@@ -156,13 +178,14 @@ const db = firebase.firestore();
 /* ======= ELEMENTOS ======= */
 const loginBtn = document.getElementById("loginBtn");
 const logoutBtn = document.getElementById("logoutBtn");
-const loginContainer = document.getElementById("loginContainer");
-const mainContainer = document.getElementById("mainContainer");
-const ticketTableBody = document.getElementById("ticketTableBody");
 const btnUserRegister = document.getElementById("btnUserRegister");
+const userModal = new bootstrap.Modal(document.getElementById("userModal"));
+const userForm = document.getElementById("userForm");
+const mainContainer = document.getElementById("mainContainer");
+const loginContainer = document.getElementById("loginContainer");
 const btnNewTicket = document.getElementById("btnNewTicket");
-const btnReport = document.getElementById("btnReport");
 const newTicketModal = new bootstrap.Modal(document.getElementById("newTicketModal"));
+const ticketTableBody = document.getElementById("ticketTableBody");
 let currentUser = null;
 let tickets = [];
 
@@ -175,19 +198,13 @@ loginBtn.addEventListener("click", async ()=>{
     const snap=await db.collection("users").where("login","==",user).where("password","==",pass).get();
     if(snap.empty) return alert("Usuário ou senha incorretos!");
     currentUser=snap.docs[0].data();
-    console.log("Login OK:", currentUser);
     loginContainer.classList.add("d-none");
     mainContainer.classList.remove("d-none");
     logoutBtn.classList.remove("d-none");
     if(currentUser.role==="admin") btnUserRegister.classList.remove("d-none");
     carregarChamados();
-  }catch(e){
-    console.error("Erro no login:",e);
-    alert("Erro ao conectar ao banco.");
-  }
+  }catch(e){alert("Erro ao conectar ao banco.");}
 });
-
-/* ======= LOGOUT ======= */
 logoutBtn.addEventListener("click", ()=>{
   currentUser=null;
   loginContainer.classList.remove("d-none");
@@ -195,24 +212,19 @@ logoutBtn.addEventListener("click", ()=>{
   logoutBtn.classList.add("d-none");
 });
 
-/* ======= NOVO CHAMADO ======= */
+/* ======= CHAMADOS ======= */
 btnNewTicket.addEventListener("click", async ()=>{
-  document.getElementById("ticketModalTitle").textContent="Novo Chamado";
   document.getElementById("ticketForm").reset();
   document.getElementById("editingTicketId").value="";
   await fetchOperators();
   newTicketModal.show();
 });
-
-/* ======= CARREGAR CHAMADOS ======= */
 async function carregarChamados(){
   ticketTableBody.innerHTML="<tr><td colspan='8'>Carregando...</td></tr>";
   const snap=await db.collection("tickets").orderBy("date","asc").get();
   tickets=snap.docs.map(d=>({id:d.id,...d.data()}));
   renderTickets();
 }
-
-/* ======= RENDERIZAÇÃO ======= */
 function renderTickets(){
   ticketTableBody.innerHTML="";
   if(!tickets.length) return ticketTableBody.innerHTML="<tr><td colspan='8'>Nenhum chamado.</td></tr>";
@@ -220,58 +232,39 @@ function renderTickets(){
     const canEdit = t.status !== "Encerrado";
     const row=document.createElement("tr");
     row.innerHTML=`
-      <td>${escapeHtml(t.subject)}</td>
-      <td>${escapeHtml(t.client)}</td>
-      <td class="text-start">${escapeHtml(t.description)}</td>
-      <td>${escapeHtml(t.tech)}</td>
-      <td>${escapeHtml(t.priority)}</td>
-      <td>${escapeHtml(t.status)}</td>
+      <td>${t.subject}</td><td>${t.client}</td><td>${t.description}</td>
+      <td>${t.tech}</td><td>${t.priority}</td><td>${t.status}</td>
       <td>${t.date?new Date(t.date).toLocaleString():"-"}</td>
       <td>
-        <button class="btn btn-primary btn-sm" onclick="showDetails('${t.id}')"><i class="bi bi-eye"></i></button>
-        ${canEdit ? `<button class="btn btn-warning btn-sm ms-1" onclick="editTicket('${t.id}')"><i class="bi bi-pencil-square"></i></button>` : ""}
-        ${t.status!=="Encerrado" ? `<button class="btn btn-success btn-sm ms-1" onclick="encerrarChamado('${t.id}')"><i class="bi bi-check2-circle"></i></button>` : ""}
+        ${canEdit ? `<button class='btn btn-warning btn-sm' onclick="editTicket('${t.id}')"><i class='bi bi-pencil-square'></i></button>` : ""}
+        ${t.status!=="Encerrado" ? `<button class='btn btn-success btn-sm ms-1' onclick="encerrarChamado('${t.id}')"><i class='bi bi-check2-circle'></i></button>` : ""}
       </td>`;
     ticketTableBody.appendChild(row);
   });
 }
-
-/* ======= EDITAR ======= */
-window.editTicket=async id=>{
-  const t=tickets.find(x=>x.id===id);
-  if(!t) return alert("Chamado não encontrado");
-  document.getElementById("ticketModalTitle").textContent="Editar Chamado";
-  document.getElementById("editingTicketId").value=id;
-  document.getElementById("ticketSubject").value=t.subject;
-  document.getElementById("ticketClient").value=t.client;
-  document.getElementById("ticketDescription").value=t.description;
-  document.getElementById("ticketPriority").value=t.priority;
-  document.getElementById("ticketStatus").value=t.status;
-  await fetchOperators();
-  document.getElementById("ticketTech").value=t.tech;
-  newTicketModal.show();
+window.encerrarChamado=async id=>{
+  await db.collection("tickets").doc(id).update({status:"Encerrado"});
+  carregarChamados();
 };
 
-/* ======= SALVAR ======= */
-document.getElementById("ticketForm").addEventListener("submit", async e=>{
+/* ======= CADASTRAR USUÁRIO ======= */
+btnUserRegister.addEventListener("click", ()=>userModal.show());
+userForm.addEventListener("submit", async e=>{
   e.preventDefault();
-  const id=document.getElementById("editingTicketId").value;
-  const data={
-    subject:document.getElementById("ticketSubject").value,
-    client:document.getElementById("ticketClient").value,
-    description:document.getElementById("ticketDescription").value,
-    tech:document.getElementById("ticketTech").value,
-    priority:document.getElementById("ticketPriority").value,
-    status:document.getElementById("ticketStatus").value,
-    date:id?tickets.find(t=>t.id===id)?.date:new Date().getTime()
-  };
-  if(id) await db.collection("tickets").doc(id).update(data);
-  else await db.collection("tickets").add(data);
-  newTicketModal.hide();
-  carregarChamados();
+  const name=document.getElementById("userName").value.trim();
+  const login=document.getElementById("userLogin").value.trim();
+  const pass=document.getElementById("userPassword").value.trim();
+  const role=document.getElementById("userRole").value;
+  if(!name||!login||!pass) return alert("Preencha todos os campos!");
+  const exists=await db.collection("users").where("login","==",login).get();
+  if(!exists.empty) return alert("Este login já existe!");
+  await db.collection("users").add({name,login,password:pass,role});
+  alert("Usuário cadastrado com sucesso!");
+  userForm.reset();
+  userModal.hide();
 });
 
-/* ======= OUTRAS FUNÇÕES ======= */
+/* ======= SUPORTE ======= */
 async function fetchOperators(){
   const s=await db.collection("operators").get();
   const sel=document.getElementById("ticketTech");
@@ -283,25 +276,6 @@ async function fetchOperators(){
     sel.appendChild(o);
   });
 }
-window.encerrarChamado=async id=>{
-  if(confirm("Deseja encerrar este chamado?")){
-    await db.collection("tickets").doc(id).update({status:"Encerrado"});
-    carregarChamados();
-  }
-};
-window.showDetails=id=>{
-  const t=tickets.find(x=>x.id===id);
-  if(!t) return alert("Chamado não encontrado");
-  alert(`Assunto: ${t.subject}\nCliente: ${t.client}\nDescrição: ${t.description}\nTécnico: ${t.tech}\nStatus: ${t.status}`);
-};
-
-/* ======= RELATÓRIO ======= */
-btnReport.addEventListener("click", ()=>{
-  alert("Função de relatório em desenvolvimento.");
-});
-
-/* ======= UTIL ======= */
-function escapeHtml(txt){return txt?String(txt).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m])):"";}
 </script>
 </body>
 </html>
