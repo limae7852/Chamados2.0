@@ -161,8 +161,11 @@ const btnUserRegister = document.getElementById("btnUserRegister");
 const btnNewTicket = document.getElementById("btnNewTicket");
 const btnOperators = document.getElementById("btnOperators");
 const btnReport = document.getElementById("btnReport");
-const themeToggle = document.getElementById("themeToggle");
+
 const newTicketModal = new bootstrap.Modal(document.getElementById("newTicketModal"));
+const userModal = new bootstrap.Modal(document.getElementById("userModal"));
+const operatorsModal = new bootstrap.Modal(document.getElementById("operatorsModal"));
+
 let currentUser = null;
 let tickets = [];
 
@@ -200,37 +203,66 @@ btnNewTicket.addEventListener("click", async ()=>{
 
 /* CADASTRAR USUÁRIO */
 btnUserRegister.addEventListener("click", ()=>{
-  const nome=prompt("Nome do novo usuário:");
-  const login=prompt("Login de acesso:");
-  const senha=prompt("Senha:");
-  const role=prompt("Função (admin ou user):","user");
-  if(!nome||!login||!senha) return alert("Preencha todos os campos!");
-  db.collection("users").add({name:nome,login,password:senha,role})
-    .then(()=>alert("Usuário cadastrado com sucesso!"))
-    .catch(()=>alert("Erro ao cadastrar usuário."));
+  document.getElementById("userForm").reset();
+  userModal.show();
+});
+
+document.getElementById("userForm").addEventListener("submit", async e=>{
+  e.preventDefault();
+  const data={
+    name:document.getElementById("userName").value,
+    login:document.getElementById("userLogin").value,
+    password:document.getElementById("userPassword").value,
+    role:document.getElementById("userRole").value
+  };
+  await db.collection("users").add(data);
+  userModal.hide();
+  alert("Usuário cadastrado com sucesso!");
 });
 
 /* GERENCIAR TÉCNICOS */
 btnOperators.addEventListener("click", async ()=>{
-  const action=prompt("Digite:\n1 - Listar técnicos\n2 - Adicionar técnico\n3 - Excluir técnico");
-  if(action==="1"){
-    const snap=await db.collection("operators").get();
-    if(snap.empty) return alert("Nenhum técnico cadastrado.");
-    const nomes=snap.docs.map(d=>d.data().name).join("\n");
-    alert("Técnicos cadastrados:\n"+nomes);
-  } else if(action==="2"){
-    const name=prompt("Nome do novo técnico:");
-    if(!name) return;
-    await db.collection("operators").add({name});
-    alert("Técnico cadastrado com sucesso!");
-  } else if(action==="3"){
-    const name=prompt("Nome do técnico a excluir:");
-    const snap=await db.collection("operators").where("name","==",name).get();
-    if(snap.empty) return alert("Técnico não encontrado.");
-    await db.collection("operators").doc(snap.docs[0].id).delete();
-    alert("Técnico removido.");
-  }
+  await carregarTecnicos();
+  operatorsModal.show();
 });
+
+async function carregarTecnicos(){
+  const tbody=document.getElementById("operatorsTableBody");
+  tbody.innerHTML="<tr><td colspan='2'>Carregando...</td></tr>";
+  const snap=await db.collection("operators").get();
+  tbody.innerHTML="";
+  if(snap.empty){
+    tbody.innerHTML="<tr><td colspan='2'>Nenhum técnico cadastrado.</td></tr>";
+    return;
+  }
+  snap.forEach(doc=>{
+    const d=doc.data();
+    const tr=document.createElement("tr");
+    tr.innerHTML=`
+      <td>${escapeHtml(d.name)}</td>
+      <td class="text-center">
+        <button class="btn btn-danger btn-sm" onclick="excluirTecnico('${doc.id}')">
+          <i class="bi bi-trash"></i> Excluir
+        </button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+document.getElementById("addOperatorBtn").addEventListener("click", async ()=>{
+  const name=document.getElementById("newOperatorName").value.trim();
+  if(!name) return alert("Informe o nome do técnico!");
+  await db.collection("operators").add({name});
+  document.getElementById("newOperatorName").value="";
+  await carregarTecnicos();
+});
+
+window.excluirTecnico=async id=>{
+  if(confirm("Deseja excluir este técnico?")){
+    await db.collection("operators").doc(id).delete();
+    await carregarTecnicos();
+  }
+};
 
 /* CARREGAR CHAMADOS */
 async function carregarChamados(){
